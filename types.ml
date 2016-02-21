@@ -38,7 +38,6 @@ type spl = SPL of decl list
 type 'a result = Error of string | Success of 'a;;
 
 type token = 
-	| QUOTE (* Toegevoegd voor het inlezen van een character *)
 	| VAR
 	| EQ
 	| SEMICOLON

@@ -61,7 +61,7 @@ let rec scan_line = function
 	| ','::line -> COMMA::(scan_line line)
 	| '['::line -> OPEN_BRACK::(scan_line line)
 	| ']'::line -> CLOSE_BRACK::(scan_line line)
-	| '\''::line -> QUOTE::(scan_line line)
+	| '\''::c::'\''::line -> (Chartok c)::(scan_line line) (* inlezen van char op deze manier *)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
       	else if is_letter char then (get_name [] (char::line))
