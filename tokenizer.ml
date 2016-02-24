@@ -1,5 +1,7 @@
 open Char_func
 open Types
+open List
+
 
 let rec get_number number line = match line with
 		| char::restline -> 
@@ -15,7 +17,8 @@ let rec get_name name line = match line with
 			else (Some (IDtok (List.rev name)),line)
 		| [] -> (Some (IDtok (List.rev name)),line)
 
-let match_next line = line == [] || (not(is_letter (hd line)) && not(is_digit (hd line)));;
+let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
+
 
 let rec scan_line = function
 	| [] -> []
@@ -61,7 +64,6 @@ let rec scan_line = function
 	| ','::line -> COMMA::(scan_line line)
 	| '['::line -> OPEN_BRACK::(scan_line line)
 	| ']'::line -> CLOSE_BRACK::(scan_line line)
-	| '\''::c::'\''::line -> (Chartok c)::(scan_line line) (* inlezen van char op deze manier *)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
       	else if is_letter char then (get_name [] (char::line))
@@ -69,41 +71,33 @@ let rec scan_line = function
     		| None,line -> scan_line line
     		| Some s, line -> s::(scan_line line)
 
-let token_to_string t = match t with
-	| VAR -> "var"
-	| EQ -> " = "
-	| SEMICOLON -> "; "
-	| OPEN_PAR -> "("
-	| CLOSE_PAR -> ")"
-	| DDPOINT -> " :: "
-	| OPEN_ACO -> "{"
-	| CLOSE_ACO -> "}"
-	| VOID -> "Void"
-	| ARROW -> " -> "
-	| COMMA -> ","
-	| OPEN_BRACK -> "["
-	| CLOSE_BRACK -> "]"
-	| Basictoken Type_int -> "Int"
-	| Basictoken Type_bool -> "Bool"
-	| Basictoken Type_char -> "Char"
-	| IF -> "if "
-	| ELSE -> "else "
-	| WHILE -> "while "
-	| RETURN -> "return "
-	| FALSE -> "False"
-	| TRUE -> "True"
-	| EMPTYLIST -> "[]"
-	| PERIOD -> "."
-	| Fieldtoken Hd -> "hd"
-	| Fieldtoken Tl -> "tl"
-	| Fieldtoken Fst -> "fst"
-	| Fieldtoken Snd -> "snd"
-	| (* ... *)
-
 let rec token_list_to_string list = match list with
 	| [] -> "" 
-	| t::list -> (token_to_string t) ^ (token_list_to_string list) 
-	
+	| VAR::list -> "VAR, " ^ token_list_to_string(list)
+	| EQ::list -> "EQ, " ^ token_list_to_string(list)
+	| SEMICOLON::list -> ";, " ^ token_list_to_string(list)
+	| OPEN_PAR::list -> "(, " ^ token_list_to_string(list)
+	| CLOSE_PAR::list -> "), " ^ token_list_to_string(list)
+	| DDPOINT::list -> "::, " ^ token_list_to_string(list)
+	| OPEN_ACO::list -> "{, " ^ token_list_to_string(list)
+	| CLOSE_ACO::list -> "}, " ^ token_list_to_string(list)
+	| VOID::list -> "VOID, " ^ token_list_to_string(list)
+	| ARROW::list -> "->, " ^ token_list_to_string(list)
+	| COMMA::list -> "COMMA, " ^ token_list_to_string(list)
+	| OPEN_BRACK::list -> "[, " ^ token_list_to_string(list)
+	| CLOSE_BRACK::list -> "], " ^ token_list_to_string(list)
+	| Basictoken Type_int::list -> "INT, " ^ token_list_to_string(list)
+	| Basictoken Type_bool::list -> "BOOL, " ^ token_list_to_string(list)
+	| Basictoken Type_char::list -> "CHAR, " ^ token_list_to_string(list)
+	| IF::list -> "IF, " ^ token_list_to_string(list)
+	| ELSE::list -> "ELSE, " ^ token_list_to_string(list)
+	| WHILE::list -> "WHILE, " ^ token_list_to_string(list)
+	| RETURN::list -> "RETURN, " ^ token_list_to_string(list)
+	| FALSE::list -> "FALSE, " ^ token_list_to_string(list)
+	| TRUE::list -> "TRUE, " ^ token_list_to_string(list)
+	| EMPTYLIST::list -> "[], " ^ token_list_to_string(list)
+	| PERIOD::list -> "., " ^ token_list_to_string(list)
+	| Fieldtoken a::list -> "FIELDTOKEN, " ^ token_list_to_string(list)
 	| Optok a::list -> "OP " ^ (implode a) ^ ", " ^ token_list_to_string(list)
 	| Inttok a::list -> "INTTOK " ^ (implode a) ^ ", " ^ token_list_to_string(list)
 	| IDtok a::list -> "ID " ^ (implode a) ^ ", " ^ token_list_to_string(list)

@@ -1,5 +1,32 @@
 open Types
 
+
+let rec exp_parser list = 
+  let rec basicexp_parser list = match list with
+  | IDtok id::Fieldtoken field::list -> (Exp_field (Id id,Field [field]),list) (*fixen dat het meerdere fieldtokens kan hebben*)
+  | Optok ['-']::Inttok int::list -> (Exp_int (Inttoken ('-'::int)), list)
+  | Inttok int::list -> (Exp_int (Inttoken int), list)
+  | Optok [op1]::list when op1 == '!' || op1 == '-' -> (match basicexp_parser list with
+  	| (exp, list) -> (Exp_prefix (Op1 op1, exp), list))
+  | (IDtok [c])::list -> (Exp_char c, list)
+  | FALSE::list -> (Exp_bool false, list)
+  | TRUE::list -> (Exp_bool true, list)
+  | EMPTYLIST::list -> (Exp_emptylist, list) in
+match list with
+| IDtok id::OPEN_PAR::CLOSE_PAR::list -> (Exp_function_call (Id id,[]),list)
+| IDtok id::OPEN_PAR::list -> (match exp_parser list with
+	| (exp,CLOSE_PAR::list) -> (Exp_function_call (Id id,[exp]),list)
+	| (exp,COMMA::list) -> (match exp_parser (IDtok id::OPEN_PAR::list) with
+		| (Exp_function_call(id,explist),newlist) -> (Exp_function_call(id,exp::explist),newlist)))
+| OPEN_PAR::list -> (match exp_parser list with
+	| (exp,CLOSE_PAR::list) -> (Exp_parentheses exp, list)
+	| (exp1,COMMA::list1) -> (match exp_parser list1 with
+		| (exp2,CLOSE_PAR::list2) -> (Exp_tuple(exp1,exp2),list)))
+| _ -> (match basicexp_parser list with
+	|  (exp1,Optok op2::list) -> (match exp_parser list with
+		| (exp2,list) -> (Exp_infix (exp1,Op2 op2,exp2),list))
+	| x -> x);;
+
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
 	| (IDtok id)::list -> Success (Type_id (Id id)),list
@@ -19,9 +46,8 @@ let vardeclvar_parser id list = match exp_parser list with
 | (exp,SEMICOLON::restlist) -> (Decl_var (Vardecl_var (id, exp)) ,restlist);;
 
 let rec fargs_parser id_list = function
-| CLOSE_PAR::list -> (Fargs (List.rev id_list)),list
-| (IDtok id)::list -> fargs_parser ((Id id)::id_list) list
-| COMMA::(IDtok id)::list -> fargs_parser ((Id id)::id_list) list
+| CLOSE_PAR::list	-> (Fargs (List.rev id_list)),list
+| (IDtok id)::list -> fargs_parser ((Id id)::id_list) list;;
 
 let funtype_parser type_list list = match list with
 | ARROW::list	-> (match rettype_parser with 
@@ -70,7 +96,7 @@ let fundecl_parser id list = match fargs_parser [] list with
 		 (match vardecl_list_parser with
 		| vardecl_list, list -> 
 			(match stmt_list_parser with
-			| [], x::lastlist -> Error ("geen statement, maar " ^ token_list_to_string [x]), lastlist
+			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist
 			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;
 
 let rec spl_parser decllist tokenlist = 
