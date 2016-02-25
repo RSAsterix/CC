@@ -130,14 +130,14 @@ let rec fargs_parser_till_CLOSE_PAR id_list = function
   | (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
   | list -> Error ("Geen sluithaak of komma, maar " ^ token_list_to_string list), list;;
 
-let rettype_parser list = match list with
+let rettype_parser = function
 	| VOID::list -> Success Type_void, list
 	| list -> 
 		(match type_parser list with
 		| Success type1, list -> Success (Rettype type1), list
 		| Error e, list -> Error e, list);;
 
-let rec funtype_parser type_list list = match list with
+let rec funtype_parser type_list = function
   | ARROW::list	-> 
 		(match rettype_parser list with 
   	| Success rettype, list -> Success (Funtype ((List.rev type_list),rettype)), list
@@ -214,7 +214,7 @@ stmt_parser = function
     	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (Id id,fieldlist,exp)), lastlist
     	| Success exp, lastlist -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list)
 		| fieldlist, list -> Error ("Geen =-teken, maar " ^ token_list_to_string list), list)
-  | list -> Error ("Geen statement, maar " ^ token_list_to_string list), list;;                    *)
+  | list -> Error ("Geen statement, maar " ^ token_list_to_string list), list;;
 
 
 let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
@@ -241,7 +241,7 @@ let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
 		|Success funtype, list -> Error ("geen openhaakje, maar " ^ token_list_to_string list), list)
 	| Success fargs, list -> Error ("geen openhaakje of ::, maar " ^ token_list_to_string list), list;;
 
-let decl_parser tokenlist = match tokenlist with
+let decl_parser = function
 	| IDtok id::OPEN_PAR::list ->
 		(match fundecl_parser (Id id) list with
 		| Success fundecl, list -> Success (Decl_fun fundecl), list
@@ -252,19 +252,9 @@ let decl_parser tokenlist = match tokenlist with
 		| Error e, faillist -> Error e, faillist);;
 
 let rec spl_parser decllist tokenlist = 
-<<<<<<< HEAD
 	match decl_parser tokenlist with
   | Success decls,[] -> Success (SPL (List.rev (decls::decllist)))
   | Success decls,restlist  -> spl_parser (decls::decllist) restlist
-=======
-	let decl_parser tokenlist = match tokenlist with
-	| VAR::IDtok id::EQ::list -> vardeclvar_parser ID id list
-	| IDtok id::OPEN_PAR::list -> fundecl_parser ID id list
-	| _ -> vardecltype_parser list in
-  match decl_parser tokenlist with
-  | (Success decls,[]) -> Success (SPL (List.rev (decls::decllist)))
-  | (Success decls,restlist)  -> spl_parser (decls::decllist) restlist
->>>>>>> origin/dev
   | Error e, faillist -> Error e;;
 
 
