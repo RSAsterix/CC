@@ -120,20 +120,20 @@ let stmt_list_parser stmt_list list = match list with
 (*stmt_function_call*)
 (*stmt_define*)
 
-let fundecl_parser id list = match fargs_parser [] list with
-| fargs, OPEN_ACO::list ->
-	(match vardecl_list_parser with
-	| vardecl_list, list ->
-		(match stmt_list_parser with
-		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))
-| fargs,DDPOINT::list ->
-	 (match funtype_parser list with
-	| funtype, OPEN_ACO::list ->
-		 (match vardecl_list_parser with
-		| vardecl_list, list -> 
-			(match stmt_list_parser with
-			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist
-			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;
+(* let fundecl_parser id list = match fargs_parser [] list with                                   *)
+(* | fargs, OPEN_ACO::list ->                                                                     *)
+(* 	(match vardecl_list_parser with                                                              *)
+(* 	| vardecl_list, list ->                                                                      *)
+(* 		(match stmt_list_parser with                                                               *)
+(* 		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))                  *)
+(* | fargs,DDPOINT::list ->                                                                       *)
+(* 	 (match funtype_parser list with                                                             *)
+(* 	| funtype, OPEN_ACO::list ->                                                                 *)
+(* 		 (match vardecl_list_parser with                                                           *)
+(* 		| vardecl_list, list ->                                                                    *)
+(* 			(match stmt_list_parser with                                                             *)
+(* 			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist *)
+(* 			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;     *)
 
 let rec spl_parser decllist tokenlist = 
 	let decl_parser tokenlist = match tokenlist with
