@@ -63,8 +63,6 @@ let rec fargs_parser_till_CLOSE_PAR id_list = function
 | (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
 | x::list -> Error ("Geen sluithaak of komma, maar " ^ token_to_string x), list
 
-
-
 let rettype_parser list = match list with
 	| VOID::list -> Success Type_void, list
 	| list -> (match type_parser list with
@@ -80,7 +78,7 @@ let rec funtype_parser type_list list = match list with
 		| Error e, list -> Error e, list);;
 
 let vardecl_parser list = match list with
-| VAR::IDtok id::EQ::list -> vardeclvar_parser id list
+| VAR::IDtok id::EQ::list -> vardeclvar_parser (Id id) list
 | _ ->  vardecltype_parser list;;
 
 let vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
