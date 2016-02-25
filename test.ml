@@ -2,6 +2,7 @@ open Printf
 open Tokenizer
 open Parser
 open Char_func
+open Types
 
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
@@ -11,7 +12,7 @@ let filename = "C:/Users/tom_e/workspace/Project/input.txt";;
 (* let filename = "C:/Users/Martin/workspace/test/input.txt";; *)
 
 let in_channel = open_in filename;;
-let tokenlist = ref [] in
+let tokenlist = ref [];;
 try
   while true do
     let line = input_line in_channel in
@@ -21,3 +22,8 @@ try
 	done
 with End_of_file ->
   close_in in_channel;;
+
+let structure = spl_parser [] !tokenlist;;
+match structure with
+| (Error e) -> print_endline e 
+| x -> print_endline "Succes!";;
