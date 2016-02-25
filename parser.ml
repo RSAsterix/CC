@@ -53,10 +53,6 @@ let rec type_parser = function
 		| _,(x::list) -> Error ("Geen sluithaak, maar " ^ token_to_string x), list
 		| Error e, list -> Error e, list);;
 
-let vardeclvar_parser id list = match exp_parser list with
-| (Success exp,SEMICOLON::restlist) -> (Success (Decl_var (Vardecl_var (id, exp))) ,restlist)
-| Error e, faillist -> Error e, faillist;;
-
 let rec fargs_parser_till_CLOSE_PAR id_list = function
 | CLOSE_PAR::list	-> Success (Fargs (List.rev id_list)),list
 | (IDtok id)::CLOSE_PAR::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
@@ -76,6 +72,10 @@ let rec funtype_parser type_list list = match list with
   | x -> (match type_parser x with
   	| Success type1, list -> funtype_parser (type1::type_list) list
 		| Error e, list -> Error e, list);;
+
+let vardeclvar_parser id list = match exp_parser list with
+| (Success exp,SEMICOLON::restlist) -> (Success (Decl_var (Vardecl_var (id, exp))) ,restlist)
+| Error e, faillist -> Error e, faillist;;
 
 let vardecl_parser list = match list with
 | VAR::IDtok id::EQ::list -> vardeclvar_parser (Id id) list
