@@ -1,4 +1,6 @@
 open Types
+open Tokenizer
+open Exp_parser
 
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
@@ -6,13 +8,13 @@ let rec type_parser = function
 	| OPEN_PAR::list -> (match (type_parser list) with
 		| Success type1,(COMMA::list) -> (match (type_parser list) with
 			| Success type2,(CLOSE_PAR::list) -> Success (Type_tuple (type1,type2)),list
-			| Success _, (x::list) -> Error ("Geen sluithaak, maar " ^ token_list_to_string [x]), list
+			| Success _, list -> Error ("Geen sluithaak, maar " ^ token_list_to_string list), list
 			| Error e, list -> Error e, list)
-		| Success _, (x::list) -> Error ("Geen komma, maar " ^ token_list_to_string [x])
+		| Success _, list -> Error ("Geen komma, maar " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
 	| OPEN_BRACK::list -> (match (type_parser list) with
-		| type1,(CLOSE_BRACK::list) -> Success (Type_list type1),list
-		| _,(x::list) -> Error ("Geen sluithaak, maar " ^ token_list_to_string [x]), list
+		| Success(type1),(CLOSE_BRACK::list) -> Success (Type_list type1),list
+		| _,(x::list) -> Error ("Geen sluithaak, maar " ^ token_to_string x), list
 		| Error e, list -> Error e, list);;
 
 let vardeclvar_parser id list = match exp_parser list with
