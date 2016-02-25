@@ -80,51 +80,60 @@ let rec funtype_parser type_list list = match list with
 		| Error e, list -> Error e, list);;
 
 let vardecl_parser list = match list with
-| VAR::IDtok id::EQ::list -> vardeclvar_parser id list
+| VAR::IDtok id::EQ::list -> vardeclvar_parser Id id list
 | _ ->  vardecltype_parser list;;
 
 let vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
 | Error e, faillist -> Succes (List.rev vardecl_list),list
 | Succes vardecl, list ->  vardecl_list_parser_till_ERROR  (vardecl::vardecl_list) list;;
 
-let stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with
-| CLOSE_ACO::list -> Succes (List.rev stmt_list),list
+let rec stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with
+| CLOSE_ACO::list -> Success (List.rev stmt_list),list
 | IF::OPEN_PAR::list -> 
 	match exp_parser list with
-	| Error e, faillist -> faillist
-	| exp, CLOSE_PAR::OPEN_ACO::list -> 
-		match stmt_list_parser [] list with
-		| if_stmts, ELSE::list -> 
-			match stmt_list_parser with
-			| else_stmts, lastlist -> stmt_list_parser (Stmt_if_else ((exp,if_stmts,else_stmts)::stmt_list)), lastlist
-		| if_stmts, lastlist -> stmt_list_parser (Stmt_if ((exp,if_stmts)::stmt_list)), lastlist
+	| Error e, faillist -> Error e, faillist
+	| Success exp, CLOSE_PAR::OPEN_ACO::list -> 
+		match stmt_list_parser_till_CLOSE_ACO [] list with
+		| Error e, faillist -> Error e, faillist
+		| Success if_stmts, ELSE::OPEN_ACO::list -> 
+			match stmt_list_parser_till_CLOSE_ACO [] list with
+			| Error e, faillist -> Error e, faillist
+			| Success else_stmts, lastlist -> stmt_list_parser_till_CLOSE_ACO (Stmt_if_else ((exp,if_stmts,else_stmts)::stmt_list)), lastlist
+		| Success if_stmts, lastlist -> stmt_list_parser_till_CLOSE_ACO (Stmt_if ((exp,if_stmts)::stmt_list)), lastlist
 | WHILE::OPEN_PAR::list ->
 	match exp_parser list with
-	| exp, CLOSE_PAR::OPEN_ACO::list ->
-		match stmt_list_parser [] list with
-		| while_stmts, lastlist -> stmt_list_parser(Stmt_while((exp,while_stmts)::stmt_list)), lastlist
-| RETURN::SEMICOLON::lastlist -> stmt_list_parser(Stmt_return((None)::stmt_list)), lastlist
+	| Error e, faillist -> Error e, faillist
+	| Success exp, CLOSE_PAR::OPEN_ACO::list ->
+		match stmt_list_parser_till_CLOSE_ACO [] list with
+		| Error e, faillist -> Error e, faillist
+		| Success while_stmts, lastlist -> stmt_list_parser_till_CLOSE_ACO(Stmt_while((exp,while_stmts)::stmt_list)), lastlist
+| RETURN::SEMICOLON::lastlist -> stmt_list_parser_till_CLOSE_ACO(Stmt_return((None)::stmt_list)), lastlist
 | RETURN::list ->
 	match exp_parser list with
-	| exp, SEMICOLON::lastlist -> stmt_list_parser(Stmt_return((exp)::stmt_list)), lastlist
+	| Error e, faillist -> Error e, faillist
+	| Success exp, SEMICOLON::lastlist -> stmt_list_parser_till_CLOSE_ACO(Stmt_return((exp)::stmt_list)), lastlist;;
 (*stmt_function_call*)
 (*stmt_define*)
 
-(* let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with                    *)
-(* | Error e, faillist -> Error e, faillist                                                       *)
-(* | Succes fargs, OPEN_ACO::list ->                                                              *)
-(* 	(match vardecl_list_parser_till_ERROR with                                                   *)
-(* 	| vardecl_list, list ->                                                                      *)
-(* 		(match stmt_list_parser_till_CLOSE_ACO with                                                *)
-(* 		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))                  *)
-(* | fargs,DDPOINT::list ->                                                                       *)
-(* 	 (match funtype_parser list with                                                             *)
-(* 	| funtype, OPEN_ACO::list ->                                                                 *)
-(* 		 (match vardecl_list_parser with                                                           *)
-(* 		| vardecl_list, list ->                                                                    *)
-(* 			(match stmt_list_parser with                                                             *)
-(* 			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist *)
-(* 			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;     *)
+let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
+| Error e, faillist -> Error e, faillist
+| Success fargs, OPEN_ACO::list ->
+	(match vardecl_list_parser_till_ERROR with
+	| Success vardecl_list, list ->
+		(match stmt_list_parser_till_CLOSE_ACO with
+		| Error e, faillist -> Error e, faillist
+		| Success [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist
+		| Success stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))
+| Success fargs,DDPOINT::list ->
+	 (match funtype_parser list with
+	| Error e, faillist -> Error e, faillist
+	| Success funtype, OPEN_ACO::list ->
+		 (match vardecl_list_parser_till_ERROR with
+		| Success vardecl_list, list ->
+			(match stmt_list_parser with
+			| Error e, faillist -> Error e, faillist
+			| Success [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist
+			| Success stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;
 
 let rec spl_parser decllist tokenlist = 
 	let decl_parser tokenlist = match tokenlist with
