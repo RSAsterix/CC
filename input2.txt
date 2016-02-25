@@ -27,7 +27,7 @@ list = list.tl ;
 return accu ;
 }
 
-abs ( n ) :: Int -> Int { i f (n < 0) return -n; else return n ; }
+abs ( n ) :: Int -> Int { if (n < 0) return -n; else return n ; }
 
 swapCopy ( pair ) :: (a, b) -> (b, a) {
 return ( pair.snd, pair.fst );
