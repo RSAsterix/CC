@@ -22,8 +22,8 @@ let rec parse_exp = function
 			| list -> (match (parse_exp list) with
 				| Success exp, list -> parse_funcall (exp::arg_list) list
 				| Error e, list -> []) (* Hoe gaan we dit oplossen? *)
-			in Success (Exp_function_call (Id id) (parse_funcall [] list)), list) 
-		|	list -> Success (Exp_field (Id id, parse_field [] list)), list
+			in Success (Exp_function_call ((Id id), (parse_funcall [] list))), list) 
+		|	list -> Success (Exp_field (Id id, parse_field [] list)), list)
 	| OPEN_PAR::list -> (match (parse_exp list) with
 		| Success exp1, COMMA::list -> (match (parse_exp list) with
 			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
@@ -31,6 +31,6 @@ let rec parse_exp = function
 		| Success exp, CLOSE_PAR::list -> Success (Exp_parentheses exp), list
 		| Error e, list -> Error e, list)
 	| (Optok c)::list when (is_op1 c) -> (match (parse_exp list) with
-		| Success exp, list ->  Success (Exp_prefix (Op1 c) exp), list
+		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
 		| Error e, list -> Error e, list)
 (* Nu nog "exp op2 exp" *)
