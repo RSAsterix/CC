@@ -45,6 +45,7 @@ let rec scan_line = function
 	| '*'::line -> Optok(['*'])::(scan_line line)
 	| '/'::line -> Optok(['/'])::(scan_line line)
 	| '%'::line -> Optok(['%'])::(scan_line line)
+	| '='::'='::line -> Optok(['=';'='])::(scan_line line)
 	| '<'::'='::line -> Optok(['<';'='])::(scan_line line)
 	| '>'::'='::line -> Optok(['>';'='])::(scan_line line)
 	| '!'::'='::line -> Optok(['!';'='])::(scan_line line)
