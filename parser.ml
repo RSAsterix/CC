@@ -53,17 +53,11 @@ let rec type_parser = function
 		| _,(x::list) -> Error ("Geen sluithaak, maar " ^ token_to_string x), list
 		| Error e, list -> Error e, list);;
 
-let vardeclvar_parser id list = match exp_parser list with
-| (Success exp,SEMICOLON::restlist) -> (Success (Decl_var (Vardecl_var (id, exp))) ,restlist)
-| Error e, faillist -> Error e, faillist;;
-
 let rec fargs_parser_till_CLOSE_PAR id_list = function
 | CLOSE_PAR::list	-> Success (Fargs (List.rev id_list)),list
 | (IDtok id)::CLOSE_PAR::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
 | (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
 | x::list -> Error ("Geen sluithaak of komma, maar " ^ token_to_string x), list
-
-
 
 let rettype_parser list = match list with
 	| VOID::list -> Success Type_void, list
@@ -79,13 +73,25 @@ let rec funtype_parser type_list list = match list with
   	| Success type1, list -> funtype_parser (type1::type_list) list
 		| Error e, list -> Error e, list);;
 
-let vardecl_parser list = match list with
-| VAR::IDtok id::EQ::list -> vardeclvar_parser Id id list
-| _ ->  vardecltype_parser list;;
 
-let vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
-| Error e, faillist -> Succes (List.rev vardecl_list),list
-| Succes vardecl, list ->  vardecl_list_parser_till_ERROR  (vardecl::vardecl_list) list;;
+let vardecl_rest_parser typetoken = function
+	| IDtok id::EQ::list -> (match exp_parser list with
+		| Success exp, SEMICOLON::list -> Success (Vardecl (typetoken, Id id, exp)), list
+		| Success _, list -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list 
+		| Error e, list -> Error e, list)
+	| IDtok id::list -> Error ("Geen =, maar " ^ token_list_to_string list), list
+	| list -> Error ("Geen id, maar " ^ token_list_to_string list), list
+
+let vardecl_parser = function
+  | VAR::list -> vardecl_rest_parser None list
+  | list -> (match type_parser list with
+		| Success type1, list -> vardecl_rest_parser (Some type1) list
+		| Error e, list -> Error e, list);;
+
+
+let rec vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
+| Error e, faillist -> Success (List.rev vardecl_list), list
+| Success vardecl, list ->  vardecl_list_parser_till_ERROR  (vardecl::vardecl_list) list;;
 
 let rec stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with
 | CLOSE_ACO::list -> Success (List.rev stmt_list),list

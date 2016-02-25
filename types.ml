@@ -30,7 +30,7 @@ type typetoken =  Basictype of basictype
 	| Type_id of id
 type rettype = Rettype of typetoken | Type_void
 type funtype = Funtype of typetoken list * rettype
-type vardecl = Vardecl_var of id * exp | Vardecl_type of typetoken * id * exp 
+type vardecl = Vardecl of typetoken option * id * exp 
 type fundecl = Fundecl of id * fargs * funtype option * vardecl list * stmt list
 type decl = Decl_var of vardecl | Decl_fun of fundecl
 type spl = SPL of decl list;;
