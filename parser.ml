@@ -8,7 +8,7 @@ let rec parse_field field_list = function
 	| list -> Field (List.rev field_list);;
 
 let is_op1 c =
-	c == '!' || c == '-';;
+	c == ['!'] || c == ['-'];;
 
 let rec parse_exp = function
 	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
@@ -16,15 +16,10 @@ let rec parse_exp = function
 	| FALSE::list -> Success (Exp_bool false), list
 	| TRUE::list -> Success (Exp_bool true), list
 	| OPEN_BRACK::CLOSE_BRACK::list -> Success (Exp_emptylist), list
-	| (IDtok id)::list -> (match list with
-		| OPEN_PAR::list -> (let rec parse_funcall arg_list = function
-			| CLOSE_PAR::list -> (List.rev arg_list), list
-			| COMMA::list -> parse_funcall arg_list list
-			| list -> (match (parse_exp list) with
-				| Success exp, list -> parse_funcall (exp::arg_list) list
-				| Error e, list -> [], list) (* Hoe gaan we dit oplossen? *)
-			in Success (Exp_function_call ((Id id), (parse_funcall [] list))), list) 
-		|	list -> Success (Exp_field (Id id, parse_field [] list)), list)
+	| (IDtok id)::OPEN_PAR::list -> (match parse_funcall [] list with
+			| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
+			| Error e, list -> Error e, list)
+	|	(IDtok id)::list -> Success (Exp_field (Id id, parse_field [] list)), list
 	| OPEN_PAR::list -> (match (parse_exp list) with
 		| Success exp1, COMMA::list -> (match (parse_exp list) with
 			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
@@ -32,36 +27,16 @@ let rec parse_exp = function
 		| Success exp, CLOSE_PAR::list -> Success (Exp_parentheses exp), list
 		| Error e, list -> Error e, list)
 	| (Optok c)::list when (is_op1 c) -> (match (parse_exp list) with
-		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
+		| Success exp, list ->  Success (Exp_prefix ((Op1 (List.hd c)), exp)), list
+		| Error e, list -> Error e, list)
+and
+parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
+	| CLOSE_PAR::list -> Success (List.rev arg_list), list
+	| COMMA::list -> parse_funcall arg_list list
+	| list -> (match (parse_exp list) with
+		| Success exp, list -> parse_funcall (exp::arg_list) list
 		| Error e, list -> Error e, list)
 (* Nu nog "exp op2 exp" *)
-
-
-let rec exp_parser list = 
-  let rec basicexp_parser list = match list with
-  | IDtok id::Fieldtoken field::list -> (Exp_field (Id id,Field [field]),list) (*fixen dat het meerdere fieldtokens kan hebben*)
-  | Optok ['-']::Inttok int::list -> (Exp_int (Inttoken ('-'::int)), list)
-  | Inttok int::list -> (Exp_int (Inttoken int), list)
-  | Optok [op1]::list when op1 == '!' || op1 == '-' -> (match basicexp_parser list with
-  	| (exp, list) -> (Exp_prefix (Op1 op1, exp), list))
-  | (IDtok [c])::list -> (Exp_char c, list)
-  | FALSE::list -> (Exp_bool false, list)
-  | TRUE::list -> (Exp_bool true, list)
-  | EMPTYLIST::list -> (Exp_emptylist, list) in
-match list with
-| IDtok id::OPEN_PAR::CLOSE_PAR::list -> (Exp_function_call (Id id,[]),list)
-| IDtok id::OPEN_PAR::list -> (match exp_parser list with
-	| (exp,CLOSE_PAR::list) -> (Exp_function_call (Id id,[exp]),list)
-	| (exp,COMMA::list) -> (match exp_parser (IDtok id::OPEN_PAR::list) with
-		| (Exp_function_call(id,explist),newlist) -> (Exp_function_call(id,exp::explist),newlist)))
-| OPEN_PAR::list -> (match exp_parser list with
-	| (exp,CLOSE_PAR::list) -> (Exp_parentheses exp, list)
-	| (exp1,COMMA::list1) -> (match exp_parser list1 with
-		| (exp2,CLOSE_PAR::list2) -> (Exp_tuple(exp1,exp2),list)))
-| _ -> (match basicexp_parser list with
-	|  (exp1,Optok op2::list) -> (match exp_parser list with
-		| (exp2,list) -> (Exp_infix (exp1,Op2 op2,exp2),list))
-	| x -> x);;
 
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
@@ -89,10 +64,20 @@ let rec fargs_parser_till_CLOSE_PAR id_list = function
 | x::list -> Error ("Geen sluithaak of komma, maar " ^ token_to_string x), list
 
 
-let funtype_parser type_list list = match list with
-| ARROW::list	-> (match rettype_parser with 
-	| rettype, list -> (Funtype ((List.rev type_list),rettype)),list)
-| x -> (match type_parser x with (type1, list) -> funtype_parser (type1::type_list) list);;
+
+let rettype_parser list = match list with
+	| VOID::list -> Success Type_void, list
+	| list -> (match type_parser list with
+		| Success type1, list -> Success (Rettype type1), list
+		| Error e, list -> Error e, list);;
+
+let rec funtype_parser type_list list = match list with
+  | ARROW::list	-> (match rettype_parser list with 
+  	| Success rettype, list -> Success (Funtype ((List.rev type_list),rettype)), list
+  	| Error e, list -> Error e, list)
+  | x -> (match type_parser x with
+  	| Success type1, list -> funtype_parser (type1::type_list) list
+		| Error e, list -> Error e, list);;
 
 let vardecl_parser list = match list with
 | VAR::IDtok id::EQ::list -> vardeclvar_parser id list
