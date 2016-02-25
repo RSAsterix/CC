@@ -109,28 +109,31 @@ stmt_parser list = match list with
 		| Success if_stmts, ELSE::OPEN_ACO::list -> 
 			(match stmt_list_parser_till_CLOSE_ACO [] list with
 			| Error e, faillist -> Error e, faillist
-			| Success else_stmts, lastlist -> Success (Stmt_if_else ((exp,if_stmts,else_stmts)::stmt_list)), lastlist)
-		| Success if_stmts, lastlist -> Success (Stmt_if ((exp,if_stmts)::stmt_list)), lastlist))
+			| Success else_stmts, lastlist -> Success (Stmt_if_else (exp,if_stmts,else_stmts)), lastlist)
+		| Success if_stmts, lastlist -> Success (Stmt_if (exp,if_stmts)), lastlist)
+	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)
 | WHILE::OPEN_PAR::list ->
 	(match exp_parser list with
 	| Error e, faillist -> Error e, faillist
 	| Success exp, CLOSE_PAR::OPEN_ACO::list ->
 		(match stmt_list_parser_till_CLOSE_ACO [] list with
 		| Error e, faillist -> Error e, faillist
-		| Success while_stmts, lastlist -> Success (Stmt_while((exp,while_stmts)::stmt_list)), lastlist))
-| RETURN::SEMICOLON::lastlist -> Success (Stmt_return((None)::stmt_list)), lastlist
+		| Success while_stmts, lastlist -> Success (Stmt_while(exp,while_stmts)), lastlist)
+	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)
+| RETURN::SEMICOLON::lastlist -> Success (Stmt_return(None)), lastlist
 | RETURN::list ->
 	(match exp_parser list with
 	| Error e, faillist -> Error e, faillist
-	| Success exp, SEMICOLON::lastlist -> Success (Stmt_return((exp)::stmt_list)), lastlist)
+	| Success exp, SEMICOLON::lastlist -> Success (Stmt_return(Some(exp))), lastlist)
 | (IDtok id)::OPEN_PAR::list -> 
 	(match parse_funcall [] list with
 	| Error e, faillist -> Error e, faillist
-	| Success exp_list, lastlist -> Success (Stmt_function_call(id,exp_list)), lastlist)
-| (IDtok id)::(Fieldtoken field)::EQUAL::list ->
+	| Success exp_list, lastlist -> Success (Stmt_function_call(Id id,exp_list)), lastlist)
+| (IDtok id)::list
+(Fieldtoken field)::EQ::list ->
 	(match exp_parser list with
 	| Error e, faillist -> Error e, faillist
-	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (id,field,exp)), lastlist
+	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (Id id,field,exp)), lastlist
 	| Success exp, lastlist -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list)
 | list -> Error ("Geen statement, maar " ^ token_list_to_string list), list;;
 
