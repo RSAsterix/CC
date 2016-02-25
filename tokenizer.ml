@@ -40,21 +40,21 @@ let rec scan_line = function
 	| '-'::'>'::line -> ARROW::(scan_line line)
 	| '['::']'::line -> EMPTYLIST::(scan_line line)
 	| '.'::line -> PERIOD::(scan_line line)
-	| '+'::line -> Optok(['+'])::(scan_line line)
-	| '-'::line -> Optok(['-'])::(scan_line line)
-	| '*'::line -> Optok(['*'])::(scan_line line)
-	| '/'::line -> Optok(['/'])::(scan_line line)
-	| '%'::line -> Optok(['%'])::(scan_line line)
-	| '='::'='::line -> Optok(['=';'='])::(scan_line line)
-	| '<'::'='::line -> Optok(['<';'='])::(scan_line line)
-	| '>'::'='::line -> Optok(['>';'='])::(scan_line line)
-	| '!'::'='::line -> Optok(['!';'='])::(scan_line line)
-	| '&'::'&'::line -> Optok(['&';'&'])::(scan_line line)
-	| '|'::'|'::line -> Optok(['|';'|'])::(scan_line line)
-	| ':'::line -> Optok([':'])::(scan_line line)
-	| '!'::line -> Optok(['!'])::(scan_line line)
-	| '<'::line -> Optok(['<'])::(scan_line line)
-	| '>'::line -> Optok(['>'])::(scan_line line)
+	| '+'::line -> Optok "+"::(scan_line line)
+	| '-'::line -> Optok "-"::(scan_line line)
+	| '*'::line -> Optok "*"::(scan_line line)
+	| '/'::line -> Optok "/"::(scan_line line)
+	| '%'::line -> Optok "%"::(scan_line line)
+	| '='::'='::line -> Optok "=="::(scan_line line)
+	| '<'::'='::line -> Optok "<="::(scan_line line)
+	| '>'::'='::line -> Optok ">="::(scan_line line)
+	| '!'::'='::line -> Optok "!="::(scan_line line)
+	| '&'::'&'::line -> Optok "&&"::(scan_line line)
+	| '|'::'|'::line -> Optok "||"::(scan_line line)
+	| ':'::line -> Optok ":"::(scan_line line)
+	| '!'::line -> Optok "!"::(scan_line line)
+	| '<'::line -> Optok "<"::(scan_line line)
+	| '>'::line -> Optok ">"::(scan_line line)
 	| '='::line -> EQ::(scan_line line) 
 	| ';'::line -> SEMICOLON::(scan_line line)
 	| '('::line -> OPEN_PAR::(scan_line line)
@@ -101,7 +101,7 @@ let token_to_string t = match t with
 	| Fieldtoken Tl -> "tl"
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
-	| Optok a -> implode a
+	| Optok a -> a
 	| Inttok a -> implode a
 	| IDtok a -> implode a
 	| Chartok a -> Char.escaped a;;
