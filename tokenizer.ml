@@ -1,5 +1,7 @@
 open Char_func
 open Types
+open List
+
 
 let rec get_number number line = match line with
 		| char::restline -> 
@@ -61,7 +63,6 @@ let rec scan_line = function
 	| ','::line -> COMMA::(scan_line line)
 	| '['::line -> OPEN_BRACK::(scan_line line)
 	| ']'::line -> CLOSE_BRACK::(scan_line line)
-	| '\''::c::'\''::line -> (Chartok c)::(scan_line line) (* inlezen van char op deze manier *)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
       	else if is_letter char then (get_name [] (char::line))
@@ -105,3 +106,4 @@ let token_to_string t = match t with
 let rec token_list_to_string list = match list with
 	| [] -> "" 
 	| t::list -> (token_to_string t) ^ (token_list_to_string list);;
+

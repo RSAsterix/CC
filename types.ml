@@ -33,9 +33,11 @@ type funtype = Funtype of typetoken list * rettype
 type vardecl = Vardecl_var of id * exp | Vardecl_type of typetoken * id * exp 
 type fundecl = Fundecl of id * fargs * funtype option * vardecl list * stmt list
 type decl = Decl_var of vardecl | Decl_fun of fundecl
-type spl = SPL of decl list
+type spl = SPL of decl list;;
 
-type 'a result = Error of string | Success of 'a;;
+type 'a result = Error of string | Succes of 'a
+
+let henk = Succes (2,3)
 
 type token = 
 	| VAR
@@ -56,5 +58,4 @@ type token =
 	| Fieldtoken of fieldtoken
 	| Optok of char list
 	| Inttok of char list
-	| Chartok of char
 	| IDtok of char list
