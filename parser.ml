@@ -30,7 +30,7 @@ let rec exp_parser = function
 		(match exp_and list with
     | Success exp1, (Optok c)::list when (is_op_or c) -> 
 			(match exp_parser list with
-			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
 		| x -> x) (* Return either the same success, or the same error *)
 and
@@ -39,7 +39,7 @@ exp_and = function
 		(match exp_eq list with
     | Success exp1, (Optok c)::list when (is_op_and c) -> 
 			(match exp_and list with
-			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
 		| x -> x)
 and
@@ -48,7 +48,7 @@ exp_eq = function
 		(match exp_plus list with
     | Success exp1, (Optok c)::list when (is_op_eq c) -> 
 			(match exp_eq list with
-			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
 		| x -> x)
 and
@@ -57,7 +57,7 @@ exp_plus = function
 		(match exp_times list with
     | Success exp1, (Optok c)::list when (is_op_plus c) -> 
 			(match exp_plus list with
-			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
 		| x -> x)
 and
@@ -66,7 +66,7 @@ exp_times = function
 		(match exp_strongest list with
     | Success exp1, (Optok c)::list when (is_op_times c) -> 
 			(match exp_times list with
-			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
 		| x -> x)
 and
@@ -165,50 +165,50 @@ let rec vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser 
   | Error e, faillist -> Success (List.rev vardecl_list), list
   | Success vardecl, list ->  vardecl_list_parser_till_ERROR  (vardecl::vardecl_list) list;;
 
-let rec stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with
-  | CLOSE_ACO::list -> Success (List.rev stmt_list),list
-  | list -> 
-  	(match stmt_parser list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success stmt, list -> stmt_list_parser_till_CLOSE_ACO (stmt::stmt_list) list)
-and 
-stmt_parser list = match list with
-  | IF::OPEN_PAR::list -> 
-  	(match exp_parser list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success exp, CLOSE_PAR::OPEN_ACO::list -> 
-  		(match stmt_list_parser_till_CLOSE_ACO [] list with
-  		| Error e, faillist -> Error e, faillist
-  		| Success if_stmts, ELSE::OPEN_ACO::list -> 
-  			(match stmt_list_parser_till_CLOSE_ACO [] list with
-  			| Error e, faillist -> Error e, faillist
-  			| Success else_stmts, lastlist -> Success (Stmt_if_else (exp,if_stmts,else_stmts)), lastlist)
-  		| Success if_stmts, lastlist -> Success (Stmt_if (exp,if_stmts)), lastlist)
-  	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)
-  | WHILE::OPEN_PAR::list ->
-  	(match exp_parser list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success exp, CLOSE_PAR::OPEN_ACO::list ->
-  		(match stmt_list_parser_till_CLOSE_ACO [] list with
-  		| Error e, faillist -> Error e, faillist
-  		| Success while_stmts, lastlist -> Success (Stmt_while(exp,while_stmts)), lastlist)
-  	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)
-  | RETURN::SEMICOLON::lastlist -> Success (Stmt_return(None)), lastlist
-  | RETURN::list ->
-  	(match exp_parser list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success exp, SEMICOLON::lastlist -> Success (Stmt_return(Some(exp))), lastlist)
-  | (IDtok id)::OPEN_PAR::list -> 
-  	(match parse_funcall [] list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success exp_list, lastlist -> Success (Stmt_function_call(Id id,exp_list)), lastlist)
-  | (IDtok id)::list
-  (Fieldtoken field)::EQ::list ->
-  	(match exp_parser list with
-  	| Error e, faillist -> Error e, faillist
-  	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (Id id,field,exp)), lastlist
-  	| Success exp, lastlist -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list)
-  | list -> Error ("Geen statement, maar " ^ token_list_to_string list), list;;
+(* let rec stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with                              *)
+(*   | CLOSE_ACO::list -> Success (List.rev stmt_list),list                                              *)
+(*   | list ->                                                                                           *)
+(*   	(match stmt_parser list with                                                                      *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success stmt, list -> stmt_list_parser_till_CLOSE_ACO (stmt::stmt_list) list)                   *)
+(* and                                                                                                   *)
+(* stmt_parser list = match list with                                                                    *)
+(*   | IF::OPEN_PAR::list ->                                                                             *)
+(*   	(match exp_parser list with                                                                       *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success exp, CLOSE_PAR::OPEN_ACO::list ->                                                       *)
+(*   		(match stmt_list_parser_till_CLOSE_ACO [] list with                                             *)
+(*   		| Error e, faillist -> Error e, faillist                                                        *)
+(*   		| Success if_stmts, ELSE::OPEN_ACO::list ->                                                     *)
+(*   			(match stmt_list_parser_till_CLOSE_ACO [] list with                                           *)
+(*   			| Error e, faillist -> Error e, faillist                                                      *)
+(*   			| Success else_stmts, lastlist -> Success (Stmt_if_else (exp,if_stmts,else_stmts)), lastlist) *)
+(*   		| Success if_stmts, lastlist -> Success (Stmt_if (exp,if_stmts)), lastlist)                     *)
+(*   	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)       *)
+(*   | WHILE::OPEN_PAR::list ->                                                                          *)
+(*   	(match exp_parser list with                                                                       *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success exp, CLOSE_PAR::OPEN_ACO::list ->                                                       *)
+(*   		(match stmt_list_parser_till_CLOSE_ACO [] list with                                             *)
+(*   		| Error e, faillist -> Error e, faillist                                                        *)
+(*   		| Success while_stmts, lastlist -> Success (Stmt_while(exp,while_stmts)), lastlist)             *)
+(*   	| Success exp, list -> Error ("Geen sluithaakje, maar " ^ token_list_to_string list), list)       *)
+(*   | RETURN::SEMICOLON::lastlist -> Success (Stmt_return(None)), lastlist                              *)
+(*   | RETURN::list ->                                                                                   *)
+(*   	(match exp_parser list with                                                                       *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success exp, SEMICOLON::lastlist -> Success (Stmt_return(Some(exp))), lastlist)                 *)
+(*   | (IDtok id)::OPEN_PAR::list ->                                                                     *)
+(*   	(match parse_funcall [] list with                                                                 *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success exp_list, lastlist -> Success (Stmt_function_call(Id id,exp_list)), lastlist)           *)
+(*   | (IDtok id)::list                                                                                  *)
+(*   (Fieldtoken field)::EQ::list ->                                                                     *)
+(*   	(match exp_parser list with                                                                       *)
+(*   	| Error e, faillist -> Error e, faillist                                                          *)
+(*   	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (Id id,field,exp)), lastlist           *)
+(*   	| Success exp, lastlist -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list)     *)
+(*   | list -> Error ("Geen statement, maar " ^ token_list_to_string list), list;;                       *)
 
 let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
   | Error e, faillist -> Error e, faillist
@@ -236,8 +236,8 @@ let rec spl_parser decllist tokenlist =
 	| IDtok id::OPEN_PAR::list -> fundecl_parser ID id list
 	| _ -> vardecltype_parser list in
   match decl_parser tokenlist with
-  | (Succes decls,[]) -> Succes (SPL (List.rev (decls::decllist)))
-  | (Succes decls,restlist)  -> spl_parser (decls::decllist) restlist
+  | (Success decls,[]) -> Success (SPL (List.rev (decls::decllist)))
+  | (Success decls,restlist)  -> spl_parser (decls::decllist) restlist
   | Error e, faillist -> Error e;;
 
 let structure = 
