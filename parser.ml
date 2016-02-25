@@ -8,7 +8,22 @@ let rec parse_field field_list = function
 	| list -> Field (List.rev field_list);;
 
 let is_op1 c =
-	c == ['!'] || c == ['-'];;
+	c == "!" || c == "-";;
+
+let is_op_or c =
+	c == "||";;
+
+let is_op_and c =
+	c == "&&";;
+
+let is_op_eq c =
+	c == "==" || c == ">=" || c == "<=" || c == "!=";;
+
+let is_op_plus c =
+	c == "+" || c == "-";;
+
+let is_op_times c =
+	c == "*" || c == "/";;
 
 let rec exp_parser = function
 	| list -> (match exp_and list with
@@ -62,7 +77,7 @@ exp_strongest = function
 		| Success exp, CLOSE_PAR::list -> Success (Exp_parentheses exp), list
 		| Error e, list -> Error e, list)
 	| (Optok c)::list when (is_op1 c) -> (match (exp_parser list) with
-		| Success exp, list ->  Success (Exp_prefix ((Op1 (List.hd c)), exp)), list
+		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
 		| Error e, list -> Error e, list)
 	| [] -> Error "Empty expression?", []
 and
