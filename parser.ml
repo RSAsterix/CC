@@ -17,7 +17,7 @@ let is_op_and c =
 	c == "&&";;
 
 let is_op_eq c =
-	c == "==" || c == ">=" || c == "<=" || c == "!=";;
+	c == "==" || c == ">=" || c == "<=" || c == "!=" || c == "<" || c == ">";;
 
 let is_op_plus c =
 	c == "+" || c == "-";;
@@ -88,14 +88,16 @@ exp_strongest = function
 		| Success exp1, COMMA::list -> 
 			(match (exp_parser list) with
 			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
+			| Success _, list -> Error ("(exp_strongest) No closing parenthesis after comma, but: " ^ token_list_to_string list), list
 			| Error e, list -> Error e, list)
-		| Success exp, CLOSE_PAR::list -> Success (Exp_parentheses exp), list
+		| Success exp, CLOSE_PAR::list -> Success exp, list (* Haakjes weglaten in AST*)
+		| Success _, list -> Error ("(exp_strongest) No closing parenthesis, but: " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
 	| (Optok c)::list when (is_op1 c) -> 
 		(match (exp_parser list) with
 		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
 		| Error e, list -> Error e, list)
-	| [] -> Error "Empty expression?", []
+	| list -> Error ("Empty expression or unexpected token: " ^ token_list_to_string list), list
 and
 parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
 	| CLOSE_PAR::list -> Success (List.rev arg_list), list
@@ -256,10 +258,6 @@ let rec spl_parser decllist tokenlist =
   | Success decls,[] -> Success (SPL (List.rev (decls::decllist)))
   | Success decls,restlist  -> spl_parser (decls::decllist) restlist
   | Error e, faillist -> Error e;;
-
-
-(* let structure =             *)
-(* 	spl_parser [] tokenlist;; *)
 
 (*overal goede errors toevoegen*)
 (*overal success toevoegen*)
