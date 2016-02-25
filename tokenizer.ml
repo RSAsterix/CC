@@ -63,12 +63,13 @@ let rec scan_line = function
 	| ','::line -> COMMA::(scan_line line)
 	| '['::line -> OPEN_BRACK::(scan_line line)
 	| ']'::line -> CLOSE_BRACK::(scan_line line)
+	| '\''::c::'\''::line -> (Chartok c)::(scan_line line)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
       	else if is_letter char then (get_name [] (char::line))
       	else (None, line)) with
     		| None,line -> scan_line line
-    		| Some s, line -> s::(scan_line line)
+    		| Some s, line -> s::(scan_line line);;
 
 let token_to_string t = match t with
 	| VAR -> "var"
@@ -101,7 +102,8 @@ let token_to_string t = match t with
 	| Fieldtoken Snd -> "snd"
 	| Optok a -> implode a
 	| Inttok a -> implode a
-	| IDtok a -> implode a;;
+	| IDtok a -> implode a
+	| Chartok a -> Char.escaped a;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
