@@ -79,11 +79,15 @@ let rec type_parser = function
 		| Error e, list -> Error e, list);;
 
 let vardeclvar_parser id list = match exp_parser list with
-| (exp,SEMICOLON::restlist) -> (Decl_var (Vardecl_var (id, exp)) ,restlist);;
+| (Succes exp,SEMICOLON::restlist) -> (Succes (Decl_var (Vardecl_var (id, exp))) ,restlist)
+| Error e, faillist -> Error e, faillist;;
 
-let rec fargs_parser id_list = function
-| CLOSE_PAR::list	-> (Fargs (List.rev id_list)),list
-| (IDtok id)::list -> fargs_parser ((Id id)::id_list) list;;
+let rec fargs_parser_till_CLOSE_PAR id_list = function
+| CLOSE_PAR::list	-> Succes (Fargs (List.rev id_list)),list
+| (IDtok id)::CLOSE_PAR::list	-> Succes (Fargs (List.rev ((Id id)::id_list))),list
+| (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
+| x::list -> Error ("Geen sluithaak of komma, maar " ^ token_to_string x), list
+
 
 let funtype_parser type_list list = match list with
 | ARROW::list	-> (match rettype_parser with 
@@ -94,14 +98,15 @@ let vardecl_parser list = match list with
 | VAR::IDtok id::EQ::list -> vardeclvar_parser id list
 | _ ->  vardecltype_parser list;;
 
-let vardecl_list_parser vardecl_list list = match vardecl_parser list with
-| Error e, faillist -> (List.rev vardecl_list),list
-| Succes vardecl, list ->  vardecl_list_parser  (vardecl::vardecl_list) list;;
+let vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
+| Error e, faillist -> Succes (List.rev vardecl_list),list
+| Succes vardecl, list ->  vardecl_list_parser_till_ERROR  (vardecl::vardecl_list) list;;
 
-let stmt_list_parser stmt_list list = match list with
-| CLOSE_ACO::list -> (List.rev stmt_list),list
+let stmt_list_parser_till_CLOSE_ACO stmt_list list = match list with
+| CLOSE_ACO::list -> Succes (List.rev stmt_list),list
 | IF::OPEN_PAR::list -> 
 	match exp_parser list with
+	| Error e, faillist -> faillist
 	| exp, CLOSE_PAR::OPEN_ACO::list -> 
 		match stmt_list_parser [] list with
 		| if_stmts, ELSE::list -> 
@@ -120,20 +125,21 @@ let stmt_list_parser stmt_list list = match list with
 (*stmt_function_call*)
 (*stmt_define*)
 
-(* let fundecl_parser id list = match fargs_parser [] list with                                   *)
-(* | fargs, OPEN_ACO::list ->                                                                     *)
-(* 	(match vardecl_list_parser with                                                              *)
-(* 	| vardecl_list, list ->                                                                      *)
-(* 		(match stmt_list_parser with                                                               *)
-(* 		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))                  *)
-(* | fargs,DDPOINT::list ->                                                                       *)
-(* 	 (match funtype_parser list with                                                             *)
-(* 	| funtype, OPEN_ACO::list ->                                                                 *)
-(* 		 (match vardecl_list_parser with                                                           *)
-(* 		| vardecl_list, list ->                                                                    *)
-(* 			(match stmt_list_parser with                                                             *)
-(* 			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist *)
-(* 			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;     *)
+let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
+| Error e, faillist -> Error e, faillist
+| Succes fargs, OPEN_ACO::list ->
+	(match vardecl_list_parser_till_ERROR with
+	| vardecl_list, list ->
+		(match stmt_list_parser_till_CLOSE_ACO with
+		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))
+| fargs,DDPOINT::list ->
+	 (match funtype_parser list with
+	| funtype, OPEN_ACO::list ->
+		 (match vardecl_list_parser with
+		| vardecl_list, list ->
+			(match stmt_list_parser with
+			| [], x::lastlist -> Error "geen statement, maar " ^ token_list_to_string [x]), lastlist
+			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;
 
 let rec spl_parser decllist tokenlist = 
 	let decl_parser tokenlist = match tokenlist with
@@ -141,12 +147,13 @@ let rec spl_parser decllist tokenlist =
 	| IDtok id::OPEN_PAR::list -> fundecl_parser ID id list
 	| _ -> vardecltype_parser list in
 match decl_parser tokenlist with
-| (decls,[]) -> List.rev (decls::decllist)
-| (decls,restlist)  -> spl_parser (decls::decllist) restlist;;
+| (Succes decls,[]) -> Succes (SPL (List.rev (decls::decllist)))
+| (Succes decls,restlist)  -> spl_parser (decls::decllist) restlist
+| Error e, faillist -> Error e;;
 
-
-let structure = SPL (spl_parser [] tokenlist);;
+let structure = spl_parser [] tokenlist;;
 
 (*chartok moet gemaakt worden*)
 (*overal goede errors toevoegen*)
 (*overal succes toevoegen*)
+(*vardecltype_parser*)
