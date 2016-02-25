@@ -144,8 +144,8 @@ let rec funtype_parser type_list = function
 		(match rettype_parser list with 
   	| Success rettype, list -> Success (Funtype ((List.rev type_list),rettype)), list
   	| Error e, list -> Error e, list)
-  | x -> 
-		(match type_parser x with
+  | list -> 
+		(match type_parser list with
   	| Success type1, list -> funtype_parser (type1::type_list) list
 		| Error e, list -> Error e, list);;
 
@@ -164,7 +164,6 @@ let vardecl_parser = function
 		(match type_parser list with
 		| Success type1, list -> vardecl_rest_parser (Some type1) list
 		| Error e, list -> Error e, list);;
-
 
 let rec vardecl_list_parser_till_ERROR vardecl_list list = match vardecl_parser list with
   | Error e, faillist -> Success (List.rev vardecl_list), list
