@@ -8,40 +8,42 @@ let rec parse_field field_list = function
 	| list -> Field (List.rev field_list), list;;
 
 let is_op1 c =
-	c == "!" || c == "-";;
+	c = "!" || c = "-";;
 
-let is_op_or c =
-	c == "||";;
+let is_op_colon c =
+	c = ":";;
 
-let is_op_and c =
-	c == "&&";;
+let is_op_logical c =
+	c = "||" || c = "&&";;
 
 let is_op_eq c =
-	c == "==" || c == ">=" || c == "<=" || c == "!=" || c == "<" || c == ">";;
+	c = "==" || c = ">=" || c = "<=" || c = "!=" || c = "<" || c = ">";;
 
 let is_op_plus c =
-	c == "+" || c == "-";;
+	c = "+" || c = "-";;
 
 let is_op_times c =
-	c == "*" || c == "/";;
+	c = "*" || c = "/";;
 
 let rec exp_parser = function
 	| list -> 
-		(match exp_and list with
-    | Success exp1, (Optok c)::list when (is_op_or c) -> 
+		(match exp_logical list with
+    | Success exp1, (Optok c)::list when (is_op_colon c) -> 
 			(match exp_parser list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
-		| x -> x) (* Return either the same success, or the same error *)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
 and
-exp_and = function
+exp_logical = function
 	| list -> 
 		(match exp_eq list with
-    | Success exp1, (Optok c)::list when (is_op_and c) -> 
-			(match exp_and list with
+    | Success exp1, (Optok c)::list when (is_op_logical c) -> 
+			(match exp_logical list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
-		| x -> x)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
 and
 exp_eq = function
 	| list -> 
@@ -50,7 +52,8 @@ exp_eq = function
 			(match exp_eq list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
-		| x -> x)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
 and
 exp_plus = function
 	| list -> 
@@ -59,7 +62,8 @@ exp_plus = function
 			(match exp_plus list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
-		| x -> x)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
 and
 exp_times = function
 	| list -> 
@@ -68,7 +72,8 @@ exp_times = function
 			(match exp_times list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
-		| x -> x)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
 and
 exp_strongest = function
 	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
