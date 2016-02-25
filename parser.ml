@@ -87,10 +87,19 @@ let rec fargs_parser id_list = function
 | CLOSE_PAR::list	-> (Fargs (List.rev id_list)),list
 | (IDtok id)::list -> fargs_parser ((Id id)::id_list) list;;
 
-let funtype_parser type_list list = match list with
-| ARROW::list	-> (match rettype_parser with 
-	| rettype, list -> (Funtype ((List.rev type_list),rettype)),list)
-| x -> (match type_parser x with (type1, list) -> funtype_parser (type1::type_list) list);;
+let rettype_parser list = match list with
+	| VOID::list -> Success Type_void, list
+	| list -> (match type_parser list with
+		| Success type1, list -> Success (Rettype type1), list
+		| Error e, list -> Error e, list);;
+
+let rec funtype_parser type_list list = match list with
+  | ARROW::list	-> (match rettype_parser list with 
+  	| Success rettype, list -> Success (Funtype ((List.rev type_list),rettype)), list
+  	| Error e, list -> Error e, list)
+  | x -> (match type_parser x with
+  	| Success type1, list -> funtype_parser (type1::type_list) list
+		| Error e, list -> Error e, list);;
 
 let vardecl_parser list = match list with
 | VAR::IDtok id::EQ::list -> vardeclvar_parser id list
