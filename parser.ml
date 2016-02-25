@@ -11,6 +11,41 @@ let is_op1 c =
 	c == ['!'] || c == ['-'];;
 
 let rec exp_parser = function
+	| list -> (match exp_and list with
+    | Success exp1, (Optok c)::list when (is_op_or c) -> (match exp_parser list with
+			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| x -> x) (* Return either the same success, or the same error *)
+and
+exp_and = function
+	| list -> (match exp_eq list with
+    | Success exp1, (Optok c)::list when (is_op_and c) -> (match exp_and list with
+			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| x -> x)
+and
+exp_eq = function
+	| list -> (match exp_plus list with
+    | Success exp1, (Optok c)::list when (is_op_eq c) -> (match exp_eq list with
+			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| x -> x)
+and
+exp_plus = function
+	| list -> (match exp_times list with
+    | Success exp1, (Optok c)::list when (is_op_plus c) -> (match exp_plus list with
+			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| x -> x)
+and
+exp_times = function
+	| list -> (match exp_strongest list with
+    | Success exp1, (Optok c)::list when (is_op_times c) -> (match exp_times list with
+			| Success exp2, list -> Succes (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| x -> x)
+and
+exp_strongest = function
 	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
 	| (Chartok c)::list -> Success (Exp_char c), list
 	| FALSE::list -> Success (Exp_bool false), list
@@ -29,6 +64,7 @@ let rec exp_parser = function
 	| (Optok c)::list when (is_op1 c) -> (match (exp_parser list) with
 		| Success exp, list ->  Success (Exp_prefix ((Op1 (List.hd c)), exp)), list
 		| Error e, list -> Error e, list)
+	| [] -> Error "Empty expression?", []
 and
 parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
 	| CLOSE_PAR::list -> Success (List.rev arg_list), list
@@ -36,7 +72,6 @@ parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
 	| list -> (match (exp_parser list) with
 		| Success exp, list -> parse_funcall (exp::arg_list) list
 		| Error e, list -> Error e, list)
-(* Nu nog "exp op2 exp" *)
 
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
