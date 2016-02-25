@@ -15,7 +15,7 @@ let rec get_name name line = match line with
 			else (Some (IDtok (List.rev name)),line)
 		| [] -> (Some (IDtok (List.rev name)),line)
 
-let match_next line = line == [] || (not(is_letter (hd line)) && not(is_digit (hd line)));;
+let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
 
 let rec scan_line = function
 	| [] -> []
@@ -98,12 +98,10 @@ let token_to_string t = match t with
 	| Fieldtoken Tl -> "tl"
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
-	| (* ... *)
+	| Optok a -> implode a
+	| Inttok a -> implode a
+	| IDtok a -> implode a;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
-	| t::list -> (token_to_string t) ^ (token_list_to_string list) 
-	
-	| Optok a::list -> "OP " ^ (implode a) ^ ", " ^ token_list_to_string(list)
-	| Inttok a::list -> "INTTOK " ^ (implode a) ^ ", " ^ token_list_to_string(list)
-	| IDtok a::list -> "ID " ^ (implode a) ^ ", " ^ token_list_to_string(list)
+	| t::list -> (token_to_string t) ^ (token_list_to_string list);;
