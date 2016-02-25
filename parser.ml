@@ -16,15 +16,10 @@ let rec parse_exp = function
 	| FALSE::list -> Success (Exp_bool false), list
 	| TRUE::list -> Success (Exp_bool true), list
 	| OPEN_BRACK::CLOSE_BRACK::list -> Success (Exp_emptylist), list
-	| (IDtok id)::list -> (match list with
-		| OPEN_PAR::list -> (let rec parse_funcall arg_list = function
-			| CLOSE_PAR::list -> (List.rev arg_list), list
-			| COMMA::list -> parse_funcall arg_list list
-			| list -> (match (parse_exp list) with
-				| Success exp, list -> parse_funcall (exp::arg_list) list
-				| Error e, list -> [], list) (* Hoe gaan we dit oplossen? *)
-			in Success (Exp_function_call ((Id id), (parse_funcall [] list))), list) 
-		|	list -> Success (Exp_field (Id id, parse_field [] list)), list)
+	| (IDtok id)::OPEN_PAR::list -> (match parse_funcall [] list with
+			| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
+			| Error e, list -> Error e, list)
+	|	(IDtok id)::list -> Success (Exp_field (Id id, parse_field [] list)), list
 	| OPEN_PAR::list -> (match (parse_exp list) with
 		| Success exp1, COMMA::list -> (match (parse_exp list) with
 			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
@@ -33,6 +28,13 @@ let rec parse_exp = function
 		| Error e, list -> Error e, list)
 	| (Optok c)::list when (is_op1 c) -> (match (parse_exp list) with
 		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
+		| Error e, list -> Error e, list)
+and
+parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
+	| CLOSE_PAR::list -> Success (List.rev arg_list), list
+	| COMMA::list -> parse_funcall arg_list list
+	| list -> (match (parse_exp list) with
+		| Success exp, list -> parse_funcall (exp::arg_list) list
 		| Error e, list -> Error e, list)
 (* Nu nog "exp op2 exp" *)
 
