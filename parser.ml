@@ -5,7 +5,8 @@ open Tokenizer
 (* Geen fieldtokens = lege lijst             *)
 let rec parse_field field_list = function
 	| PERIOD::(Fieldtoken t)::list -> parse_field (t::field_list) list
-	| list -> Field (List.rev field_list), list;;
+	| PERIOD::list -> Error ("(parse_field) No field detected! " ^ token_list_to_string list), list
+	| list -> Success (Field (List.rev field_list)), list;;
 
 let is_op1 c =
 	c = "!" || c = "-";;
@@ -87,7 +88,8 @@ exp_strongest = function
 		| Error e, list -> Error e, list)
 	|	(IDtok id)::list -> 
 		(match parse_field [] list with
-		|  fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list)
+		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
+		| Error e, list -> Error e, list)
 	| OPEN_PAR::list -> 
 		(match (exp_parser list) with
 		| Success exp1, COMMA::list -> 
@@ -181,10 +183,9 @@ let rec stmt_list_parser stmt_list = function
 	| list ->
 		(match stmt_parser list with
 		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
-		| Error e, list -> Error e, list)
+		| Error e, list -> Error ("(stmt_list_parser) " ^ e), list)
 and
 stmt_parser = function
-	(* 'if' '(' Exp ')' '{' Stmt* '}' [ 'else' '{' Stmt* '}' ] *)
   | IF::OPEN_PAR::list ->
   	(match exp_parser list with
 		| Success exp, CLOSE_PAR::OPEN_ACO::list ->
@@ -197,7 +198,6 @@ stmt_parser = function
 			| Error e, list -> Error e, list)
 		| Success _, list -> Error ("(stmt_parser) Unexpected token after expression: " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
-	(* 'while' '(' Exp ')' '{' Stmt* '}' *)
 	| WHILE::OPEN_PAR::list ->
 		(match exp_parser list with
 		| Success exp, CLOSE_PAR::OPEN_ACO::list ->
@@ -206,28 +206,26 @@ stmt_parser = function
 			| Error e, list -> Error e, list)
 		| Success _, list -> Error ("(stmt_parser) Unexpected token after expression: " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
-	(* 'return' [ Exp ] *)
 	| RETURN::SEMICOLON::list -> Success (Stmt_return(None)), list
 	| RETURN::list ->
 		(match exp_parser list with
 		| Success exp, SEMICOLON::list -> Success (Stmt_return(Some(exp))), list
 		| Success _, list -> Error ("No semicolon, but: " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
-	(* FunCall ';'*)
 	| (IDtok id)::OPEN_PAR::list -> 
   	(match parse_funcall [] list with
   	| Success exp_list, list -> Success (Stmt_function_call (Id id, exp_list)), list
 		| Error e, list -> Error e, list)
-	(* id Field '=' Exp ';' *)
 	| (IDtok id)::list ->
 		(match parse_field [] list with
-		| fieldlist, EQ::list -> 
+		| Success fieldlist, EQ::list -> 
     	(match exp_parser list with
-    	| Success exp, SEMICOLON::lastlist -> Success (Stmt_define (Id id, fieldlist, exp)), lastlist
+    	| Success exp, SEMICOLON::list -> Success (Stmt_define (Id id, fieldlist, exp)), list
     	| Success _, list -> Error ("(stmt_parser) No semicolon, but: " ^ token_list_to_string list), list
 			| Error e, list -> Error e, list)
-		| _, list -> Error ("(stmt_parser) No '=', but: " ^ token_list_to_string list), list)
-	| list -> Error ("(stmt_parser) Unexpected token: " ^ token_list_to_string list), list
+		| Success _, list -> Error ("(stmt_parser) No '=', but: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| list -> Error ("(stmt_parser) Unexpected token: " ^ token_list_to_string list), list;;
 
 let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
   | Error e, faillist -> Error e, faillist

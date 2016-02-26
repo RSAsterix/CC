@@ -74,21 +74,21 @@ let rec scan_line = function
 
 let token_to_string t = match t with
 	| VAR -> "var"
-	| EQ -> " = "
+	| EQ -> "= "
 	| SEMICOLON -> "; "
 	| OPEN_PAR -> "("
 	| CLOSE_PAR -> ")"
-	| DDPOINT -> " :: "
+	| DDPOINT -> ":: "
 	| OPEN_ACO -> "{"
 	| CLOSE_ACO -> "}"
 	| VOID -> "Void"
-	| ARROW -> " -> "
+	| ARROW -> "-> "
 	| COMMA -> ","
 	| OPEN_BRACK -> "["
 	| CLOSE_BRACK -> "]"
-	| Basictoken Type_int -> "Int"
-	| Basictoken Type_bool -> "Bool"
-	| Basictoken Type_char -> "Char"
+	| Basictoken Type_int -> "Int "
+	| Basictoken Type_bool -> "Bool "
+	| Basictoken Type_char -> "Char "
 	| IF -> "if "
 	| ELSE -> "else "
 	| WHILE -> "while "
@@ -102,11 +102,11 @@ let token_to_string t = match t with
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
 	| Optok a -> a
-	| Inttok a -> implode a
-	| IDtok a -> implode a
-	| Chartok a -> Char.escaped a;;
+	| Inttok a -> "(int:" ^ implode a ^ ")"
+	| IDtok a -> "(Id:" ^ implode a ^ ")"
+	| Chartok a -> implode ['\'';a;'\''] ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
-	| t::list -> (token_to_string t) ^", " ^ (token_list_to_string list);;
+	| t::list -> (token_to_string t) ^ (token_list_to_string list);;
 
