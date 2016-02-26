@@ -184,7 +184,13 @@ let rec stmt_list_parser stmt_list = function
 	| list ->
 		(match stmt_parser list with
 		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
-		| Error e, list -> print_string ("(" ^ "henk" ^ ")"); Error ("(stmt_list_parser) " ^ e), list)
+		| Error e, list -> 
+			print_string "(size of stmt_list: ";
+			print_int (List.length stmt_list);
+			print_string ", stmt_list: ";
+			print_stmt_list stmt_list;
+			print_endline ")";
+			Error ("(stmt_list_parser) " ^ e), list)
 and
 stmt_parser = function
   | IF::OPEN_PAR::list ->
