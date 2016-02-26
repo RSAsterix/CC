@@ -131,3 +131,11 @@ let rec print_typetoken = function
 		print_string "]";
 	| Type_id id ->
 		print_id id;;
+
+let print_rettype = function
+	| Type_void ->
+		print_string "return Void;";
+	| Rettype t ->
+		print_string "return ";
+		print_typetoken t;
+		print_string ";";;
