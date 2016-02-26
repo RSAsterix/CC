@@ -5,7 +5,7 @@
 		<item value="" key="ocamlbuildProjectLibs"/>
 		<item value="true" key="ocamlbuildGenerateTypeInfo"/>
 		<item value="" key="ocamlbuildProjectOtherFlags"/>
-		<item value="test.byte" key="ocamlbuildProjectTargets"/>
+		<item value="test.byte,test.d.byte" key="ocamlbuildProjectTargets"/>
 		<item value="" key="ocamlbuildProjectCompilerFlags"/>
 	</section>
 </section>
