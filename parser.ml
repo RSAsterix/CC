@@ -2,18 +2,11 @@ open Types
 open Tokenizer
 open Pretty_printer
 
-(* Levert een lijst met gevonden fieldtokens *)
-(* Geen fieldtokens = lege lijst             *)
-let rec parse_field field_list = function
-	| PERIOD::(Fieldtoken t)::list -> parse_field (t::field_list) list
-	| PERIOD::list -> Error ("(parse_field) No field detected! " ^ token_list_to_string list), list
-	| list -> Success (Field (List.rev field_list)), list;;
+let is_op_colon c =
+	c = ":";;
 
 let is_op1 c =
 	c = "!" || c = "-";;
-
-let is_op_colon c =
-	c = ":";;
 
 let is_op_logical c =
 	c = "||" || c = "&&";;
@@ -26,6 +19,13 @@ let is_op_plus c =
 
 let is_op_times c =
 	c = "*" || c = "/" || c = "%";;
+
+(* Levert een lijst met gevonden fieldtokens *)
+(* Geen fieldtokens = lege lijst             *)
+let rec parse_field field_list = function
+	| PERIOD::(Fieldtoken t)::list -> parse_field (t::field_list) list
+	| PERIOD::list -> Error ("(parse_field) No field detected! " ^ token_list_to_string list), list
+	| list -> Success (Field (List.rev field_list)), list;;
 
 let rec exp_parser = function
 	| list -> 
