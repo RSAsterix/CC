@@ -25,7 +25,7 @@ let is_op_plus c =
 	c = "+" || c = "-";;
 
 let is_op_times c =
-	c = "*" || c = "/";;
+	c = "*" || c = "/" || c = "%";;
 
 let rec exp_parser = function
 	| list -> 
@@ -176,7 +176,7 @@ let vardecl_parser = function
 let rec vardecl_list_parser vardecl_list = function
 	| list ->
 		(match vardecl_parser list with
-		| Error e, list -> Success (List.rev vardecl_list), list
+		| Error e, _ -> Success (List.rev vardecl_list), list
 		| Success vardecl, list -> vardecl_list_parser (vardecl::vardecl_list) list);; 
 
 let rec stmt_list_parser stmt_list = function
