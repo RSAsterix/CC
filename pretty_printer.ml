@@ -139,3 +139,12 @@ let print_rettype = function
 		print_string "return ";
 		print_typetoken t;
 		print_string ";";;
+
+let print_funtype = function
+	| Funtype ([], ret) ->
+		print_string "-> ";
+		print_rettype ret;
+	| Funtype (a::list, _) ->
+		print_typetoken a;
+		print_string " ";;
+		
