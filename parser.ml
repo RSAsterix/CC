@@ -217,7 +217,7 @@ stmt_parser = function
   	| Success exp_list, list -> Success (Stmt_function_call (Id id, exp_list)), list
 		| Error e, list -> Error e, list)
 	| (IDtok id)::list ->
-		(match parse_field [] list with
+		(match (parse_field [] list) with
 		| Success fieldlist, EQ::list -> 
     	(match exp_parser list with
     	| Success exp, SEMICOLON::list -> Success (Stmt_define (Id id, fieldlist, exp)), list
@@ -248,7 +248,7 @@ let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
         | Error e, faillist -> Error e, faillist
         | Success [], lastlist -> Error ("geen statement, maar " ^ token_list_to_string lastlist), lastlist
         | Success stmt_list, lastlist -> Success (Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list)),lastlist))
-		|Success funtype, list -> Error ("geen openhaakje, maar " ^ token_list_to_string list), list)
+		| Success funtype, list -> Error ("geen openhaakje, maar " ^ token_list_to_string list), list)
 	| Success fargs, list -> Error ("geen openhaakje of ::, maar " ^ token_list_to_string list), list;;
 
 let decl_parser = function
