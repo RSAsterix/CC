@@ -4,7 +4,7 @@ open Char_func
 let print_id = function
 	| Id id -> print_string (implode id);;
 
-let print_int = function
+let print_inttoken = function
 	| Inttoken [] -> ()
 	| Inttoken i -> print_string (implode i);;
 
@@ -13,6 +13,10 @@ let print_op1 = function
 
 let print_op2 = function
 	| Op2 o -> print_string o;;
+
+let print_bool = function
+	| true -> print_string "True";
+	| false -> print_string "False";;
 
 let rec print_fields = function
 	| Field [] -> ();
@@ -71,6 +75,26 @@ print_exp = function
 		print_exp exp1;
 		print_op2 op2;
 		print_exp exp2;
+	| Exp_prefix (op1, exp) ->
+		print_op1 op1;
+		print_exp exp;
+	| Exp_int int ->
+		print_inttoken int;
+	| Exp_char c ->
+		print_char c;
+	| Exp_bool b ->
+		print_bool b;
+	| Exp_function_call (id, exp_list) ->
+		print_id id;
+		print_exp_list exp_list;
+	| Exp_emptylist ->
+		print_string "[]"
+	| Exp_tuple (exp1, exp2) ->
+		print_string "(";
+		print_exp exp1;
+		print_string ",";
+		print_exp exp2;
+		print_string ")";
 and
 print_exp_list = function
 	| [] -> ();
