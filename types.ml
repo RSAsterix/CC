@@ -11,7 +11,6 @@ type exp =
 	| Exp_int of inttoken
 	| Exp_char of char
 	| Exp_bool of bool
-	| Exp_parentheses of exp
 	| Exp_function_call of id * exp list
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
