@@ -102,8 +102,8 @@ let token_to_string t = match t with
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
 	| Optok a -> a
-	| Inttok a -> "(int:" ^ implode a ^ ")"
-	| IDtok a -> "(Id:" ^ implode a ^ ")"
+	| Inttok a -> implode a
+	| IDtok a -> implode a
 	| Chartok a -> implode ['\'';a;'\''] ;;
 
 let rec token_list_to_string list = match list with

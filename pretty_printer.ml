@@ -155,3 +155,36 @@ let rec print_vardecl = function
 	| Vardecl (Some t, id, exp) ->
 		print_typetoken t;
 		print_vardecl (Vardecl (None, id, exp));;
+
+let rec print_vardecl_list = function
+	| [] -> ();
+	| x::list -> 
+		print_vardecl x;
+		print_vardecl_list list;;
+
+let print_funtype_option = function
+	| None -> ();
+	| Some ft ->
+		print_funtype ft;;
+
+let rec print_fundecl = function
+	| Fundecl (id, fargs, funtype, vardecl_list, stmt_list) ->
+		print_id id;
+		print_fargs fargs;
+		print_funtype_option funtype;
+		print_vardecl_list vardecl_list;
+		print_stmt_list stmt_list;;
+
+let print_decl = function
+	| Decl_var v -> 
+		print_vardecl v;
+	| Decl_fun f ->
+		print_fundecl f;;
+
+let rec print_spl = function
+	| SPL [] -> ();
+	| SPL (x::list) ->
+		print_decl x;
+		print_spl (SPL list);;	
+		
+		

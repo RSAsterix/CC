@@ -3,6 +3,7 @@ open Tokenizer
 open Parser
 open Char_func
 open Types
+open Pretty_printer
 
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
@@ -25,5 +26,5 @@ with End_of_file ->
 
 let structure = spl_parser [] !tokenlist;;
 match structure with
-| (Error e) -> print_endline e 
-| x -> print_endline "Succes!";;
+| Error e -> print_endline e 
+| Success x -> print_spl x;;
