@@ -35,11 +35,15 @@ let rec print_fields = function
 		shout ".snd"; 
 		print_fields (Field ls);;
 
-(* Is op1 zwakker dan op2? *)
-let weaker (Op2 op1) (Op2 op2) = true;; (* deze moet nog *)
+let op_map = function
+	| Op2 c when (is_op_colon c) -> 1
+	| Op2 c when (is_op_logical c) -> 2
+	| Op2 c when (is_op_eq c) -> 3
+	| Op2 c when (is_op_plus c) -> 4
+	| Op2 c when (is_op_times c) -> 5;;
 
-let rec isLower exp op = 	match exp with
-	| Exp_infix (e1, o, e2) -> (weaker o op);
+let isLower exp op = match exp with
+	| Exp_infix (e1, o, e2) -> (op_map o) < (op_map op);
 	| e -> false;;
 
 let rec print_exp = function
@@ -47,11 +51,15 @@ let rec print_exp = function
 		print_id id;
 		print_fields flds;
 	| Exp_infix (exp1, op2, exp2) -> (* associativiteit met haakjes? *)
-		(if (isLower exp1 op2) then (shout "("; print_exp exp1; shout ")";)else(print_exp exp1;));	
+		(if(isLower exp1 op2) 
+		then(shout "("; print_exp exp1; shout ")";)
+		else(print_exp exp1;));	
 		shout " ";
 		print_op2 op2;
 		shout " ";
-		(if (isLower exp2 op2) then (shout "("; print_exp exp2; shout ")";)else(print_exp exp2;));
+		(if(isLower exp2 op2)
+		then(shout "("; print_exp exp2; shout ")";)
+		else(print_exp exp2;));
 	| Exp_prefix (op1, exp) ->
 		print_op1 op1;
 		print_exp exp;
