@@ -108,4 +108,3 @@ let token_to_string t = match t with
 let rec token_list_to_string list = match list with
 	| [] -> "" 
 	| t::list -> (token_to_string t) ^ (token_list_to_string list);;
-

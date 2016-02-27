@@ -36,7 +36,6 @@ type spl = SPL of decl list;;
 
 type 'a result = Error of string | Success of 'a;;
 
-
 type token = 
 	| VAR
 	| EQ

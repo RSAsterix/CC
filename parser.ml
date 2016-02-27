@@ -1,24 +1,6 @@
 open Types
 open Tokenizer
-open Pretty_printer
-
-let is_op_colon c =
-	c = ":";;
-
-let is_op1 c =
-	c = "!" || c = "-";;
-
-let is_op_logical c =
-	c = "||" || c = "&&";;
-
-let is_op_eq c =
-	c = "==" || c = ">=" || c = "<=" || c = "!=" || c = "<" || c = ">";;
-
-let is_op_plus c =
-	c = "+" || c = "-";;
-
-let is_op_times c =
-	c = "*" || c = "/" || c = "%";;
+open Char_func
 
 (* Levert een lijst met gevonden fieldtokens *)
 (* Geen fieldtokens = lege lijst             *)
@@ -184,13 +166,7 @@ let rec stmt_list_parser stmt_list = function
 	| list ->
 		(match stmt_parser list with
 		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
-		| Error e, list -> 
-			print_string "(size of stmt_list: ";
-			print_int (List.length stmt_list);
-			print_string ", stmt_list: ";
-			print_stmt_list stmt_list;
-			print_endline ")";
-			Error ("(stmt_list_parser) " ^ e), list)
+		| Error e, list -> Error ("(stmt_list_parser) " ^ e), list)
 and
 stmt_parser = function
   | IF::OPEN_PAR::list ->
