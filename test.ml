@@ -9,7 +9,7 @@ open Pretty_printer
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-let filename = "C:/Users/tom_e/workspace/CC/input2.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/inputT.txt";;
 (* let filename = "C:/Users/Martin/workspace/test/input.txt";; *)
 
 let in_channel = open_in filename;;
@@ -26,5 +26,5 @@ with End_of_file ->
 
 let structure = spl_parser [] !tokenlist;;
 match structure with
-| Error e -> print_endline e 
+| Error e -> print_endline e;
 | Success x -> print_spl x;;
