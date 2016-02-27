@@ -1,116 +1,253 @@
 open Types
+open Tokenizer
+open Char_func
 
-let rec exp_parser list = 
-  let rec basicexp_parser list = match list with
-  | IDtok id::Fieldtoken field::list -> (Exp_field (Id id,Field [field]),list) (*fixen dat het meerdere fieldtokens kan hebben*)
-  | Optok ['-']::Inttok int::list -> (Exp_int (Inttoken ('-'::int)), list)
-  | Inttok int::list -> (Exp_int (Inttoken int), list)
-  | Optok [op1]::list when op1 == '!' || op1 == '-' -> (match basicexp_parser list with
-  	| (exp, list) -> (Exp_prefix (Op1 op1, exp), list))
-  | (IDtok [c])::list -> (Exp_char c, list)
-  | FALSE::list -> (Exp_bool false, list)
-  | TRUE::list -> (Exp_bool true, list)
-  | EMPTYLIST::list -> (Exp_emptylist, list) in
-match list with
-| IDtok id::OPEN_PAR::CLOSE_PAR::list -> (Exp_function_call (Id id,[]),list)
-| IDtok id::OPEN_PAR::list -> (match exp_parser list with
-	| (exp,CLOSE_PAR::list) -> (Exp_function_call (Id id,[exp]),list)
-	| (exp,COMMA::list) -> (match exp_parser (IDtok id::OPEN_PAR::list) with
-		| (Exp_function_call(id,explist),newlist) -> (Exp_function_call(id,exp::explist),newlist)))
-| OPEN_PAR::list -> (match exp_parser list with
-	| (exp,CLOSE_PAR::list) -> (Exp_parentheses exp, list)
-	| (exp1,COMMA::list1) -> (match exp_parser list1 with
-		| (exp2,CLOSE_PAR::list2) -> (Exp_tuple(exp1,exp2),list)))
-| _ -> (match basicexp_parser list with
-	|  (exp1,Optok op2::list) -> (match exp_parser list with
-		| (exp2,list) -> (Exp_infix (exp1,Op2 op2,exp2),list))
-	| x -> x);;
+(* Levert een lijst met gevonden fieldtokens *)
+(* Geen fieldtokens = lege lijst             *)
+let rec parse_field field_list = function
+	| PERIOD::(Fieldtoken t)::list -> parse_field (t::field_list) list
+	| PERIOD::list -> Error ("(parse_field) No field detected! " ^ token_list_to_string list), list
+	| list -> Success (Field (List.rev field_list)), list;;
+
+let rec exp_parser = function
+	| list -> 
+		(match exp_logical list with
+    | Success exp1, (Optok c)::list when (is_op_colon c) -> 
+			(match exp_parser list with
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
+and
+exp_logical = function
+	| list -> 
+		(match exp_eq list with
+    | Success exp1, (Optok c)::list when (is_op_logical c) -> 
+			(match exp_logical list with
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
+and
+exp_eq = function
+	| list -> 
+		(match exp_plus list with
+    | Success exp1, (Optok c)::list when (is_op_eq c) -> 
+			(match exp_eq list with
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
+and
+exp_plus = function
+	| list -> 
+		(match exp_times list with
+    | Success exp1, (Optok c)::list when (is_op_plus c) -> 
+			(match exp_plus list with
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
+and
+exp_times = function
+	| list -> 
+		(match exp_strongest list with
+    | Success exp1, (Optok c)::list when (is_op_times c) -> 
+			(match exp_times list with
+			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Error e, list -> Error e, list)
+		| Success exp, list -> Success exp, list
+		| Error e, list -> Error e, list)
+and
+exp_strongest = function
+	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
+	| (Chartok c)::list -> Success (Exp_char c), list
+	| FALSE::list -> Success (Exp_bool false), list
+	| TRUE::list -> Success (Exp_bool true), list
+	| OPEN_BRACK::CLOSE_BRACK::list -> Success (Exp_emptylist), list
+	| (IDtok id)::OPEN_PAR::list -> 
+		(match parse_funcall [] list with
+		| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
+		| Error e, list -> Error e, list)
+	|	(IDtok id)::list -> 
+		(match parse_field [] list with
+		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
+		| Error e, list -> Error e, list)
+	| OPEN_PAR::list -> 
+		(match (exp_parser list) with
+		| Success exp1, COMMA::list -> 
+			(match (exp_parser list) with
+			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
+			| Success _, list -> Error ("(exp_strongest) No closing parenthesis after comma, but: " ^ token_list_to_string list), list
+			| Error e, list -> Error e, list)
+		| Success exp, CLOSE_PAR::list -> Success exp, list (* Haakjes weglaten in AST*)
+		| Success _, list -> Error ("(exp_strongest) No closing parenthesis, but: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| (Optok c)::list when (is_op1 c) -> 
+		(match (exp_parser list) with
+		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
+		| Error e, list -> Error e, list)
+	| list -> Error ("Empty expression or unexpected token: " ^ token_list_to_string list), list
+and
+parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
+	| CLOSE_PAR::list -> Success (List.rev arg_list), list
+	| COMMA::list -> parse_funcall arg_list list
+	| list -> 
+		(match (exp_parser list) with
+		| Success exp, list -> parse_funcall (exp::arg_list) list
+		| Error e, list -> Error e, list)
 
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
 	| (IDtok id)::list -> Success (Type_id (Id id)),list
-	| OPEN_PAR::list -> (match (type_parser list) with
-		| Success type1,(COMMA::list) -> (match (type_parser list) with
+	| OPEN_PAR::list -> 
+		(match (type_parser list) with
+		| Success type1,(COMMA::list) -> 
+			(match (type_parser list) with
 			| Success type2,(CLOSE_PAR::list) -> Success (Type_tuple (type1,type2)),list
-			| Success _, (x::list) -> Error ("Geen sluithaak, maar " ^ token_list_to_string [x]), list
+			| Success _, list -> Error ("Geen sluithaak, maar " ^ token_list_to_string list), list
 			| Error e, list -> Error e, list)
-		| Success _, (x::list) -> Error ("Geen komma, maar " ^ token_list_to_string [x])
+		| Success _, list -> Error ("Geen komma, maar " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
-	| OPEN_BRACK::list -> (match (type_parser list) with
-		| type1,(CLOSE_BRACK::list) -> Success (Type_list type1),list
-		| _,(x::list) -> Error ("Geen sluithaak, maar " ^ token_list_to_string [x]), list
+	| OPEN_BRACK::list -> 
+		(match (type_parser list) with
+		| Success(type1),(CLOSE_BRACK::list) -> Success (Type_list type1),list
+		| Success type1 ,list -> Error ("Geen rechte sluithaak, maar " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| list -> Error ("Geen type, maar " ^ token_list_to_string list), list;;
+
+let rec fargs_parser_till_CLOSE_PAR id_list = function
+  | CLOSE_PAR::list	-> Success (Fargs (List.rev id_list)),list
+  | (IDtok id)::CLOSE_PAR::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
+  | (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
+  | list -> Error ("Geen sluithaak of komma, maar " ^ token_list_to_string list), list;;
+
+let rettype_parser = function
+	| VOID::list -> Success Type_void, list
+	| list -> 
+		(match type_parser list with
+		| Success type1, list -> Success (Rettype type1), list
 		| Error e, list -> Error e, list);;
 
-let vardeclvar_parser id list = match exp_parser list with
-| (exp,SEMICOLON::restlist) -> (Decl_var (Vardecl_var (id, exp)) ,restlist);;
+let rec funtype_parser type_list = function
+  | ARROW::list	-> 
+		(match rettype_parser list with
+  	| Success rettype, list -> Success (Funtype ((List.rev type_list), rettype)), list
+  	| Error e, list -> Error e, list)
+  | list -> 
+		(match type_parser list with
+  	| Success type1, list -> funtype_parser (type1::type_list) list
+		| Error e, list -> Error e, list);;
 
-let rec fargs_parser id_list = function
-| CLOSE_PAR::list -> (Fargs (List.rev id_list)),list
-| (IDtok id)::list -> fargs_parser ((Id id)::id_list) list
-| COMMA::(IDtok id)::list -> fargs_parser ((Id id)::id_list) list
+let vardecl_rest_parser typetoken = function
+	| IDtok id::EQ::list -> 
+		(match exp_parser list with
+		| Success exp, SEMICOLON::list -> Success (Vardecl (typetoken, Id id, exp)), list
+		| Success _, list -> Error ("Geen semicolon, maar " ^ token_list_to_string list), list 
+		| Error e, list -> Error e, list)
+	| IDtok id::list -> Error ("Geen =, maar " ^ token_list_to_string list), list
+	| list -> Error ("Geen id, maar " ^ token_list_to_string list), list
 
-let funtype_parser type_list list = match list with
-| ARROW::list	-> (match rettype_parser with 
-	| rettype, list -> (Funtype ((List.rev type_list),rettype)),list)
-| x -> (match type_parser x with (type1, list) -> funtype_parser (type1::type_list) list);;
+let vardecl_parser = function
+  | VAR::list -> vardecl_rest_parser None list
+  | list -> 
+		(match type_parser list with
+		| Success type1, list -> vardecl_rest_parser (Some type1) list
+		| Error e, list -> Error e, list);;
 
-let vardecl_parser list = match list with
-| VAR::IDtok id::EQ::list -> vardeclvar_parser id list
-| _ ->  vardecltype_parser list;;
+let rec vardecl_list_parser vardecl_list = function
+	| list ->
+		(match vardecl_parser list with
+		| Error e, _ -> Success (List.rev vardecl_list), list
+		| Success vardecl, list -> vardecl_list_parser (vardecl::vardecl_list) list);; 
 
-let vardecl_list_parser vardecl_list list = match vardecl_parser list with
-| Error e, faillist -> (List.rev vardecl_list),list
-| Succes vardecl, list ->  vardecl_list_parser  (vardecl::vardecl_list) list;;
+let rec stmt_list_parser stmt_list = function
+	| CLOSE_ACO::list -> Success (List.rev stmt_list), list 
+	| list ->
+		(match stmt_parser list with
+		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
+		| Error e, list -> Error ("(stmt_list_parser) " ^ e), list)
+and
+stmt_parser = function
+  | IF::OPEN_PAR::list ->
+  	(match exp_parser list with
+		| Success exp, CLOSE_PAR::OPEN_ACO::list ->
+			(match stmt_list_parser [] list with
+			| Success stmt_list1, ELSE::OPEN_ACO::list ->
+				(match stmt_list_parser [] list with
+				| Success stmt_list2, list -> Success (Stmt_if_else (exp, stmt_list1, stmt_list2)), list
+				| Error e, list -> Error e, list)
+			| Success stmt_list1, list -> Success (Stmt_if (exp, stmt_list1)), list
+			| Error e, list -> Error e, list)
+		| Success _, list -> Error ("(stmt_parser) Unexpected token after expression: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| WHILE::OPEN_PAR::list ->
+		(match exp_parser list with
+		| Success exp, CLOSE_PAR::OPEN_ACO::list ->
+			(match stmt_list_parser [] list with
+			| Success stmt_list, list -> Success (Stmt_while (exp, stmt_list)), list
+			| Error e, list -> Error e, list)
+		| Success _, list -> Error ("(stmt_parser) Unexpected token after expression: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| RETURN::SEMICOLON::list -> Success (Stmt_return(None)), list
+	| RETURN::list ->
+		(match exp_parser list with
+		| Success exp, SEMICOLON::list -> Success (Stmt_return(Some(exp))), list
+		| Success _, list -> Error ("No semicolon, but: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| (IDtok id)::OPEN_PAR::list -> 
+  	(match parse_funcall [] list with
+  	| Success exp_list, list -> Success (Stmt_function_call (Id id, exp_list)), list
+		| Error e, list -> Error e, list)
+	| (IDtok id)::list ->
+		(match (parse_field [] list) with
+		| Success fieldlist, EQ::list -> 
+    	(match exp_parser list with
+    	| Success exp, SEMICOLON::list -> Success (Stmt_define (Id id, fieldlist, exp)), list
+    	| Success _, list -> Error ("(stmt_parser) No semicolon, but: " ^ token_list_to_string list), list
+			| Error e, list -> Error e, list)
+		| Success _, list -> Error ("(stmt_parser) No '=', but: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list)
+	| list -> Error ("(stmt_parser) Unexpected token: " ^ token_list_to_string list), list;;
 
-let stmt_list_parser stmt_list list = match list with
-| CLOSE_ACO::list -> (List.rev stmt_list),list
-| IF::OPEN_PAR::list -> 
-	match exp_parser list with
-	| exp, CLOSE_PAR::OPEN_ACO::list -> 
-		match stmt_list_parser [] list with
-		| if_stmts, ELSE::list -> 
-			match stmt_list_parser with
-			| else_stmts, lastlist -> stmt_list_parser (Stmt_if_else ((exp,if_stmts,else_stmts)::stmt_list)), lastlist
-		| if_stmts, lastlist -> stmt_list_parser (Stmt_if ((exp,if_stmts)::stmt_list)), lastlist
-| WHILE::OPEN_PAR::list ->
-	match exp_parser list with
-	| exp, CLOSE_PAR::OPEN_ACO::list ->
-		match stmt_list_parser [] list with
-		| while_stmts, lastlist -> stmt_list_parser(Stmt_while((exp,while_stmts)::stmt_list)), lastlist
-| RETURN::SEMICOLON::lastlist -> stmt_list_parser(Stmt_return((None)::stmt_list)), lastlist
-| RETURN::list ->
-	match exp_parser list with
-	| exp, SEMICOLON::lastlist -> stmt_list_parser(Stmt_return((exp)::stmt_list)), lastlist
-(*stmt_function_call*)
-(*stmt_define*)
+let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
+  | Error e, faillist -> Error e, faillist
+  | Success fargs, OPEN_ACO::list ->
+  	(match vardecl_list_parser [] list with
+		| Error e, faillist -> Error e, faillist
+  	| Success vardecl_list, list ->
+  		(match stmt_list_parser [] list with
+  		| Error e, faillist -> Error e, faillist
+  		| Success [], lastlist -> Error ("geen statement, maar " ^ token_list_to_string lastlist), lastlist
+  		| Success stmt_list, lastlist -> Success (Fundecl (id,fargs,None,vardecl_list,stmt_list)),lastlist))
+  | Success fargs,DDPOINT::list ->
+    (match funtype_parser [] list with
+    | Error e, faillist -> Error e, faillist
+    | Success funtype, OPEN_ACO::list ->
+      (match vardecl_list_parser [] list with
+			| Error e, faillist -> Error e, faillist
+      | Success vardecl_list, list ->
+        (match stmt_list_parser [] list with
+        | Error e, faillist -> Error e, faillist
+        | Success [], lastlist -> Error ("geen statement, maar " ^ token_list_to_string lastlist), lastlist
+        | Success stmt_list, lastlist -> Success (Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list)),lastlist))
+		| Success funtype, list -> Error ("geen openhaakje, maar " ^ token_list_to_string list), list)
+	| Success fargs, list -> Error ("geen openhaakje of ::, maar " ^ token_list_to_string list), list;;
 
-let fundecl_parser id list = match fargs_parser [] list with
-| fargs, OPEN_ACO::list ->
-	(match vardecl_list_parser with
-	| vardecl_list, list ->
-		(match stmt_list_parser with
-		| stmt_list, lastlist -> Fundecl (id,fargs,None,vardecl_list,stmt_list)))
-| fargs,DDPOINT::list ->
-	 (match funtype_parser list with
-	| funtype, OPEN_ACO::list ->
-		 (match vardecl_list_parser with
-		| vardecl_list, list -> 
-			(match stmt_list_parser with
-			| [], x::lastlist -> Error ("geen statement, maar " ^ token_list_to_string [x]), lastlist
-			| stmt_list, lastlist -> Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list))));;
+let decl_parser = function
+	| IDtok id::OPEN_PAR::list ->
+		(match fundecl_parser (Id id) list with
+		| Success fundecl, list -> Success (Decl_fun fundecl), list
+		| Error e, faillist -> Error e, faillist)
+	| list -> 
+		(match vardecl_parser list with
+		| Success vardecl, list -> Success (Decl_var vardecl), list
+		| Error e, faillist -> Error e, faillist);;
 
 let rec spl_parser decllist tokenlist = 
-	let decl_parser tokenlist = match tokenlist with
-	| VAR::IDtok id::EQ::list -> vardeclvar_parser ID id list
-	| IDtok id::OPEN_PAR::list -> fundecl_parser ID id list
-	| _ -> vardecltype_parser list in
-match decl_parser tokenlist with
-| (decls,[]) -> List.rev (decls::decllist)
-| (decls,restlist)  -> spl_parser (decls::decllist) restlist;;
+	match decl_parser tokenlist with
+  | Success decls,[] -> Success (SPL (List.rev (decls::decllist)))
+  | Success decls,restlist  -> spl_parser (decls::decllist) restlist
+  | Error e, faillist -> Error e;;
 
-
-let structure = SPL (spl_parser [] tokenlist);;
-
-(*chartok moet gemaakt worden*)
-(*overal goede errors toevoegen*)
-(*overal succes toevoegen*)
+(*optok "-" en dan een inttoken = niet exp op1 int, maar één grote int! *)

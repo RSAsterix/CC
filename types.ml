@@ -1,7 +1,7 @@
-type id = Id of char list
-type inttoken = Inttoken of char list
-type op1 = Op1 of char
-type op2 = Op2 of char list
+type id = Id of string
+type inttoken = Inttoken of int
+type op1 = Op1 of string
+type op2 = Op2 of string
 type fieldtoken = Hd | Tl | Fst | Snd
 type field = Field of fieldtoken list
 type exp = 
@@ -11,7 +11,6 @@ type exp =
 	| Exp_int of inttoken
 	| Exp_char of char
 	| Exp_bool of bool
-	| Exp_parentheses of exp
 	| Exp_function_call of id * exp list
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
@@ -30,15 +29,14 @@ type typetoken =  Basictype of basictype
 	| Type_id of id
 type rettype = Rettype of typetoken | Type_void
 type funtype = Funtype of typetoken list * rettype
-type vardecl = Vardecl_var of id * exp | Vardecl_type of typetoken * id * exp 
+type vardecl = Vardecl of typetoken option * id * exp 
 type fundecl = Fundecl of id * fargs * funtype option * vardecl list * stmt list
 type decl = Decl_var of vardecl | Decl_fun of fundecl
-type spl = SPL of decl list
+type spl = SPL of decl list;;
 
 type 'a result = Error of string | Success of 'a;;
 
 type token = 
-	| QUOTE (* Toegevoegd voor het inlezen van een character *)
 	| VAR
 	| EQ
 	| SEMICOLON
@@ -55,7 +53,7 @@ type token =
 	| EMPTYLIST
 	| PERIOD 
 	| Fieldtoken of fieldtoken
-	| Optok of char list
-	| Inttok of char list
-	| Chartok of char
-	| IDtok of char list
+	| Optok of string
+	| Inttok of int
+	| IDtok of string
+	| Chartok of char;;
