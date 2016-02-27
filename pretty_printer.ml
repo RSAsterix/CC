@@ -147,4 +147,11 @@ let print_funtype = function
 	| Funtype (a::list, _) ->
 		print_typetoken a;
 		print_string " ";;
-		
+
+let rec print_vardecl = function
+	| Vardecl (None, id, exp) ->
+		print_id id;
+		print_exp exp;
+	| Vardecl (Some t, id, exp) ->
+		print_typetoken t;
+		print_vardecl (Vardecl (None, id, exp));;
