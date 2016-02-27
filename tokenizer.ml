@@ -2,20 +2,19 @@ open Char_func
 open Types
 open List
 
-
 let rec get_number number line = match line with
 		| char::restline -> 
 			if is_digit char 
 			then get_number (char::number) restline 
-			else (Some (Inttok (List.rev number)),line)
-		| [] -> (Some (Inttok (List.rev number)),line)
+			else (Some (Inttok (int_of_string (implode (List.rev number)))), line)
+		| [] -> (Some (Inttok (int_of_string (implode (List.rev number)))),line);;
 
 let rec get_name name line = match line with
 		| char::restline -> 
 			if is_letter char || is_digit char || char == '_' 
 			then get_name (char::name) restline 
-			else (Some (IDtok (List.rev name)),line)
-		| [] -> (Some (IDtok (List.rev name)),line)
+			else (Some (IDtok (implode (List.rev name))),line)
+		| [] -> (Some (IDtok (implode (List.rev name))),line);;
 
 let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
 
@@ -102,8 +101,8 @@ let token_to_string t = match t with
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
 	| Optok a -> a
-	| Inttok a -> implode a
-	| IDtok a -> implode a
+	| Inttok a -> string_of_int a
+	| IDtok a -> a
 	| Chartok a -> implode ['\'';a;'\''] ;;
 
 let rec token_list_to_string list = match list with

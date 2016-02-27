@@ -2,42 +2,37 @@ open Types
 open Char_func
 open Format
 
+let shout = print_string;;
+
 let print_bool = function
-	| true -> 
-		print_string "True";
-	| false -> 
-		print_string "False";;
+	| true -> shout "True";
+	| false -> shout "False";;
 
 let print_id = function
-	| Id id -> 
-		print_string (implode id);;
+	| Id id -> shout id;;
 
 let print_inttoken = function
-	| Inttoken [] -> ();
-	| Inttoken i -> 
-		print_string (implode i);;
+	| Inttoken i -> print_int i;;
 
 let print_op1 = function
-	| Op1 o -> 
-		print_string o;;
+	| Op1 o -> shout o;;
 
 let print_op2 = function
-	| Op2 o -> 
-		print_string o;;
+	| Op2 o -> shout o;;
 
 let rec print_fields = function
 	| Field [] -> ();
 	| Field (Hd::ls) -> 
-		print_string ".hd";
+		shout ".hd";
 		print_fields (Field ls);
 	| Field (Tl::ls) -> 
-		print_string ".tl"; 
+		shout ".tl"; 
 		print_fields (Field ls);
 	| Field (Fst::ls) -> 
-		print_string ".fst"; 
+		shout ".fst"; 
 		print_fields (Field ls);
 	| Field (Snd::ls) -> 
-		print_string ".snd"; 
+		shout ".snd"; 
 		print_fields (Field ls);;
 
 let rec print_exp = function
@@ -46,9 +41,9 @@ let rec print_exp = function
 		print_fields flds;
 	| Exp_infix (exp1, op2, exp2) -> (* associativiteit met haakjes? *)
 		print_exp exp1;
-		print_string " ";
+		shout " ";
 		print_op2 op2;
-		print_string " ";
+		shout " ";
 		print_exp exp2;
 	| Exp_prefix (op1, exp) ->
 		print_op1 op1;
@@ -56,79 +51,79 @@ let rec print_exp = function
 	| Exp_int int ->
 		print_inttoken int;
 	| Exp_char c ->
-		print_string "'";
+		shout "'";
 		print_char c;
-		print_string "'";
+		shout "'";
 	| Exp_bool b ->
 		print_bool b;
 	| Exp_function_call (id, exps) ->
 		print_funcall (id, exps);
 	| Exp_emptylist ->
-		print_string "[]"
+		shout "[]"
 	| Exp_tuple (exp1, exp2) ->
-		print_string "(";
+		shout "(";
 		print_exp exp1;
-		print_string ",";
+		shout ",";
 		print_exp exp2;
-		print_string ")";
+		shout ")";
 and print_exp_list = function
 	| [] -> ();
 	| [exp] ->
 		print_exp exp;
 	| exp::exp_list ->
 		print_exp exp;
-		print_string ", ";
+		shout ", ";
 		print_exp_list exp_list;
 and print_stmt = function
 	| Stmt_if (exp, stmt_list) -> 
-		print_string "if(";
+		shout "if(";
 		print_exp exp;
-		print_string "){";
+		shout "){";
 		print_break 0 2;
 		open_vbox 0;
 		print_stmt_list stmt_list;
 		close_box ();
 		print_cut();
-		print_string "}";
+		shout "}";
 	| Stmt_if_else (exp, stmt_list1, stmt_list2) -> 
-		print_string "if(";
+		shout "if(";
 		print_exp exp;
-		print_string "){";
+		shout "){";
 		print_break 0 2;
 		open_vbox 0;
 		print_stmt_list stmt_list1;
 		close_box ();
 		print_cut ();
-		print_string "}else{";
+		shout "}else{";
 		print_break 0 2;
 		open_vbox 0;
 		print_stmt_list stmt_list2;
 		close_box ();
 		print_cut ();
-		print_string "}";
+		shout "}";
 	| Stmt_while (exp, stmt_list) ->
-		print_string "while(";
+		shout "while(";
 		print_exp exp;
-		print_string "){";
+		shout "){";
 		print_break 0 2;
 		open_vbox 0;
 		print_stmt_list stmt_list;
 		close_box ();
 		print_cut ();
-		print_string "}";
+		shout "}";
 	| Stmt_define (id, fields, exp) ->
 		print_id id;
 		print_fields fields;
-		print_string " = ";
+		shout " = ";
 		print_exp exp;
-		print_string ";";
+		shout ";";
 	| Stmt_function_call (id, exps) ->
 		print_funcall (id, exps);
-		print_string ";";
+		shout ";";
 	| Stmt_return x ->
-		print_string "return ";
+		shout "return ";
 		print_exp_option x;
-		print_string ";";
+		shout ";";
 and print_stmt_list = function
 	| [] -> ();
 	| [stmt] ->
@@ -144,9 +139,9 @@ and print_exp_option = function
 and print_funcall = function
 	| (id, exps) ->
 		print_id id;
-		print_string "(";
+		shout "(";
 		print_exp_list exps;
-		print_string ")";;
+		shout ")";;
 
 let rec print_fargs = function
 	| Fargs [] -> ()
@@ -154,59 +149,59 @@ let rec print_fargs = function
 		print_id a;
 	| Fargs (a::list) ->
 		print_id a;
-		print_string ", ";
+		shout ", ";
 		print_fargs (Fargs list);;
 
 let print_basictype = function
-	| Type_int -> print_string "Int";
-	| Type_bool -> print_string "Bool";
-	| Type_char -> print_string "Char";;
+	| Type_int -> shout "Int";
+	| Type_bool -> shout "Bool";
+	| Type_char -> shout "Char";;
 
 let rec print_typetoken = function
 	| Basictype b -> print_basictype b;
 	| Type_tuple (t1, t2) ->
-		print_string "(";
+		shout "(";
 		print_typetoken t1;
-		print_string ", ";
+		shout ", ";
 		print_typetoken t2;
-		print_string ")";
+		shout ")";
 	| Type_list t ->
-		print_string "[";
+		shout "[";
 		print_typetoken t;
-		print_string "]";
+		shout "]";
 	| Type_id id ->
 		print_id id;;
 
 let print_rettype = function
 	| Type_void ->
-		print_string "Void";
+		shout "Void";
 	| Rettype t ->
 		print_typetoken t;;
 
 let rec print_funtype = function
 	| Funtype ([], ret) ->
-		print_string "-> ";
+		shout "-> ";
 		print_rettype ret;
-		print_string " ";
+		shout " ";
 	| Funtype (a::list, ret) ->
 		print_typetoken a;
-		print_string " ";
+		shout " ";
 		print_funtype (Funtype (list, ret));;
 
 let print_var_option = function
 	| None ->
-		print_string "var";
+		shout "var";
 	| Some t ->
 		print_typetoken t;;
 
 let rec print_vardecl = function
 	| Vardecl (t, id, exp) ->
 		print_var_option t;
-		print_string " ";
+		shout " ";
 		print_id id;
-		print_string " = ";
+		shout " = ";
 		print_exp exp;
-		print_string ";";;
+		shout ";";;
 
 let rec print_vardecl_list = function
 	| [] -> ();
@@ -218,24 +213,24 @@ let rec print_vardecl_list = function
 let print_funtype_option = function
 	| None -> ();
 	| Some ft ->
-		print_string " :: ";
+		shout " :: ";
 		print_funtype ft;;
 
 let rec print_fundecl = function
 	| Fundecl (id, fargs, funtype, vardecl_list, stmt_list) ->
 		print_id id;
-		print_string "(";
+		shout "(";
 		print_fargs fargs;
-		print_string ")";
+		shout ")";
 		print_funtype_option funtype;
-		print_string "{";
+		shout "{";
 		print_break 0 2;
 		open_vbox 0;
 		print_vardecl_list vardecl_list;
 		print_stmt_list stmt_list;
 		close_box ();
 		print_cut ();
-		print_string "}";;
+		shout "}";;
 
 let print_decl = function
 	| Decl_var v -> 
@@ -249,7 +244,6 @@ let rec print_spl = function
 		open_vbox 0;
 		print_decl x;
 		close_box ();
-		print_cut ();
+		print_newline ();
+		print_newline ();
 		print_spl (SPL list);;
-		
-		

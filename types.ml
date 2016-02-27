@@ -1,5 +1,5 @@
-type id = Id of char list
-type inttoken = Inttoken of char list
+type id = Id of string
+type inttoken = Inttoken of int
 type op1 = Op1 of string
 type op2 = Op2 of string
 type fieldtoken = Hd | Tl | Fst | Snd
@@ -55,6 +55,6 @@ type token =
 	| PERIOD 
 	| Fieldtoken of fieldtoken
 	| Optok of string
-	| Inttok of char list
-	| IDtok of char list
+	| Inttok of int
+	| IDtok of string
 	| Chartok of char;;
