@@ -149,8 +149,8 @@ let rettype_parser = function
 
 let rec funtype_parser type_list = function
   | ARROW::list	-> 
-		(match rettype_parser list with 
-  	| Success rettype, list -> Success (Funtype ((List.rev type_list),rettype)), list
+		(match rettype_parser list with
+  	| Success rettype, list -> Success (Funtype ((List.rev type_list), rettype)), list
   	| Error e, list -> Error e, list)
   | list -> 
 		(match type_parser list with
@@ -274,6 +274,4 @@ let rec spl_parser decllist tokenlist =
   | Success decls,restlist  -> spl_parser (decls::decllist) restlist
   | Error e, faillist -> Error e;;
 
-(*overal goede errors toevoegen*)
-(*overal success toevoegen*)
 (*optok "-" en dan een inttoken = niet exp op1 int, maar één grote int! *)
