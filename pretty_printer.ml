@@ -35,16 +35,23 @@ let rec print_fields = function
 		shout ".snd"; 
 		print_fields (Field ls);;
 
+(* Is op1 zwakker dan op2? *)
+let weaker (Op2 op1) (Op2 op2) = true;; (* deze moet nog *)
+
+let rec isLower exp op = 	match exp with
+	| Exp_infix (e1, o, e2) -> (weaker o op);
+	| e -> false;;
+
 let rec print_exp = function
 	| Exp_field (id, flds) ->
 		print_id id;
 		print_fields flds;
 	| Exp_infix (exp1, op2, exp2) -> (* associativiteit met haakjes? *)
-		print_exp exp1;
+		(if (isLower exp1 op2) then (shout "("; print_exp exp1; shout ")";)else(print_exp exp1;));	
 		shout " ";
 		print_op2 op2;
 		shout " ";
-		print_exp exp2;
+		(if (isLower exp2 op2) then (shout "("; print_exp exp2; shout ")";)else(print_exp exp2;));
 	| Exp_prefix (op1, exp) ->
 		print_op1 op1;
 		print_exp exp;
