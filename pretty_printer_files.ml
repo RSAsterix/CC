@@ -94,98 +94,48 @@ let rec print_fargs ppf = function
 	| Fargs (a::list) ->
 		fprintf ppf "%a, %a" print_id a print_fargs (Fargs list);;
 
-let print_basictype = function
+let print_basictype ppf = function
 	| Type_int -> fprintf ppf "%s" "Int";
 	| Type_bool -> fprintf ppf "%s" "Bool";
 	| Type_char -> fprintf ppf "%s" "Char";;
 
-let rec print_typetoken = function
-	| Basictype b -> print_basictype b;
-	| Type_tuple (t1, t2) ->
-		shout "(";
-		print_typetoken t1;
-		shout ", ";
-		print_typetoken t2;
-		shout ")";
-	| Type_list t ->
-		shout "[";
-		print_typetoken t;
-		shout "]";
-	| Type_id id ->
-		print_id id;;
+let rec print_typetoken ppf = function
+	| Basictype b -> fprintf ppf "%a" print_basictype b;
+	| Type_tuple (t1, t2) -> fprintf ppf "(%a, %a)" print_typetoken t1 print_typetoken t2;
+	| Type_list t -> fprintf ppf "[%a]" print_typetoken t;
+	| Type_id id -> fprintf ppf "%a" print_id id;;
 
-let print_rettype = function
-	| Type_void ->
-		shout "Void";
-	| Rettype t ->
-		print_typetoken t;;
+let print_rettype ppf = function
+	| Type_void -> fprintf ppf "%s" "Void";
+	| Rettype t -> fprintf ppf "%a" print_typetoken t;;
 
-let rec print_funtype = function
-	| Funtype ([], ret) ->
-		shout "-> ";
-		print_rettype ret;
-		shout " ";
-	| Funtype (a::list, ret) ->
-		print_typetoken a;
-		shout " ";
-		print_funtype (Funtype (list, ret));;
+let rec print_funtype ppf = function
+	| Funtype ([], ret) -> fprintf ppf "-> %a " print_rettype ret;
+	| Funtype (a::list, ret) -> fprintf ppf "%a %a" print_typetoken a print_funtype (Funtype (list, ret));;
 
-let print_var_option = function
-	| None ->
-		shout "var";
-	| Some t ->
-		print_typetoken t;;
+let print_var_option ppf = function
+	| None -> fprintf ppf "%s" "var";
+	| Some t -> fprintf ppf "%a" print_typetoken t;;
 
-let rec print_vardecl = function
-	| Vardecl (t, id, exp) ->
-		print_var_option t;
-		shout " ";
-		print_id id;
-		shout " = ";
-		print_exp exp;
-		shout ";";;
+let rec print_vardecl ppf = function
+	| Vardecl (t, id, exp) -> fprintf ppf "%a %a = %a" print_var_option t print_id id print_exp exp;;
 
-let rec print_vardecl_list = function
+let rec print_vardecl_list ppf = function
 	| [] -> ();
-	| x::list -> 
-		print_vardecl x;
-		print_cut ();
-		print_vardecl_list list;;
+	| x::list -> fprintf ppf "%a@,%a" print_vardecl x print_vardecl_list list;;
 
-let print_funtype_option = function
+let print_funtype_option ppf = function
 	| None -> ();
-	| Some ft ->
-		shout " :: ";
-		print_funtype ft;;
+	| Some ft -> fprintf ppf " :: %a" print_funtype ft;;
 
-let rec print_fundecl = function
-	| Fundecl (id, fargs, funtype, vardecl_list, stmt_list) ->
-		print_id id;
-		shout "(";
-		print_fargs fargs;
-		shout ")";
-		print_funtype_option funtype;
-		shout "{";
-		print_break 0 2;
-		open_vbox 0;
-		print_vardecl_list vardecl_list;
-		print_stmt_list stmt_list;
-		close_box ();
-		print_cut ();
-		shout "}";;
+let rec print_fundecl ppf = function
+	| Fundecl (id, fargs, funtype, vardecl_list, stmt_list) -> 
+		fprintf ppf "%a(%a)%a{@;<0 2>@[<v 0>%a%a@]@,}" print_id id print_fargs fargs print_funtype_option funtype print_vardecl_list vardecl_list print_stmt_list stmt_list;;
 
-let print_decl = function
-	| Decl_var v -> 
-		print_vardecl v;
-	| Decl_fun f ->
-		print_fundecl f;;
+let print_decl ppf = function
+	| Decl_var v -> fprintf ppf "%a" print_vardecl v;
+	| Decl_fun f -> fprintf ppf "%a" print_fundecl f;;
 
-let rec print_spl = function
+let rec print_spl ppf = function
 	| SPL [] -> ();
-	| SPL (x::list) ->
-		open_vbox 0;
-		print_decl x;
-		close_box ();
-		print_newline ();
-		print_newline ();
-		print_spl (SPL list);;
+	| SPL (x::list) -> fprintf ppf "@[<v 0>%a@]@.@.%a" print_decl x print_spl (SPL list);;
