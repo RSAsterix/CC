@@ -118,7 +118,7 @@ let print_var_option ppf = function
 	| Some t -> fprintf ppf "%a" print_typetoken t;;
 
 let rec print_vardecl ppf = function
-	| Vardecl (t, id, exp) -> fprintf ppf "%a %a = %a" print_var_option t print_id id print_exp exp;;
+	| Vardecl (t, id, exp) -> fprintf ppf "%a %a = %a;" print_var_option t print_id id print_exp exp;;
 
 let rec print_vardecl_list ppf = function
 	| [] -> ();

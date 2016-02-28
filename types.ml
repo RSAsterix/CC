@@ -50,7 +50,6 @@ type token =
 	| Basictoken of basictype
 	| IF | ELSE | WHILE | RETURN
 	| FALSE | TRUE
-	| EMPTYLIST
 	| PERIOD 
 	| Fieldtoken of fieldtoken
 	| Optok of string

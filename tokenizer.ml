@@ -37,7 +37,6 @@ let rec scan_line = function
 	| 's'::'n'::'d'::line when (match_next line) -> Fieldtoken Snd::(scan_line line)
 	| ':'::':'::line -> DDPOINT::(scan_line line)
 	| '-'::'>'::line -> ARROW::(scan_line line)
-	| '['::']'::line -> EMPTYLIST::(scan_line line)
 	| '.'::line -> PERIOD::(scan_line line)
 	| '+'::line -> Optok "+"::(scan_line line)
 	| '-'::line -> Optok "-"::(scan_line line)
@@ -72,38 +71,37 @@ let rec scan_line = function
     		| Some s, line -> s::(scan_line line);;
 
 let token_to_string t = match t with
-	| VAR -> "var"
-	| EQ -> "= "
+	| VAR -> "var "
+	| EQ -> " = "
 	| SEMICOLON -> "; "
 	| OPEN_PAR -> "("
 	| CLOSE_PAR -> ")"
-	| DDPOINT -> ":: "
+	| DDPOINT -> " :: "
 	| OPEN_ACO -> "{"
 	| CLOSE_ACO -> "}"
 	| VOID -> "Void"
 	| ARROW -> "-> "
-	| COMMA -> ","
+	| COMMA -> ", "
 	| OPEN_BRACK -> "["
-	| CLOSE_BRACK -> "]"
+	| CLOSE_BRACK -> "] "
 	| Basictoken Type_int -> "Int "
 	| Basictoken Type_bool -> "Bool "
 	| Basictoken Type_char -> "Char "
-	| IF -> "if "
-	| ELSE -> "else "
-	| WHILE -> "while "
+	| IF -> "if"
+	| ELSE -> "else"
+	| WHILE -> "while"
 	| RETURN -> "return "
 	| FALSE -> "False"
 	| TRUE -> "True"
-	| EMPTYLIST -> "[]"
 	| PERIOD -> "."
 	| Fieldtoken Hd -> "hd"
 	| Fieldtoken Tl -> "tl"
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
-	| Optok a -> a
-	| Inttok a -> string_of_int a
+	| Optok a -> a ^ " "
+	| Inttok a -> string_of_int a ^ " "
 	| IDtok a -> a
-	| Chartok a -> implode ['\'';a;'\''] ;;
+	| Chartok a -> implode ['\'';a;'\'';' '] ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 

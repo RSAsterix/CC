@@ -217,6 +217,7 @@ let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
 		| Error e, faillist -> Error e, faillist
   	| Success vardecl_list, list ->
   		(match stmt_list_parser [] list with
+			| Error e, VAR::faillist -> Error ("(fundecl_parser) Previous var_parse failed. " ^ e), faillist
   		| Error e, faillist -> Error e, faillist
   		| Success [], lastlist -> Error ("geen statement, maar " ^ token_list_to_string lastlist), lastlist
   		| Success stmt_list, lastlist -> Success (Fundecl (id,fargs,None,vardecl_list,stmt_list)),lastlist))
@@ -228,6 +229,7 @@ let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
 			| Error e, faillist -> Error e, faillist
       | Success vardecl_list, list ->
         (match stmt_list_parser [] list with
+				| Error e, VAR::faillist -> Error ("(fundecl_parser) Previous var_parse failed. " ^ e), faillist
         | Error e, faillist -> Error e, faillist
         | Success [], lastlist -> Error ("geen statement, maar " ^ token_list_to_string lastlist), lastlist
         | Success stmt_list, lastlist -> Success (Fundecl (id,fargs,Some funtype,vardecl_list,stmt_list)),lastlist))

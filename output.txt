@@ -19,7 +19,7 @@ fromTo(from, to) :: Int Int -> [Int] {
 }
 
 reverse(list) :: [t] -> [t] {
-  var accu = []
+  var accu = [];
   while(!isEmpty(list)){
     accu = list.hd : accu;
     list = list.tl;
@@ -40,7 +40,7 @@ swapCopy(pair) :: (a, b) -> (b, a) {
 }
 
 swap(tuple) :: (a, a) -> (a, a) {
-  var tmp = tuple.fst
+  var tmp = tuple.fst;
   tuple.fst = tuple.snd;
   tuple.snd = tmp;
   return tuple;
