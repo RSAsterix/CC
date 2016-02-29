@@ -46,6 +46,7 @@ type token =
 	| VOID
 	| ARROW
 	| COMMA
+	| EMPTYLIST
 	| OPEN_BRACK | CLOSE_BRACK
 	| Basictoken of basictype
 	| IF | ELSE | WHILE | RETURN

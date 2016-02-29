@@ -10,7 +10,7 @@ open Pretty_printer_files
 (* (Stream.next lines) aan te roepen *)
 
 let filename = "C:/Users/tom_e/workspace/CC/inputO.txt";;
-(* let filename = "C:/Users/Martin/workspace/test/input.txt";; *)
+(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
@@ -26,6 +26,7 @@ with End_of_file ->
 
 let structure = spl_parser [] !tokenlist;;
 let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
+(* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
 let oc = open_out outfile;;
 match structure with
 | Error e -> print_endline e;

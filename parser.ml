@@ -64,9 +64,9 @@ exp_strongest = function
 	| (Chartok c)::list -> Success (Exp_char c), list
 	| FALSE::list -> Success (Exp_bool false), list
 	| TRUE::list -> Success (Exp_bool true), list
-	| OPEN_BRACK::CLOSE_BRACK::list -> Success (Exp_emptylist), list
+	| EMPTYLIST::list -> Success (Exp_emptylist), list
 	| (IDtok id)::OPEN_PAR::list -> 
-		(match parse_funcall [] list with
+		(match parse_funcall list with
 		| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
 		| Error e, list -> Error e, list)
 	|	(IDtok id)::list -> 
@@ -89,13 +89,15 @@ exp_strongest = function
 		| Error e, list -> Error e, list)
 	| list -> Error ("Empty expression or unexpected token: " ^ token_list_to_string list), list
 and
-parse_funcall arg_list = function (* nog geen errors bij lege argumenten *)
-	| CLOSE_PAR::list -> Success (List.rev arg_list), list
-	| COMMA::list -> parse_funcall arg_list list
-	| list -> 
-		(match (exp_parser list) with
-		| Success exp, list -> parse_funcall (exp::arg_list) list
-		| Error e, list -> Error e, list)
+parse_funcall list =
+	let rec parse_actargs arg_list list = (match (exp_parser list) with
+		| Success exp, CLOSE_PAR::list -> Success (List.rev (exp::arg_list)), list
+		| Success exp, COMMA::list -> parse_actargs (exp::arg_list) list
+		| Success exp, list -> Error ("Geen sluithaak of comma, maar: " ^ token_list_to_string list), list
+		| Error e, list -> Error e, list) in
+	match list with
+	| CLOSE_PAR::list -> Success([]), list
+	| list -> parse_actargs [] list		
 
 let rec type_parser = function
 	| (Basictoken a)::list -> Success (Basictype a),list
@@ -116,11 +118,14 @@ let rec type_parser = function
 		| Error e, list -> Error e, list)
 	| list -> Error ("Geen type, maar " ^ token_list_to_string list), list;;
 
-let rec fargs_parser_till_CLOSE_PAR id_list = function
-  | CLOSE_PAR::list	-> Success (Fargs (List.rev id_list)),list
-  | (IDtok id)::CLOSE_PAR::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
-  | (IDtok id)::COMMA::list -> fargs_parser_till_CLOSE_PAR ((Id id)::id_list) list
-  | list -> Error ("Geen sluithaak of komma, maar " ^ token_list_to_string list), list;;
+let fargs_parser_till_CLOSE_PAR list =
+	let rec fargs_parser id_list = function
+		| (IDtok id)::CLOSE_PAR::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
+  	| (IDtok id)::COMMA::list -> fargs_parser ((Id id)::id_list) list 
+		| list -> Error ("Geen sluithaak of komma, maar " ^ token_list_to_string list), list in
+  match list with
+	| CLOSE_PAR::list	-> Success (Fargs []),list
+	| list -> fargs_parser [] list
 
 let rettype_parser = function
 	| VOID::list -> Success Type_void, list
@@ -196,7 +201,7 @@ stmt_parser = function
 		| Success _, list -> Error ("No semicolon, but: " ^ token_list_to_string list), list
 		| Error e, list -> Error e, list)
 	| (IDtok id)::OPEN_PAR::list -> 
-  	(match parse_funcall [] list with
+  	(match parse_funcall list with
   	| Success exp_list, list -> Success (Stmt_function_call (Id id, exp_list)), list
 		| Error e, list -> Error e, list)
 	| (IDtok id)::list ->
@@ -210,7 +215,7 @@ stmt_parser = function
 		| Error e, list -> Error e, list)
 	| list -> Error ("(stmt_parser) Unexpected token: " ^ token_list_to_string list), list;;
 
-let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR [] list with
+let fundecl_parser id list = match fargs_parser_till_CLOSE_PAR list with
   | Error e, faillist -> Error e, faillist
   | Success fargs, OPEN_ACO::list ->
   	(match vardecl_list_parser [] list with

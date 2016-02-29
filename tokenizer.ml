@@ -37,6 +37,7 @@ let rec scan_line = function
 	| 's'::'n'::'d'::line when (match_next line) -> Fieldtoken Snd::(scan_line line)
 	| ':'::':'::line -> DDPOINT::(scan_line line)
 	| '-'::'>'::line -> ARROW::(scan_line line)
+	| '['::']'::line -> EMPTYLIST::(scan_line line)
 	| '.'::line -> PERIOD::(scan_line line)
 	| '+'::line -> Optok "+"::(scan_line line)
 	| '-'::line -> Optok "-"::(scan_line line)
