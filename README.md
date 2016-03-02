@@ -8,6 +8,13 @@ Het bevat de volgende modules:
  - types.ml
  	In deze module staan alle zelf-gedefinieerde types. Het bestaat uit 3 delen:
  	structure: dit is de boom die de parser teruggeeft
- 	result: als het de parser lukt om een structure te maken, geeft het Success(structure), anders geeft het een
- 	 
+ 	result: als het de parser lukt om een structure te maken, geeft het Success(structure), anders geeft het een Error(foutmeldingstring)
+	
+ - tokenizer.ml
+	Deze module bevat twee grote functies met hulpfuncties:
+	-scan_line: leest een char list en maakt een token list
+	-token_list_to_string: leest een token list en maakt een string
+ - parser.ml
+	Dit is verreweg de grootste module. Het beste is om deze module van onder naar boven te lezen. De hoofdfunctie is spl_parser, die gegeven [] en een tokenlist ofwel Succes(spl) teruggeeft, ofwel Error(foutmeldingstring)
+	
  	
