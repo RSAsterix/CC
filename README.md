@@ -9,13 +9,22 @@ Het bevat de volgende modules:
  	In deze module staan alle zelf-gedefinieerde types. Het bestaat uit 3 delen:
  	structure: dit is de boom die de parser teruggeeft
  	result: als het de parser lukt om een structure te maken, geeft het Success(structure), anders geeft het een Error(foutmeldingstring)
-	
+	token: alle tokens
  - tokenizer.ml
 	Deze module bevat twee grote functies met hulpfuncties:
 	-scan_line: leest een char list en maakt een token list
 	-token_list_to_string: leest een token list en maakt een string
  - parser.ml
-	Dit is verreweg de grootste module. Het beste is om deze module van onder naar boven te lezen. De hoofdfunctie is spl_parser, die gegeven [] en een tokenlist ofwel Succes(spl) teruggeeft, ofwel Error(foutmeldingstring)
+	Dit is verreweg de grootste module. Deze module is het beste van onder naar boven te lezen. De hoofdfunctie is spl_parser, die gegeven [] en een tokenlist ofwel Success(spl) teruggeeft, ofwel Error(foutmeldingstring). Deze functie roept via-via alle bovengelegen functies aan, die elk een deel van de structuur maken.
+	Een paar opmerkingen:
+	 - functies hebben standaard een naam van de vorm x_parser, waarbij x het deel van de structuur is die ze teruggeven.
+	 - functies hebben standaard een output van de vorm Success(structuurdeel,restlist). Als functies worden aangeroepen, moeten ze unpacked worden. Dat gebeurt met de code:
+		match functie-aanroep with
+		| (structuurdeel,restlist) -> do_something
+	 - Errorstrings hebben een vorm van "(functie waar de error voorkwam)" plus een optionele "Previous vardecl failed. " plus ("No x, but: " of "Unexpected token: ") plus de tokenlist
+	 - list parsers (inclusief fargs_parser) snoepen standaard een ')' of een '}' van de tokenlist, met uitzondering van vardecl_list_parser, die net zolang parset totdat hij een Error tegenkomt. Alle list parsers kunnen [] teruggeven.
+	 - functies kunnen elkaar niet circulair aanroepen, tenzij het keyword and is gebruikt. Dit is het geval bij stmt_parser en stmt_list_parser en bij het parsen van exp.
+	 
 	
 	
 	
