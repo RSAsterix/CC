@@ -1,4 +1,4 @@
-Dit project bevat de tokenizer en parser voor de taal SPL, gemaakt door Tom Evers en Martin Huijben.
+Dit project bevat de tokenizer, parser en prettyprinter voor de taal SPL, gemaakt door Tom Evers en Martin Huijben.
 Het is geschreven in de taal OCaml.
 
 Het bevat de volgende modules:
