@@ -17,4 +17,9 @@ Het bevat de volgende modules:
  - parser.ml
 	Dit is verreweg de grootste module. Het beste is om deze module van onder naar boven te lezen. De hoofdfunctie is spl_parser, die gegeven [] en een tokenlist ofwel Succes(spl) teruggeeft, ofwel Error(foutmeldingstring)
 	
- 	
+	
+ - test.ml
+	Deze module wordt uiteindelijk uitgevoerd.
+	Het leest het bestand regel voor regel in, en geeft de resulterende tokenlist mee aan de functie "spl_parser" in parser.ml
+	Geeft spl_parser een error, dan wordt de error geprint
+	Geeft spl_parser een structuur terug, dan wordt deze meegegeven aan de prettyprinter (pretty_printer_files.ml)
