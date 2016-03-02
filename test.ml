@@ -9,8 +9,8 @@ open Pretty_printer_files
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-let filename = "C:/Users/tom_e/workspace/CC/inputO.txt";;
-(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
+(* let filename = "C:/Users/tom_e/workspace/CC/inputO.txt";; *)
+let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
@@ -25,10 +25,10 @@ with End_of_file ->
   close_in in_channel;;
 
 let structure = spl_parser [] !tokenlist;;
-let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
-(* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
+(* let outfile = "C:/Users/tom_e/workspace/CC/output.txt";; *)
+let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 let oc = open_out outfile;;
 match structure with
 | Error e -> print_endline e;
-| Success x -> print_spl (Format.formatter_of_out_channel oc) x;;
+| Success x -> print_spl (Format.formatter_of_out_channel stdout) x;;
 close_out oc;;
