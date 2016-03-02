@@ -2,6 +2,7 @@ open Char_func
 open Types
 open List
 
+
 let rec get_number number line = match line with
 		| char::restline -> 
 			if is_digit char 
@@ -16,6 +17,8 @@ let rec get_name name line = match line with
 			else (Some (IDtok (implode (List.rev name))),line)
 		| [] -> (Some (IDtok (implode (List.rev name))),line);;
 
+(*Checkt of het keywoord dat we al gelezen hebben niet direct gevolgd wordt door een letter of cijfer.*)
+(*Dan is het namelijk geen keyword maar een id*)
 let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
 
 let rec scan_line = function

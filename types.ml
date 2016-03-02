@@ -1,3 +1,4 @@
+(*==    structure    ==*)
 type id = Id of string
 type inttoken = Inttoken of int
 type op1 = Op1 of string
@@ -34,8 +35,12 @@ type fundecl = Fundecl of id * fargs * funtype option * vardecl list * stmt list
 type decl = Decl_var of vardecl | Decl_fun of fundecl
 type spl = SPL of decl list;;
 
+
+(*==    result    ==*)
 type 'a result = Error of string | Success of 'a;;
 
+
+(*==    token    ==*)
 type token = 
 	| VAR
 	| EQ
