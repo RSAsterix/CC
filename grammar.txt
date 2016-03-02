@@ -1,21 +1,21 @@
-SPL = Decl+
-Decl = id '('  FunDecl | VarDecl
-FunDecl = fargs '(' vardecl* stmt stmtList
-		| fargs '::' funtype '(' vardecl* stmtList
+SPL = decl+
+decl = id '('  funDecl | varDecl
+funDecl = fargs '(' vardeclList stmt stmtList
+		| fargs '::' funtype '(' vardeclList stmtList
 fargs =   ')' | fargs2
 fargs2 = id ')' | id ',' fargs2
 stmtList = '}' | stmt stmtList
-stmt =   'if' '(' exp ')' '{' stmtList
-		| 'else' '{' stmtList 
+stmt =   'if' '(' exp ')' '{' stmtList 'else' '{' stmtList 
 		| 'if' '(' exp ')' '{' stmtList
 		| 'while' '(' exp ')' '{' stmtList
 		| 'return' ';'
 		| 'return' exp ';'
 		| id '(' funcall
 		| id field '=' exp
-VarDecl = 'var' VarDeclRest
-		| type VarDeclRest
-VarDeclRest = id '=' exp ';'
+vardeclList = varDecl*
+varDecl = 'var' varDeclRest
+		| type varDeclRest
+varDeclRest = id '=' exp ';'
 funtype = '->' rettype | type funtype
 rettype = 'Void' | type
 type =    basictype
