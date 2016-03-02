@@ -23,12 +23,9 @@ Het bevat de volgende modules:
 		| (structuurdeel,restlist) -> do_something
 	 - Errorstrings hebben een vorm van "(functie waar de error voorkwam)" plus een optionele "Previous vardecl failed. " plus ("No x, but: " of "Unexpected token: ") plus de tokenlist
 	 - list parsers (inclusief fargs_parser) snoepen standaard een ')' of een '}' van de tokenlist, met uitzondering van vardecl_list_parser, die net zolang parset totdat hij een Error tegenkomt. Alle list parsers kunnen [] teruggeven.
-	 - functies kunnen elkaar niet circulair aanroepen, tenzij het keyword and is gebruikt. Dit is het geval bij stmt_parser en stmt_list_parser en bij het parsen van exp.
-	 
-	
-	
-	
+	 - functies kunnen elkaar niet circulair aanroepen, tenzij het keyword and is gebruikt. Dit is het geval bij stmt_parser en stmt_list_parser en bij het parsen van exp.	
  - pretty_printer_files.ml
+	Deze module prettyprints naar een file.
 	Iedere functie krijgt het argument "ppf"  mee. Dit argument is een zogeheten 'formatter': als het ware een outputstream met extra functionaliteit.
 	Iedere functie levert een unit van de vorm 
 		fprintf ppf "<formatting>" <arguments>
@@ -38,9 +35,16 @@ Het bevat de volgende modules:
 		@]			-	sluit de vorige box
 		@,			-	print een enter
 		@;<0 x>		-	print een enter, met de volgende regel op een offset van x
-	
  - test.ml
 	Deze module wordt uiteindelijk uitgevoerd.
-	Het leest het bestand regel voor regel in, en geeft de resulterende tokenlist mee aan de functie "spl_parser" in parser.ml
+	Het leest het in de code gespecificeerde bestand regel voor regel in, en geeft de resulterende tokenlist mee aan de functie "spl_parser" in parser.ml
 	Geeft spl_parser een error, dan wordt de error geprint
 	Geeft spl_parser een structuur terug, dan wordt deze meegegeven aan de prettyprinter (pretty_printer_files.ml)
+	Op dit moment print het naar de console. Verander stdout naar oc om naar output.txt te printen
+	
+Verder bevat ons project de volgende tekstbestanden:
+ - grammar
+ - input1, voorbeeldcode spl
+ - input2, meer voorbeeldcode spl
+ - output, de output van input2
+ - inputT, voorbeeldcode om de exp_parser te testen
