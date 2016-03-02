@@ -2,22 +2,29 @@ open Types
 open Char_func
 open Format
 
+(* print "True" als het argument true is,*)
+(* en "False" als het argument false is. *)
 let print_bool ppf = function
 	| true -> fprintf ppf "%s" "True";
 	| false -> fprintf ppf "%s" "False";;
 
+(* print de string van een Id *)
 let print_id ppf = function
 	| Id id -> fprintf ppf "%s" id;;
 
+(* print de integer van een Inttoken *)
 let print_inttoken ppf = function
 	| Inttoken i -> fprintf ppf "%i" i;;
 
+(* print de operator van een Op1 *)
 let print_op1 ppf = function
 	| Op1 o -> fprintf ppf "%s" o;;
 
+(* print de operator van een Op2 *)
 let print_op2 ppf = function
 	| Op2 o -> fprintf ppf "%s" o;;
 
+(* print een lijst van fields met punten ertussen *)
 let rec print_fields ppf = function
 	| Field [] -> ();
 	| Field (Hd::ls) -> fprintf ppf "%a.hd" print_fields (Field ls);
@@ -25,6 +32,8 @@ let rec print_fields ppf = function
 	| Field (Fst::ls) -> fprintf ppf "%a.fst" print_fields (Field ls);
 	| Field (Snd::ls) -> fprintf ppf "%a.snd" print_fields (Field ls);;
 
+(* levert het niveau van sterkte van een operator *)
+(* hoe hoger, hoe sterker                         *)
 let op_map = function
 	| Op2 c when (is_op_colon c) -> 1
 	| Op2 c when (is_op_logical c) -> 2
@@ -32,10 +41,13 @@ let op_map = function
 	| Op2 c when (is_op_plus c) -> 4
 	| Op2 c when (is_op_times c) -> 5;;
 
+(* Levert true als de eerste expressie een infix-expressie is *)
+(* met een zwakkere operator                                  *)
 let isLower exp op = match exp with
 	| Exp_infix (e1, o, e2) -> (op_map o) < (op_map op);
 	| e -> false;;
 
+(* Print een expressie *)
 let rec print_exp ppf = function
 	| Exp_field (id, flds) -> fprintf ppf "%a%a" print_id id print_fields flds;
 	| Exp_infix (exp1, op2, exp2) ->  
@@ -62,6 +74,7 @@ and print_exp_list ppf = function
 		fprintf ppf "%a" print_exp exp;
 	| exp::exp_list ->
 		fprintf ppf "%a, %a" print_exp exp print_exp_list exp_list;
+(* Print een statement *)
 and print_stmt ppf = function
 	| Stmt_if (exp, stmt_list) ->
 		fprintf ppf "if(%a){@;<0 2>@[<v 0>%a@]@,}" print_exp exp print_stmt_list stmt_list;
@@ -81,12 +94,16 @@ and print_stmt_list ppf = function
 		fprintf ppf "%a" print_stmt stmt;
 	| stmt::ls ->
 		fprintf ppf "%a@,%a" print_stmt stmt print_stmt_list ls;
+(* Nodig omdat een returnstatement misschien een expressie heeft, *)
+(* of misschien void                                              *)
 and print_exp_option ppf = function
 	| None -> ();
 	| Some exp -> fprintf ppf "%a" print_exp exp;
+(* Print een function call *)
 and print_funcall ppf = function
 	| (id, exps) -> fprintf ppf "%a(%a)" print_id id print_exp_list exps;;
 
+(* Print een lijst van function arguments *)
 let rec print_fargs ppf = function
 	| Fargs [] -> ()
 	| Fargs [a] ->
@@ -94,25 +111,30 @@ let rec print_fargs ppf = function
 	| Fargs (a::list) ->
 		fprintf ppf "%a, %a" print_id a print_fargs (Fargs list);;
 
+(* Print basictypes int, bool of char *)
 let print_basictype ppf = function
 	| Type_int -> fprintf ppf "%s" "Int";
 	| Type_bool -> fprintf ppf "%s" "Bool";
 	| Type_char -> fprintf ppf "%s" "Char";;
 
+(* Print een typetoken *)
 let rec print_typetoken ppf = function
 	| Basictype b -> fprintf ppf "%a" print_basictype b;
 	| Type_tuple (t1, t2) -> fprintf ppf "(%a, %a)" print_typetoken t1 print_typetoken t2;
 	| Type_list t -> fprintf ppf "[%a]" print_typetoken t;
 	| Type_id id -> fprintf ppf "%a" print_id id;;
 
+(* Print een returntype, wordt gebruikt in print_funtype *)
 let print_rettype ppf = function
 	| Type_void -> fprintf ppf "%s" "Void";
 	| Rettype t -> fprintf ppf "%a" print_typetoken t;;
 
+(* Print een functietype *)
 let rec print_funtype ppf = function
 	| Funtype ([], ret) -> fprintf ppf "-> %a " print_rettype ret;
 	| Funtype (a::list, ret) -> fprintf ppf "%a %a" print_typetoken a print_funtype (Funtype (list, ret));;
 
+(* Nodig omdat een vardecl ofwel 'var' heeft, ofwel een type *)
 let print_var_option ppf = function
 	| None -> fprintf ppf "%s" "var";
 	| Some t -> fprintf ppf "%a" print_typetoken t;;
