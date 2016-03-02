@@ -10,22 +10,6 @@ let rec field_parser field_list = function
 	| list -> Success (Field (List.rev field_list)), list;;
 
 (* exp = expLogical [opColon exp]             *)
-(* expLogical = expEq [opLogical expLogical]  *)
-(* expEq = expPlus [opEq expEq]               *)
-(* expPlus = expTimes [opPlus expPlus]        *)
-(* expTimes = expStrongest [opTimes expTimes] *)
-(* expStrongest =    int                      *)
-(* 				| char                             *)
-(* 				| 'False'                          *)
-(* 				| 'True'                           *)
-(* 				| '[]'                             *)
-(* 				| id funcall                       *)
-(* 				| id field                         *)
-(* 				| '(' exp ',' exp ')'              *)
-(* 				| '(' exp ')'                      *)
-(* 				| op1 exp                          *)
-(* funcall = ')' | actargs                    *)
-(* actargs = exp ')' | exp ',' actargs *)
 let rec exp_parser = function
 	| list -> 
 		(match exp_logical list with
@@ -36,6 +20,7 @@ let rec exp_parser = function
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
 and
+(* expLogical = expEq [opLogical expLogical]  *)
 exp_logical = function
 	| list -> 
 		(match exp_eq list with
@@ -46,6 +31,7 @@ exp_logical = function
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
 and
+(* expEq = expPlus [opEq expEq]               *)
 exp_eq = function
 	| list -> 
 		(match exp_plus list with
@@ -56,6 +42,7 @@ exp_eq = function
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
 and
+(* expPlus = expTimes [opPlus expPlus]        *)
 exp_plus = function
 	| list -> 
 		(match exp_times list with
@@ -66,6 +53,7 @@ exp_plus = function
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
 and
+(* expTimes = expStrongest [opTimes expTimes] *)
 exp_times = function
 	| list -> 
 		(match exp_strongest list with
@@ -76,6 +64,16 @@ exp_times = function
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
 and
+(* expStrongest =	int                 *)
+(* 							| char                *)
+(* 							| 'False'             *)
+(* 							| 'True'              *)
+(* 							| '[]'                *)
+(* 							| id funcall          *)
+(* 							| id field            *)
+(* 							| '(' exp ',' exp ')' *)
+(* 							| '(' exp ')'         *)
+(* 							| op1 exp             *)
 exp_strongest = function
 	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
 	| (Chartok c)::list -> Success (Exp_char c), list
@@ -106,7 +104,9 @@ exp_strongest = function
 		| Error e, list -> Error e, list)
 	| list -> Error ("(exp_strongest) Empty expression or unexpected token: " ^ token_list_to_string list), list
 and
+(* funcall = ')' | actargs *)
 funcall_parser list =
+	(* actargs = exp ')' | exp ',' actargs *)
 	let rec actargs_parser arg_list list = (match (exp_parser list) with
 		| Success exp, CLOSE_PAR::list -> Success (List.rev (exp::arg_list)), list
 		| Success exp, COMMA::list -> actargs_parser (exp::arg_list) list
@@ -114,7 +114,7 @@ funcall_parser list =
 		| Error e, list -> Error e, list) in
 	match list with
 	| CLOSE_PAR::list -> Success([]), list
-	| list -> actargs_parser [] list		
+	| list -> actargs_parser [] list;;
 
 (* type =    basictype       *)
 (* 		| id                  *)
