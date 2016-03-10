@@ -21,91 +21,92 @@ let rec get_name name line = match line with
 (*Dan is het namelijk geen keyword maar een id*)
 let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
 
-let rec scan_line = function
+let rec scan_line l = function
 	| [] -> []
-	| 'v'::'a'::'r'::line when (match_next line) -> VAR::(scan_line line)
-	| 'V'::'o'::'i'::'d'::line when (match_next line) -> VOID::(scan_line line)
-	| 'I'::'n'::'t'::line when (match_next line) -> Basictoken Type_int ::(scan_line line)
-	| 'B'::'o'::'o'::'l'::line when (match_next line) -> Basictoken Type_bool ::(scan_line line)
-	| 'C'::'h'::'a'::'r'::line when (match_next line) -> Basictoken Type_char ::(scan_line line)
-	| 'i'::'f'::line when (match_next line) -> IF ::(scan_line line)
-	| 'e'::'l'::'s'::'e'::line when (match_next line) -> ELSE ::(scan_line line)
-	| 'w'::'h'::'i'::'l'::'e'::line when (match_next line) -> WHILE ::(scan_line line)
-	| 'r'::'e'::'t'::'u'::'r'::'n'::line when (match_next line) -> RETURN ::(scan_line line)
-	| 'F'::'a'::'l'::'s'::'e'::line when (match_next line) -> FALSE ::(scan_line line)
-	| 'T'::'r'::'u'::'e'::line when (match_next line) -> TRUE ::(scan_line line)
-	| 'h'::'d'::line when (match_next line) -> Fieldtoken Hd ::(scan_line line)
-	| 't'::'l'::line when (match_next line) -> Fieldtoken Tl::(scan_line line)
-	| 'f'::'s'::'t'::line when (match_next line) -> Fieldtoken Fst::(scan_line line)
-	| 's'::'n'::'d'::line when (match_next line) -> Fieldtoken Snd::(scan_line line)
-	| ':'::':'::line -> DDPOINT::(scan_line line)
-	| '-'::'>'::line -> ARROW::(scan_line line)
-	| '['::']'::line -> EMPTYLIST::(scan_line line)
-	| '.'::line -> PERIOD::(scan_line line)
-	| '+'::line -> Optok "+"::(scan_line line)
-	| '-'::line -> Optok "-"::(scan_line line)
-	| '*'::line -> Optok "*"::(scan_line line)
-	| '/'::line -> Optok "/"::(scan_line line)
-	| '%'::line -> Optok "%"::(scan_line line)
-	| '='::'='::line -> Optok "=="::(scan_line line)
-	| '<'::'='::line -> Optok "<="::(scan_line line)
-	| '>'::'='::line -> Optok ">="::(scan_line line)
-	| '!'::'='::line -> Optok "!="::(scan_line line)
-	| '&'::'&'::line -> Optok "&&"::(scan_line line)
-	| '|'::'|'::line -> Optok "||"::(scan_line line)
-	| ':'::line -> Optok ":"::(scan_line line)
-	| '!'::line -> Optok "!"::(scan_line line)
-	| '<'::line -> Optok "<"::(scan_line line)
-	| '>'::line -> Optok ">"::(scan_line line)
-	| '='::line -> EQ::(scan_line line) 
-	| ';'::line -> SEMICOLON::(scan_line line)
-	| '('::line -> OPEN_PAR::(scan_line line)
-	| ')'::line -> CLOSE_PAR::(scan_line line)
-	| '{'::line -> OPEN_ACO::(scan_line line)
-	| '}'::line -> CLOSE_ACO::(scan_line line)
-	| ','::line -> COMMA::(scan_line line)
-	| '['::line -> OPEN_BRACK::(scan_line line)
-	| ']'::line -> CLOSE_BRACK::(scan_line line)
-	| '\''::c::'\''::line -> (Chartok c)::(scan_line line)
+	| 'v'::'a'::'r'::line when (match_next line) -> (l, VAR)::(scan_line l line)
+	| 'V'::'o'::'i'::'d'::line when (match_next line) -> (l, VOID)::(scan_line l line)
+	| 'I'::'n'::'t'::line when (match_next line) -> (l, Basictoken Type_int)::(scan_line l line)
+	| 'B'::'o'::'o'::'l'::line when (match_next line) -> (l, Basictoken Type_bool)::(scan_line l line)
+	| 'C'::'h'::'a'::'r'::line when (match_next line) -> (l, Basictoken Type_char)::(scan_line l line)
+	| 'i'::'f'::line when (match_next line) -> (l, IF)::(scan_line l line)
+	| 'e'::'l'::'s'::'e'::line when (match_next line) -> (l, ELSE)::(scan_line l line)
+	| 'w'::'h'::'i'::'l'::'e'::line when (match_next line) -> (l, WHILE)::(scan_line l line)
+	| 'r'::'e'::'t'::'u'::'r'::'n'::line when (match_next line) -> (l, RETURN)::(scan_line l line)
+	| 'F'::'a'::'l'::'s'::'e'::line when (match_next line) -> (l, FALSE)::(scan_line l line)
+	| 'T'::'r'::'u'::'e'::line when (match_next line) -> (l, TRUE)::(scan_line l line)
+	| 'h'::'d'::line when (match_next line) -> (l, Fieldtoken Hd)::(scan_line l line)
+	| 't'::'l'::line when (match_next line) -> (l, Fieldtoken Tl)::(scan_line l line)
+	| 'f'::'s'::'t'::line when (match_next line) -> (l, Fieldtoken Fst)::(scan_line l line)
+	| 's'::'n'::'d'::line when (match_next line) -> (l, Fieldtoken Snd)::(scan_line l line)
+	| ':'::':'::line -> (l, DDPOINT)::(scan_line l line)
+	| '-'::'>'::line -> (l, ARROW)::(scan_line l line)
+	| '['::']'::line -> (l, EMPTYLIST)::(scan_line l line)
+	| '.'::line -> (l, PERIOD)::(scan_line l line)
+	| '+'::line -> (l, Optok "+")::(scan_line l line)
+	| '-'::line -> (l, Optok "-")::(scan_line l line)
+	| '*'::line -> (l, Optok "*")::(scan_line l line)
+	| '/'::line -> (l, Optok "/")::(scan_line l line)
+	| '%'::line -> (l, Optok "%")::(scan_line l line)
+	| '='::'='::line -> (l, Optok "==")::(scan_line l line)
+	| '<'::'='::line -> (l, Optok "<=")::(scan_line l line)
+	| '>'::'='::line -> (l, Optok ">=")::(scan_line l line)
+	| '!'::'='::line -> (l, Optok "!=")::(scan_line l line)
+	| '&'::'&'::line -> (l, Optok "&&")::(scan_line l line)
+	| '|'::'|'::line -> (l, Optok "||")::(scan_line l line)
+	| ':'::line -> (l, Optok ":")::(scan_line l line)
+	| '!'::line -> (l, Optok "!")::(scan_line l line)
+	| '<'::line -> (l, Optok "<")::(scan_line l line)
+	| '>'::line -> (l, Optok ">")::(scan_line l line)
+	| '='::line -> (l, EQ)::(scan_line l line) 
+	| ';'::line -> (l, SEMICOLON)::(scan_line l line)
+	| '('::line -> (l, OPEN_PAR)::(scan_line l line)
+	| ')'::line -> (l, CLOSE_PAR)::(scan_line l line)
+	| '{'::line -> (l, OPEN_ACO)::(scan_line l line)
+	| '}'::line -> (l, CLOSE_ACO)::(scan_line l line)
+	| ','::line -> (l, COMMA)::(scan_line l line)
+	| '['::line -> (l, OPEN_BRACK)::(scan_line l line)
+	| ']'::line -> (l, CLOSE_BRACK)::(scan_line l line)
+	| '\''::c::'\''::line -> (l, (Chartok c))::(scan_line l line)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
       	else if is_letter char then (get_name [] (char::line))
       	else (None, line)) with
-    		| None,line -> scan_line line
-    		| Some s, line -> s::(scan_line line);;
+    		| None,line -> scan_line l line
+    		| Some s, line -> (l, s)::(scan_line l line);;
 
 let token_to_string t = match t with
-	| VAR -> "var "
-	| EQ -> " = "
-	| SEMICOLON -> "; "
-	| OPEN_PAR -> "("
-	| CLOSE_PAR -> ")"
-	| DDPOINT -> " :: "
-	| OPEN_ACO -> "{"
-	| CLOSE_ACO -> "}"
-	| VOID -> "Void"
-	| ARROW -> "-> "
-	| COMMA -> ", "
-	| OPEN_BRACK -> "["
-	| CLOSE_BRACK -> "] "
-	| Basictoken Type_int -> "Int "
-	| Basictoken Type_bool -> "Bool "
-	| Basictoken Type_char -> "Char "
-	| IF -> "if"
-	| ELSE -> "else"
-	| WHILE -> "while"
-	| RETURN -> "return "
-	| FALSE -> "False"
-	| TRUE -> "True"
-	| PERIOD -> "."
-	| Fieldtoken Hd -> "hd"
-	| Fieldtoken Tl -> "tl"
-	| Fieldtoken Fst -> "fst"
-	| Fieldtoken Snd -> "snd"
-	| Optok a -> a ^ " "
-	| Inttok a -> string_of_int a ^ " "
-	| IDtok a -> a
-	| Chartok a -> implode ['\'';a;'\'';' '] ;;
+	| (_, VAR) -> "var "
+	| (_, EQ) -> " = "
+	| (_, SEMICOLON) -> "; "
+	| (_, OPEN_PAR) -> "("
+	| (_, CLOSE_PAR) -> ")"
+	| (_, DDPOINT) -> " :: "
+	| (_, OPEN_ACO) -> "{"
+	| (_, CLOSE_ACO) -> "}"
+	| (_, VOID) -> "Void"
+	| (_, ARROW) -> "-> "
+	| (_, COMMA) -> ", "
+	| (_, OPEN_BRACK) -> "["
+	| (_, CLOSE_BRACK) -> "]"
+	| (_, EMPTYLIST) -> "[]"
+	| (_, Basictoken Type_int) -> "Int "
+	| (_, Basictoken Type_bool) -> "Bool "
+	| (_, Basictoken Type_char) -> "Char "
+	| (_, IF) -> "if"
+	| (_, ELSE) -> "else"
+	| (_, WHILE) -> "while"
+	| (_, RETURN) -> "return "
+	| (_, FALSE) -> "False"
+	| (_, TRUE) -> "True"
+	| (_, PERIOD) -> "."
+	| (_, Fieldtoken Hd) -> "hd"
+	| (_, Fieldtoken Tl) -> "tl"
+	| (_, Fieldtoken Fst) -> "fst"
+	| (_, Fieldtoken Snd) -> "snd"
+	| (_, Optok a) -> a ^ " "
+	| (_, Inttok a) -> string_of_int a ^ " "
+	| (_, IDtok a) -> a
+	| (_, Chartok a) -> implode ['\'';a;'\'';' '] ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
