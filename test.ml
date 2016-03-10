@@ -14,10 +14,12 @@ let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
+let l = ref 0;;
 try
   while true do
     let line = input_line in_channel in
-		let tokenlistline = scan_line (explode line) in
+		l := !l + 1;
+		let tokenlistline = scan_line l (explode line) in
     (* print_endline (token_list_to_string (tokenlistline)); *)
 		tokenlist := List.append !tokenlist tokenlistline
 	done
