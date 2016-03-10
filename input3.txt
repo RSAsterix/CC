@@ -1,6 +1,0 @@
-swap ( tuple ) :: (a, a) -> (a, a) {
-var tmp = tuple.fst ;
-tuple.fst = tuple.snd;
-tuple.snd = tmp;
-return tuple ;
-}

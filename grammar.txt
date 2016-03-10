@@ -1,0 +1,53 @@
+SPL = decl+
+decl = id '('  funDecl | varDecl
+funDecl = fargs '(' vardeclList stmt stmtList
+		| fargs '::' funtype '(' vardeclList stmtList
+fargs =   ')' | fargs2
+fargs2 = id ')' | id ',' fargs2
+stmtList = '}' | stmt stmtList
+stmt =   'if' '(' exp ')' '{' stmtList 'else' '{' stmtList 
+		| 'if' '(' exp ')' '{' stmtList
+		| 'while' '(' exp ')' '{' stmtList
+		| 'return' ';'
+		| 'return' exp ';'
+		| id '(' funcall
+		| id field '=' exp
+vardeclList = varDecl*
+varDecl = 'var' varDeclRest
+		| type varDeclRest
+varDeclRest = id '=' exp ';'
+funtype = '->' rettype | type funtype
+rettype = 'Void' | type
+type =    basictype
+		| id
+		| '(' type , type ')'
+		| '[' type ']'
+basictype = 'Int' | 'Bool' | 'Char'
+exp = expLogical [opColon exp]
+expLogical = expEq [opLogical expLogical]
+expEq = expPlus [opEq expEq]
+expPlus = expTimes [opPlus expPlus]
+expTimes = expStrongest [opTimes expTimes]
+expStrongest =    int
+				| char
+				| 'False'
+				| 'True'
+				| '[]'
+				| id funcall
+				| id field
+				| '(' exp ',' exp ')'
+				| '(' exp ')'
+				| op1 exp
+funcall = ')' | actargs
+actargs = exp ')' | exp ',' actargs
+field = '.' fieldtoken [field]
+fieldtoken = 'hd' | 'tl' | 'fst' | 'snd'
+opColon = ':'
+opLogical = '||' | '&&'
+opEq = '==' | '>=' | '<=' | '!=' | '<' | '>'
+opPlus = '+' | '-'
+opTimes = '*' | '/' | '%'
+op1 = '!' | '-'
+int = digit+
+id = alpha ( '_' | alphaNum )*
+

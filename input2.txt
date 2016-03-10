@@ -14,12 +14,12 @@ fromTo ( from , to ) :: Int Int -> [ Int ] {
 if ( from <= to ) {
 return from : fromTo ( from + 1, to );
 } else {
-return [ ] ;
+return [] ;
 }
 }
 
 reverse ( list ) :: [ t ] -> [ t ] {
-var accu = [ ] ;
+var accu = [] ;
 while ( ! isEmpty ( list ) ) {
 accu = list.hd : accu ;
 list = list.tl ;

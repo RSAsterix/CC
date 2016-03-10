@@ -3,12 +3,14 @@ open Bytes
 open Char
 open List
 
+(*van string naar char list*)
 let explode s =
   let rec expl i l =
     if i < 0 then l else
     expl (i - 1) (s.[i] :: l) in
   expl (String.length s - 1) [];;
 
+(*van char list naar string*)
 let implode l =
   let result = Bytes.create (List.length l) in
   let rec imp i = function

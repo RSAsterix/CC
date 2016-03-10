@@ -2,6 +2,7 @@ open Char_func
 open Types
 open List
 
+
 let rec get_number number line = match line with
 		| char::restline -> 
 			if is_digit char 
@@ -16,6 +17,8 @@ let rec get_name name line = match line with
 			else (Some (IDtok (implode (List.rev name))),line)
 		| [] -> (Some (IDtok (implode (List.rev name))),line);;
 
+(*Checkt of het keywoord dat we al gelezen hebben niet direct gevolgd wordt door een letter of cijfer.*)
+(*Dan is het namelijk geen keyword maar een id*)
 let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_digit (List.hd line)));;
 
 let rec scan_line = function
@@ -72,38 +75,37 @@ let rec scan_line = function
     		| Some s, line -> s::(scan_line line);;
 
 let token_to_string t = match t with
-	| VAR -> "var"
-	| EQ -> "= "
+	| VAR -> "var "
+	| EQ -> " = "
 	| SEMICOLON -> "; "
 	| OPEN_PAR -> "("
 	| CLOSE_PAR -> ")"
-	| DDPOINT -> ":: "
+	| DDPOINT -> " :: "
 	| OPEN_ACO -> "{"
 	| CLOSE_ACO -> "}"
 	| VOID -> "Void"
 	| ARROW -> "-> "
-	| COMMA -> ","
+	| COMMA -> ", "
 	| OPEN_BRACK -> "["
-	| CLOSE_BRACK -> "]"
+	| CLOSE_BRACK -> "] "
 	| Basictoken Type_int -> "Int "
 	| Basictoken Type_bool -> "Bool "
 	| Basictoken Type_char -> "Char "
-	| IF -> "if "
-	| ELSE -> "else "
-	| WHILE -> "while "
+	| IF -> "if"
+	| ELSE -> "else"
+	| WHILE -> "while"
 	| RETURN -> "return "
 	| FALSE -> "False"
 	| TRUE -> "True"
-	| EMPTYLIST -> "[]"
 	| PERIOD -> "."
 	| Fieldtoken Hd -> "hd"
 	| Fieldtoken Tl -> "tl"
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
-	| Optok a -> a
-	| Inttok a -> string_of_int a
+	| Optok a -> a ^ " "
+	| Inttok a -> string_of_int a ^ " "
 	| IDtok a -> a
-	| Chartok a -> implode ['\'';a;'\''] ;;
+	| Chartok a -> implode ['\'';a;'\'';' '] ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
