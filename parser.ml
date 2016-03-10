@@ -5,15 +5,15 @@ open Char_func
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
 let rec field_parser field_list = function
-	| PERIOD::(Fieldtoken t)::list -> field_parser (t::field_list) list
-	| PERIOD::list -> Error ("(field_parser) No field, but: " ^ token_list_to_string list), list
+	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
+	| (l,PERIOD)::list -> Error ("(r." ^ string_of_int l ^ ") No field, but: " ^ token_list_to_string list), list
 	| list -> Success (Field (List.rev field_list)), list;;
 
 (* exp = expLogical [opColon exp]             *)
 let rec exp_parser = function
 	| list -> 
 		(match exp_logical list with
-    | Success exp1, (Optok c)::list when (is_op_colon c) -> 
+    | Success exp1, (_,Optok c)::list when (is_op_colon c) -> 
 			(match exp_parser list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
@@ -24,7 +24,7 @@ and
 exp_logical = function
 	| list -> 
 		(match exp_eq list with
-    | Success exp1, (Optok c)::list when (is_op_logical c) -> 
+    | Success exp1, (_,Optok c)::list when (is_op_logical c) -> 
 			(match exp_logical list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
@@ -35,7 +35,7 @@ and
 exp_eq = function
 	| list -> 
 		(match exp_plus list with
-    | Success exp1, (Optok c)::list when (is_op_eq c) -> 
+    | Success exp1, (_,Optok c)::list when (is_op_eq c) -> 
 			(match exp_eq list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
@@ -46,7 +46,7 @@ and
 exp_plus = function
 	| list -> 
 		(match exp_times list with
-    | Success exp1, (Optok c)::list when (is_op_plus c) -> 
+    | Success exp1, (_,Optok c)::list when (is_op_plus c) -> 
 			(match exp_plus list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
@@ -57,7 +57,7 @@ and
 exp_times = function
 	| list -> 
 		(match exp_strongest list with
-    | Success exp1, (Optok c)::list when (is_op_times c) -> 
+    | Success exp1, (_,Optok c)::list when (is_op_times c) -> 
 			(match exp_times list with
 			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
 			| Error e, list -> Error e, list)
@@ -75,45 +75,48 @@ and
 (* 							| '(' exp ')'         *)
 (* 							| op1 exp             *)
 exp_strongest = function
-	| (Inttok i)::list -> Success (Exp_int (Inttoken i)), list
-	| (Chartok c)::list -> Success (Exp_char c), list
-	| FALSE::list -> Success (Exp_bool false), list
-	| TRUE::list -> Success (Exp_bool true), list
-	| EMPTYLIST::list -> Success (Exp_emptylist), list
-	| (IDtok id)::OPEN_PAR::list -> 
+	| (_,Inttok i)::list -> Success (Exp_int (Inttoken i)), list
+	| (_,Chartok c)::list -> Success (Exp_char c), list
+	| (_,FALSE)::list -> Success (Exp_bool false), list
+	| (_,TRUE)::list -> Success (Exp_bool true), list
+	| (_,EMPTYLIST)::list -> Success (Exp_emptylist), list
+	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
 		| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
 		| Error e, list -> Error e, list)
-	|	(IDtok id)::list -> 
+	|	(_,IDtok id)::list -> 
 		(match field_parser [] list with
 		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
 		| Error e, list -> Error e, list)
-	| OPEN_PAR::list -> 
+	| (_,OPEN_PAR)::list -> 
 		(match (exp_parser list) with
-		| Success exp1, COMMA::list -> 
+		| Success exp1, (l0,COMMA)::list -> 
 			(match (exp_parser list) with
-			| Success exp2, CLOSE_PAR::list -> Success (Exp_tuple (exp1,exp2)), list
-			| Success _, list -> Error ("(exp_strongest) No closing parenthesis after comma, but: " ^ token_list_to_string list), list
+			| Success exp2, (_,CLOSE_PAR)::list -> Success (Exp_tuple (exp1,exp2)), list
+			| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis after comma, but: " ^ token_to_string x), (l,x)::list
+			| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after comma."), []
 			| Error e, list -> Error e, list)
-		| Success exp, CLOSE_PAR::list -> Success exp, list (* Haakjes weglaten in AST*)
-		| Success _, list -> Error ("(exp_strongest) No closing parenthesis, but: " ^ token_list_to_string list), list
+		| Success exp, (_,CLOSE_PAR)::list -> Success exp, list
+		| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis, but: " ^ token_to_string x), (l,x)::list
 		| Error e, list -> Error e, list)
-	| (Optok c)::list when (is_op1 c) -> 
+	| (_,Optok c)::list when (is_op1 c) -> 
 		(match (exp_parser list) with
 		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
 		| Error e, list -> Error e, list)
-	| list -> Error ("(exp_strongest) Empty expression or unexpected token: " ^ token_list_to_string list), list
+	| (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") Empty expression or unexpected token: " ^ token_to_string x), (l,x)::list
+	| [] -> Error "Unexpected EOF while parsing expression.", []
 and
 (* funcall = ')' | actargs *)
 funcall_parser list =
 	(* actargs = exp ')' | exp ',' actargs *)
 	let rec actargs_parser arg_list list = (match (exp_parser list) with
-		| Success exp, CLOSE_PAR::list -> Success (List.rev (exp::arg_list)), list
-		| Success exp, COMMA::list -> actargs_parser (exp::arg_list) list
-		| Success exp, list -> Error ("(funcall_parser) No closing parenthesis or comma, but: " ^ token_list_to_string list), list
+		| Success exp, (_,CLOSE_PAR)::list -> Success (List.rev (exp::arg_list)), list
+		| Success exp, (_,COMMA)::list -> actargs_parser (exp::arg_list) list
+		| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis or comma, but: " ^ token_to_string x), (l,x)::list
+		| Success _, [] -> Error "Unexpected EOF while parsing function arguments.", []
 		| Error e, list -> Error e, list) in
 	match list with
-	| CLOSE_PAR::list -> Success([]), list
+	| (_,CLOSE_PAR)::list -> Success([]), list
 	| list -> actargs_parser [] list;;
 
 (* type =    basictype       *)
