@@ -1,0 +1,68 @@
+facL(n) :: Int -> Int {
+  return product(fromTo(1, n));
+}
+
+product(list) :: [Int] -> Int {
+  if(isEmpty(list)){
+    return 1;
+  }else{
+    return list.hd * product(list.tl);
+  }
+}
+
+fromTo(from, to) :: Int Int -> [Int] {
+  if(from <= to){
+    return from : fromTo(from + 1, to);
+  }else{
+    return [];
+  }
+}
+
+reverse(list) :: [t] -> [t] {
+  var accu = [];
+  while(!isEmpty(list)){
+    accu = list.hd : accu;
+    list = list.tl;
+  }
+  return accu;
+}
+
+abs(n) :: Int -> Int {
+  if(n < 0){
+    return -n;
+  }else{
+    return n;
+  }
+}
+
+swapCopy(pair) :: (a, b) -> (b, a) {
+  return (pair.snd,pair.fst);
+}
+
+swap(tuple) :: (a, a) -> (a, a) {
+  var tmp = tuple.fst;
+  tuple.fst = tuple.snd;
+  tuple.snd = tmp;
+  return tuple;
+}
+
+append(l1, l2) :: [t] [t] -> [t] {
+  if(isEmpty(l1)){
+    return l2;
+  }else{
+    l1.tl = append(l1.tl, l2);
+    return l1;
+  }
+}
+
+squareOddNumbers(list) :: [Int] -> [Int] {
+  while(!isEmpty(list) && list.hd % 2 == 0){
+    list = list.tl;
+  }
+  if(!isEmpty(list)){
+    list.hd = list.hd * list.hd;
+    list.tl = squareOddNumbers(list.tl);
+  }
+  return list;
+}
+
