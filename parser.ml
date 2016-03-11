@@ -319,6 +319,6 @@ let decl_parser = function
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
 	match decl_parser tokenlist with
-  | Success decls,[] -> Success (SPL (List.rev (decls::decllist)))
-  | Success decls,restlist  -> spl_parser (decls::decllist) restlist
-  | Error e, faillist -> Error e;;
+  | Success decls, [] -> Success (SPL (List.rev (decls::decllist)))
+  | Success decls, list -> spl_parser (decls::decllist) list
+  | Error e, list -> Error e;;
