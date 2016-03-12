@@ -1,5 +1,4 @@
 open Typechecker_lib
-open Printf
 
 (* nieuwe variabele genereren *)
 let c = ref 0;;
@@ -22,11 +21,11 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
-let tv t = function
+let tv t =
 	let rec tv_help list = function
 		| Var i -> List.rev (i::list)
   	| Imp (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Tup (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Lis t -> tv_help list t
   	| t -> [] in
-	tv_help [] t;;
+	remove_dups (tv_help [] t);;

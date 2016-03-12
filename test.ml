@@ -4,6 +4,7 @@ open Parser
 open Char_func
 open Types
 open Pretty_printer_files
+open Typechecker
 
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
