@@ -29,8 +29,8 @@ with End_of_file ->
 let structure = spl_parser [] !tokenlist;;
 let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 (* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
-let oc = open_out outfile;;
+(* let oc = open_out outfile;; *)
 match structure with
 | Error e -> print_endline e;
 | Success x -> print_spl (Format.formatter_of_out_channel stdout) x;;
-close_out oc;;
+(* close_out oc;; *)
