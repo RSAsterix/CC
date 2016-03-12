@@ -12,7 +12,7 @@ let rec rewrite subs i =
 	match subs with
 	| [] -> Var i
 	| (x,nx)::xs when (x = i) -> nx
-	| (x,nx)::xs -> rewrite xs i;; 
+	| (x,nx)::xs -> rewrite xs i;;
 
 (* substitutieregels toepassen *)
 let rec substitute subs = function
@@ -22,3 +22,11 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
+let tv t = function
+	let rec tv_help list = function
+		| Var i -> List.rev (i::list)
+  	| Imp (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
+  	| Tup (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
+  	| Lis t -> tv_help list t
+  	| t -> [] in
+	tv_help [] t;;
