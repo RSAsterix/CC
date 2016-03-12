@@ -6,7 +6,8 @@ open Char_func
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
 let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
-	| (l,PERIOD)::list -> Error ("(r." ^ string_of_int l ^ ") No field, but: " ^ token_list_to_string list), list
+	| (_,PERIOD)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No field, but: " ^ token_to_string x), (l,x)::list
+	| (_,PERIOD)::[] -> Error ("Unexpected EOF while parsing a field."), []
 	| list -> Success (Field (List.rev field_list)), list;;
 
 (* exp = expLogical [opColon exp]             *)
@@ -88,16 +89,17 @@ exp_strongest = function
 		(match field_parser [] list with
 		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
 		| Error e, list -> Error e, list)
-	| (_,OPEN_PAR)::list -> 
+	| (l0,OPEN_PAR)::list -> 
 		(match (exp_parser list) with
-		| Success exp1, (l0,COMMA)::list -> 
+		| Success exp1, (l1,COMMA)::list -> 
 			(match (exp_parser list) with
 			| Success exp2, (_,CLOSE_PAR)::list -> Success (Exp_tuple (exp1,exp2)), list
 			| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis after comma, but: " ^ token_to_string x), (l,x)::list
-			| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after comma."), []
+			| Success _, [] -> Error ("(r." ^ string_of_int l1 ^ ") Unexpected EOF after comma."), []
 			| Error e, list -> Error e, list)
 		| Success exp, (_,CLOSE_PAR)::list -> Success exp, list
 		| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis, but: " ^ token_to_string x), (l,x)::list
+		| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after opening parenthesis."), [] 
 		| Error e, list -> Error e, list)
 	| (_,Optok c)::list when (is_op1 c) -> 
 		(match (exp_parser list) with
