@@ -7,7 +7,7 @@ open Char_func
 let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No field, but: " ^ token_to_string x), (l,x)::list
-	| (_,PERIOD)::[] -> Error ("Unexpected EOF while parsing a field."), []
+	| (l,PERIOD)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF while parsing a field."), []
 	| list -> Success (Field (List.rev field_list)), list;;
 
 (* exp = expLogical [opColon exp]             *)
@@ -177,6 +177,7 @@ let vardecl_rest_parser typetoken = function
 		| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after =."), []   
 		| Error e, list -> Error e, list)
 	| (_,IDtok id)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No =, but " ^ token_to_string x), (l,x)::list
+	| (l,EQ)::list -> Error ("(r." ^ string_of_int l ^ ") No id, but '=' detected.\nIf this is a variable declaration, you probably forgot the type or the 'var' keyword."), (l,EQ)::list
 	| (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No id, but " ^ token_to_string x), (l,x)::list
 	| [] -> Error "Unexpected EOF when parsing the rest of the variable declaration.", []
 
@@ -221,9 +222,11 @@ stmt_parser = function
 				| Success stmt_list2, list -> Success (Stmt_if_else (exp, stmt_list1, stmt_list2)), list
 				| Error e, list -> Error e, list)
 			| Success _, (_,ELSE)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No opening acolade, but " ^ token_to_string x), (l,x)::list
+			| Success _, (l,ELSE)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF after 'else'."), (l,ELSE)::[] 
 			| Success stmt_list1, list -> Success (Stmt_if (exp, stmt_list1)), list
 			| Error e, list -> Error e, list)
 		| Success _, (_,CLOSE_PAR)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No opening acolade, but " ^ token_to_string x), (l,x)::list
+		| Success _, (l,CLOSE_PAR)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF after closing parenthesis."), (l,CLOSE_PAR)::[]
 		| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis, but " ^ token_to_string x), (l,x)::list
 		| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after opening parenthesis."), []
 		| Error e, list -> Error e, list)
@@ -234,6 +237,7 @@ stmt_parser = function
 			| Success stmt_list, list -> Success (Stmt_while (exp, stmt_list)), list
 			| Error e, list -> Error e, list)
 		| Success _, (_,CLOSE_PAR)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No opening acolade, but " ^ token_to_string x), (l,x)::list
+		| Success _, (l,CLOSE_PAR)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF after closing parenthesis."), (l,CLOSE_PAR)::[]
 		| Success _, (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis, but " ^ token_to_string x), (l,x)::list
 		| Success _, [] -> Error ("(r." ^ string_of_int l0 ^ ") Unexpected EOF after opening parenthesis."), [] 
 		| Error e, list -> Error e, list)
@@ -268,8 +272,9 @@ stmt_parser = function
 let fargs_parser list =
 	let rec fargs2_parser id_list = function
 		| (_,IDtok id)::(_,CLOSE_PAR)::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
-  	| (_,IDtok id)::(_,COMMA)::list -> fargs2_parser ((Id id)::id_list) list 
-		| (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis or comma, but: " ^ token_to_string x), (l,x)::list
+  	| (_,IDtok id)::(_,COMMA)::list -> fargs2_parser ((Id id)::id_list) list
+		| (_,IDtok id)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No closing parenthesis or comma, but: " ^ token_to_string x), (l,x)::list
+		| (l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No id, but: " ^ token_to_string x), (l,x)::list
 		| [] -> Error ("Unexpected EOF when parsing function arguments."), []
   in match list with
 	| (_,CLOSE_PAR)::list -> Success (Fargs []), list
@@ -313,6 +318,7 @@ let decl_parser = function
 		(match fundecl_parser (Id id) list with
 		| Success fundecl, list -> Success (Decl_fun fundecl), list
 		| Error e, faillist -> Error e, faillist)
+	| (l,IDtok id)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF after parsing id.\nBy the way: is '" ^ id ^ "' a type for a variable, or a function name without arguments?"), []
 	| list -> 
 		(match vardecl_parser list with
 		| Success vardecl, list -> Success (Decl_var vardecl), list
