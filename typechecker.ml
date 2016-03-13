@@ -26,7 +26,7 @@ let rec substitute subs = function
 (* volgens de regels in s1 *)
 let o s1 s2 =
 	let rec o_help new_subs subs = function
-		| [] -> List.rev (List.append new_subs subs)
+		| [] -> List.rev (List.append subs new_subs)
 		| (x,nx)::xs -> o_help ((x, substitute subs nx)::new_subs) subs xs in
 	o_help [] s1 s2;;
 
@@ -40,26 +40,28 @@ let tv t =
   	| t -> [] in
 	remove_dups (tv_help [] t);;
 
-let rec u = function
-	| tuple -> u_help [] tuple 
-and u_help list = function
+let u tuple = 
+	let rec u_help list = function
 	| (Var a1, Var a2) when (a1 = a2) -> List.rev list
 	| (Var a, t) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
 	| (t, Var a) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
 	| (Imp (s1, s2), Imp (t1, t2)) -> 
-		(let x = u (s2, t2) in
-		(let u1 = u (substitute x s1, substitute x t1) in
+		(let x = u_help [] (s2, t2) in
+		(let u1 = u_help [] (substitute x s1, substitute x t1) in
 		(let result = o u1 x in
 		List.append result list)))
 	| (Tup (s1, s2), Tup (t1, t2)) ->
-		(let x = u (s2, t2) in
-		(let u1 = u (substitute x s1, substitute x t1) in
+		(let x = u_help [] (s2, t2) in
+		(let u1 = u_help [] (substitute x s1, substitute x t1) in
 		(let result = o u1 x in
 		List.append result list)))
 	| (Lis s, Lis t) ->
-		(let result = u (s, t) in
+		(let result = u_help [] (s, t) in
 		List.append result list)
 	| (Int, Int) -> List.rev list
 	| (Bool, Bool) -> List.rev list
 	| (Char, Char) -> List.rev list
-	| tuple -> [];; (* fail? *)
+	| tuple -> [(-1,Var (-1))] (* heel cheatsy *) in 
+	match u_help [] tuple with
+	| list when (not (List.exists (fun x -> x = (-1, Var (-1))) list)) -> Success list
+	| _ -> Error "Type error";;
