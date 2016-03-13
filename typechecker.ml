@@ -21,6 +21,15 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
+(* Infix versie van o, vervangt alle substituties in s2 *)
+(* volgens de regels in s1 *)
+let o s1 s2 =
+	let rec o_help new_subs subs = function
+		| [] -> List.rev (List.append new_subs subs)
+		| (x,nx)::xs -> o_help ((substitute subs nx)::new_subs) subs in
+	o_help [] s1 s2;;
+
+(* Vindt alle vrije variabelen in een gegeven type t *)
 let tv t =
 	let rec tv_help list = function
 		| Var i -> List.rev (i::list)
@@ -29,3 +38,10 @@ let tv t =
   	| Lis t -> tv_help list t
   	| t -> [] in
 	remove_dups (tv_help [] t);;
+
+let rec algorithmU tuple =
+	let rec u_help list = function
+	| (Var a1, Var a2) when (a1 = a2) -> List.rev list
+	| (Var a, t) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
+	| (t, Var a) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
+	| (Imp (s1, s2), Imp (t1, t2)) -> (* verder *)
