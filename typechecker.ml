@@ -1,4 +1,5 @@
 open Typechecker_lib
+open Types
 
 (* nieuwe variabele genereren *)
 let c = ref 0;;
@@ -26,7 +27,7 @@ let rec substitute subs = function
 let o s1 s2 =
 	let rec o_help new_subs subs = function
 		| [] -> List.rev (List.append new_subs subs)
-		| (x,nx)::xs -> o_help ((substitute subs nx)::new_subs) subs in
+		| (x,nx)::xs -> o_help ((x, substitute subs nx)::new_subs) subs xs in
 	o_help [] s1 s2;;
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
@@ -39,9 +40,26 @@ let tv t =
   	| t -> [] in
 	remove_dups (tv_help [] t);;
 
-let rec algorithmU tuple =
-	let rec u_help list = function
+let rec u = function
+	| tuple -> u_help [] tuple 
+and u_help list = function
 	| (Var a1, Var a2) when (a1 = a2) -> List.rev list
 	| (Var a, t) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
 	| (t, Var a) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
-	| (Imp (s1, s2), Imp (t1, t2)) -> (* verder *)
+	| (Imp (s1, s2), Imp (t1, t2)) -> 
+		(let x = u (s2, t2) in
+		(let u1 = u (substitute x s1, substitute x t1) in
+		(let result = o u1 x in
+		List.append result list)))
+	| (Tup (s1, s2), Tup (t1, t2)) ->
+		(let x = u (s2, t2) in
+		(let u1 = u (substitute x s1, substitute x t1) in
+		(let result = o u1 x in
+		List.append result list)))
+	| (Lis s, Lis t) ->
+		(let result = u (s, t) in
+		List.append result list)
+	| (Int, Int) -> List.rev list
+	| (Bool, Bool) -> List.rev list
+	| (Char, Char) -> List.rev list
+	| tuple -> [];; (* fail? *)
