@@ -44,11 +44,27 @@ let tv t =
   	| t -> [] in
 	remove_dups (tv_help [] t);;
 
+let u t1 t2 =
+	let rec u t = function
+  	| Var a ->
+  		(match t with
+  		| Var a1 when (a = a1) -> List.rev list
+  		| x when (not isIn a (tv x)) -> List.rev ((a,x)::list))
+			| x -> Error ("Trying to unify " ^ string_of_type t ^ " with " ^ string_of_type x ^ ".")
+  	| Imp (t1,t2) ->
+			(match t with
+			| Imp (s1, s2) 
+  	| Tup (t1,t2) ->
+  	| Lis t1 ->
+  	| -> 
+		
+
+
 let u tuple = 
 	let rec u_help list = function
-	| (Var a1, Var a2) when (a1 = a2) -> List.rev list
+	(* | (Var a1, Var a2) when (a1 = a2) -> List.rev list *)
 	| (Var a, t) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
-	| (t, Var a) when (not (isIn a (tv t))) -> List.rev ((a,t)::list)
+	(* | (t, Var a) when (not (isIn a (tv t))) -> List.rev ((a,t)::list) *)
 	| (Imp (s1, s2), Imp (t1, t2)) -> 
 		(let x = u_help [] (s2, t2) in
 		(let u1 = u_help [] (substitute x s1, substitute x t1) in

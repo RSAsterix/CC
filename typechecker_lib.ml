@@ -21,6 +21,16 @@ let rec print_type out = function
 	| Bool -> fprintf out "bool"
 	| Char -> fprintf out "char";;
 
+let rec string_of_type = function
+	| Var s -> sprintf "%s" s
+	| Imp (t1,t2) -> sprintf "%a -> %a" print_type t1 print_type t2
+	| Tup (t1,t2) -> sprintf "(%a,%a)" print_type t1 print_type t2
+	| Lis t -> sprintf "[%a]" print_type t
+	| Int -> sprintf "int"
+	| Bool -> sprintf "bool"
+	| Char -> sprintf "char";;
+ 
+
 let print_subs out subs =
 	let rec subs_print_help out = function
 	| [] -> ()
