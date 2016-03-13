@@ -1,7 +1,7 @@
 open Printf
 
 type types = 
-	| Var of int
+	| Var of string
 	| Imp of types * types
 	| Tup of types * types
 	| Lis of types
@@ -12,17 +12,20 @@ let rec remove_dups lst =
 	| [] -> []
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
-let rec print_list = function
-	| [] -> ()
-	| e::l -> print_int e ; print_string " " ; print_list l;;
-
-let isIn el lst = List.exists (fun x -> x = el) lst;;  
-
 let rec print_type out = function
-	| Var i -> fprintf out "%i" i
+	| Var s -> fprintf out "%s" s
 	| Imp (t1,t2) -> fprintf out "%a -> %a" print_type t1 print_type t2
 	| Tup (t1,t2) -> fprintf out "(%a,%a)" print_type t1 print_type t2
 	| Lis t -> fprintf out "[%a]" print_type t
 	| Int -> fprintf out "int"
 	| Bool -> fprintf out "bool"
 	| Char -> fprintf out "char";;
+
+let print_subs out subs =
+	let rec subs_print_help out = function
+	| [] -> ()
+	| [(x,nx)] -> fprintf out "%s |-> %a" x print_type nx
+	| el::xs -> fprintf out "%a, %a" subs_print_help [el] subs_print_help xs in
+	fprintf out "[%a]" subs_print_help subs;;
+
+let isIn el lst = List.exists (fun x -> x = el) lst;;  

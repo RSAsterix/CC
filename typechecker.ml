@@ -1,10 +1,14 @@
 open Typechecker_lib
 open Types
+open Char_func
 
 (* nieuwe variabele genereren *)
 let c = ref 0;;
+let v = ref "";;
 let fresh = function
-	| _ -> c := !c + 1;;
+	| _ -> 
+		c := !c + 1;
+		v := "f" ^ string_of_int !c;;
 
 (* herschrijfregel uit subs gebruiken   *)
 (* subs = [x1 |-> nx1; x2 |-> nx2; ...] *) 
@@ -61,7 +65,40 @@ let u tuple =
 	| (Int, Int) -> List.rev list
 	| (Bool, Bool) -> List.rev list
 	| (Char, Char) -> List.rev list
-	| tuple -> [(-1,Var (-1))] (* heel cheatsy *) in 
+	| tuple -> [("error",Var "error")] (* heel cheatsy *) in 
 	match u_help [] tuple with
-	| list when (not (List.exists (fun x -> x = (-1, Var (-1))) list)) -> Success list
+	| list when (not (List.exists (fun x -> x = ("error",Var "error")) list)) -> Success list
 	| _ -> Error "Type error";;
+
+
+(* type exp =                             *)
+(* 	| Exp_field of id * field            *)
+(* 	| Exp_infix of exp * op2 * exp       *)
+(* 	| Exp_prefix of op1 * exp            *)
+(* 	| Exp_function_call of id * exp list *)
+(* 	| Exp_emptylist                      *)
+(* 	| Exp_tuple of exp * exp             *)
+
+
+let rec m env exp = function
+	| var -> m_help env var exp
+and m_help env var = function
+	| Exp_int _ -> u (var, Int)
+	| Exp_bool _ -> u (var, Bool)
+	| Exp_char _ -> u (var, Char)
+	| Exp_infix (e1, (Op2 op), e2) when (is_op_plus op || is_op_times op) ->
+		(match m env e1 Int with
+		| Success x1 ->
+			(match m (substitute x1 env) e2 Int with
+			| Success r1 ->
+				(let x = o r1 x1 in
+				(match u (substitute x var, Int) with
+				| Success r2 -> Success (o r2 x)
+				| Error e -> Error ("Complete expression not an int because of:\n" ^ e)))
+			| Error e -> Error ("Second part of expression not an int because of:\n" ^ e))
+		| Error e -> Error ("First part of expression not an int because of:\n" ^ e))
+	| _ -> Error "Unsupported expression";;
+
+match (m Int (Exp_infix (Exp_bool true, Op2 "+", (Exp_int (Inttoken 2)))) (Var "b")) with
+| Success x -> print_subs stdout x;
+| Error e -> print_string e;;
