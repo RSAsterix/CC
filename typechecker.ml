@@ -50,12 +50,29 @@ let u t1 t2 =
   		(match t with
   		| Var a1 when (a = a1) -> List.rev list
   		| x when (not isIn a (tv x)) -> List.rev ((a,x)::list))
-			| x -> Error ("Trying to unify " ^ string_of_type t ^ " with " ^ string_of_type x ^ ".")
+			| _ -> Error ("Trying to unify " ^ string_of_type t ^ " with " ^ string_of_type (Var a) ^ ".")
   	| Imp (t1,t2) ->
 			(match t with
-			| Imp (s1, s2) 
+			| Imp (s1, s2) ->
+				(match u s2 t2 with
+				| Success x ->
+					(match u (substitute x s1) (substitute x t1) with
+					| Success left -> Success (o left x)
+					| Error e -> ("Unable to unify arguments, due to:\n" ^ e))
+				| Error e -> Error ("Unable to unify result, due to:\n" ^ e))
+			| Var a when (not isIn a (tv (Imp (t1,t2)))) -> List.rev ((a,t)::list))
+			| _ -> Error ("Trying to unify " ^ string_of_type t ^ " with " ^ string_of_type (Imp (t1,t2)) ^ ".")
   	| Tup (t1,t2) ->
+			(match t with
+			| Tup (s1, s2) ->
+				(match u s2 t2 with
+				| Success x ->
+					(match u (substitute x s1) (substitute x t1) with
+					| Success left -> Success (o left x)
+					| Error e -> ("Unable to unify right side of tuples, due to:\n" ^ e))
+				| Error e -> Error ("Unable to unify left side of tuples, due to:\n" ^ e))
   	| Lis t1 ->
+			
   	| -> 
 		
 
