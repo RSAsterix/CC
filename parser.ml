@@ -1,13 +1,14 @@
 open Types
 open Tokenizer
 open Char_func
+open Printf
 
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
 let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
-	| (_,PERIOD)::(l,x)::list -> Error ("(r." ^ string_of_int l ^ ") No field, but: " ^ token_to_string x), (l,x)::list
-	| (l,PERIOD)::[] -> Error ("(r." ^ string_of_int l ^ ") Unexpected EOF while parsing a field."), []
+	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l x), (l,x)::list
+	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
 	| list -> Success (Field (List.rev field_list)), list;;
 
 (* exp = expLogical [opColon exp]             *)
