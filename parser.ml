@@ -11,13 +11,45 @@ let rec field_parser field_list = function
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
 	| list -> Success (Field (List.rev field_list)), list;;
 
+let parse_listop = function
+	| (_,Optok ":")::list -> Success Listop, list
+	| list -> Error "Not a listop.", list;;
+
+let parse_logop = function
+	| (_,Optok "||")::list -> Success (Logop Or), list
+	| (_,Optok "&&")::list -> Success (Logop And), list
+	| list -> Error "Not a logop.", list;;
+
+let parse_eqop = function
+	| (_,Optok "==")::list -> Success (Eqop Eq), list
+	| (_,Optok "!=")::list -> Success (Eqop Neq), list
+	| list -> Error "Not an eqop.", list;;
+
+let parse_compop = function
+	| (_,Optok "<")::list -> Success (Compop Less), list
+	| (_,Optok ">")::list -> Success (Compop Greater), list
+	| (_,Optok ">=")::list -> Success (Compop LeEq), list
+	| (_,Optok ">=")::list -> Success (Compop GrEq), list
+	| list -> Error "Not a compop.", list;;
+
+let parse_strongop = function
+	| (_,Optok "*")::list -> Success (Strongop Times), list
+	| (_,Optok "/")::list -> Success (Strongop Divide), list
+	| (_,Optok "%")::list -> Success (Strongop Modulo), list
+	| list -> Error "Not a strongop.", list;;
+
+let parse_weakop = function
+	| (_,Optok "+")::list -> Success (Weakop Plus), list
+	| (_,Optok "-")::list -> Success (Weakop Minus), list
+	| list -> Error "Not a weakop.", list;;
+
 (* exp = expLogical [opColon exp]             *)
 let rec exp_parser = function
 	| list -> 
 		(match exp_logical list with
     | Success exp1, (_,Optok c)::list when (is_op_colon c) -> 
 			(match exp_parser list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> Success (Exp_infix (exp1, Listop, exp2)), list
 			| Error e, list -> Error e, list)
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
@@ -28,7 +60,8 @@ exp_logical = function
 		(match exp_eq list with
     | Success exp1, (_,Optok c)::list when (is_op_logical c) -> 
 			(match exp_logical list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
+			| Success exp2, list -> 
+				Success (Exp_infix (exp1, (if (c = "&&") then (Logop And) else (Logop Or)), exp2)), list
 			| Error e, list -> Error e, list)
 		| Success exp, list -> Success exp, list
 		| Error e, list -> Error e, list)
