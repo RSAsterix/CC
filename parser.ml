@@ -25,7 +25,7 @@ let parse_eqcompop = function
 	| (_,Optok "!=")::list -> Success (Eqop Neq), list
 	| (_,Optok "<")::list -> Success (Compop Less), list
 	| (_,Optok ">")::list -> Success (Compop Greater), list
-	| (_,Optok ">=")::list -> Success (Compop LeEq), list
+	| (_,Optok "<=")::list -> Success (Compop LeEq), list
 	| (_,Optok ">=")::list -> Success (Compop GrEq), list
 	| list -> Error "Not an eqop or compop.", list;;
 
