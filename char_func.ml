@@ -28,11 +28,14 @@ let is_lowercase c = 'a' <= c && c <= 'z';;
 let is_letter c =
   is_uppercase c || is_lowercase c;;
 
-let is_op1 c =
-	c = "!" || c = "-";;
+let is_op1 = function
+	| Optok "!" -> true
+	| Optok "-" -> true
+	| _ -> false;;
 
-let is_op_colon c =
-	c = ":";;
+let is_op_colon = function
+	| Optok ":" -> true
+	| _ -> false;;
 
 let is_op_logical c =
 	c = "||" || c = "&&";;
@@ -45,3 +48,23 @@ let is_op_plus c =
 
 let is_op_times c =
 	c = "*" || c = "/" || c = "%";;
+
+let op2_to_type = function
+	| Op2 ":" -> Listop
+	| Op2 "&&" -> Logop And
+	| Op2 "||" -> Logop Or
+	| Op2 "==" -> Eqop Eq
+	| Op2 "!=" -> Eqop Neq
+	| Op2 "<" -> Compop Less
+	| Op2 ">" -> Compop Greater
+	| Op2 "<=" -> Compop LeEq
+	| Op2 ">=" -> Compop GrEq
+	| Op2 "*" -> Strongop Times
+	| Op2 "/" -> Strongop Divide
+	| Op2 "%" -> Strongop Modulo
+	| Op2 "+" -> Weakop Plus
+	| Op2 "-" -> Weakop Minus;;
+
+let op1_to_type = function
+	| Op1 "!" -> Not
+	| Op2 "-" -> Neg 
