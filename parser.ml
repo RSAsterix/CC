@@ -20,17 +20,14 @@ let parse_logop = function
 	| (_,Optok "&&")::list -> Success (Logop And), list
 	| list -> Error "Not a logop.", list;;
 
-let parse_eqop = function
+let parse_eqcompop = function
 	| (_,Optok "==")::list -> Success (Eqop Eq), list
 	| (_,Optok "!=")::list -> Success (Eqop Neq), list
-	| list -> Error "Not an eqop.", list;;
-
-let parse_compop = function
 	| (_,Optok "<")::list -> Success (Compop Less), list
 	| (_,Optok ">")::list -> Success (Compop Greater), list
 	| (_,Optok ">=")::list -> Success (Compop LeEq), list
 	| (_,Optok ">=")::list -> Success (Compop GrEq), list
-	| list -> Error "Not a compop.", list;;
+	| list -> Error "Not an eqop or compop.", list;;
 
 let parse_strongop = function
 	| (_,Optok "*")::list -> Success (Strongop Times), list
@@ -43,60 +40,76 @@ let parse_weakop = function
 	| (_,Optok "-")::list -> Success (Weakop Minus), list
 	| list -> Error "Not a weakop.", list;;
 
+let parse_op1 = function
+	| (_,Optok "!")::list -> Success Not, list
+	| (_,Optok "-")::list -> Success Neg, list
+	| (l,x)::list -> 
+		Error (sprintf "(r.%i) Empty expression or unexpected token: %s" l (token_to_string x)), (l,x)::list
+	| [] -> Error "Unexpected EOF while parsing expression.", []
+
 (* exp = expLogical [opColon exp]             *)
 let rec exp_parser = function
 	| list -> 
 		(match exp_logical list with
-    | Success exp1, (_,Optok c)::list when (is_op_colon c) -> 
-			(match exp_parser list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Listop, exp2)), list
-			| Error e, list -> Error e, list)
-		| Success exp, list -> Success exp, list
+    | Success exp1, list -> 
+			(match parse_listop list with
+			| Success op, list -> 
+				(match exp_parser list with
+				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+				| Error e, list -> Error e, list)
+			| Error _, _ -> Success exp1, list)
 		| Error e, list -> Error e, list)
 and
 (* expLogical = expEq [opLogical expLogical]  *)
 exp_logical = function
 	| list -> 
 		(match exp_eq list with
-    | Success exp1, (_,Optok c)::list when (is_op_logical c) -> 
-			(match exp_logical list with
-			| Success exp2, list -> 
-				Success (Exp_infix (exp1, (if (c = "&&") then (Logop And) else (Logop Or)), exp2)), list
-			| Error e, list -> Error e, list)
-		| Success exp, list -> Success exp, list
+    | Success exp1, list ->
+			(match parse_logop list with
+			| Success op, list ->
+				(match exp_logical list with
+				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+				| Error e, list -> Error e, list)
+			| Error _, _ -> Success exp1, list)
 		| Error e, list -> Error e, list)
 and
 (* expEq = expPlus [opEq expEq]               *)
 exp_eq = function
 	| list -> 
 		(match exp_plus list with
-    | Success exp1, (_,Optok c)::list when (is_op_eq c) -> 
-			(match exp_eq list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
-			| Error e, list -> Error e, list)
-		| Success exp, list -> Success exp, list
+    | Success exp1, list ->
+			(match parse_eqcompop list with
+			| Success op, list ->
+				(match exp_eq list with
+  			| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+  			| Error e, list -> Error e, list)
+			| Error _, _ -> Success exp1, list)
 		| Error e, list -> Error e, list)
 and
 (* expPlus = expTimes [opPlus expPlus]        *)
 exp_plus = function
 	| list -> 
 		(match exp_times list with
-    | Success exp1, (_,Optok c)::list when (is_op_plus c) -> 
-			(match exp_plus list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
-			| Error e, list -> Error e, list)
-		| Success exp, list -> Success exp, list
+    | Success exp1, list ->
+			(match parse_weakop list with
+			| Success op, list ->
+				(match exp_plus list with
+				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+				| Error e, list -> Error e, list)
+			| Error _, _ -> Success exp1, list)
 		| Error e, list -> Error e, list)
 and
 (* expTimes = expStrongest [opTimes expTimes] *)
 exp_times = function
 	| list -> 
 		(match exp_strongest list with
-    | Success exp1, (_,Optok c)::list when (is_op_times c) -> 
-			(match exp_times list with
-			| Success exp2, list -> Success (Exp_infix (exp1, Op2 c, exp2)), list
-			| Error e, list -> Error e, list)
-		| Success exp, list -> Success exp, list
+    | Success exp1, list ->
+			(match parse_strongop list with
+			| Success op, list ->
+				(match exp_times list with
+				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+				| Error e, list -> Error e, list)
+			| Error _, _ -> Success exp1, list)
 		| Error e, list -> Error e, list)
 and
 (* expStrongest =	int                 *)
@@ -135,12 +148,13 @@ exp_strongest = function
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
 		| Error e, list -> Error e, list)
-	| (_,Optok c)::list when (is_op1 c) -> 
-		(match (exp_parser list) with
-		| Success exp, list ->  Success (Exp_prefix ((Op1 c), exp)), list
+	| list ->
+		(match parse_op1 list with
+		| Success op, list ->
+			(match (exp_parser list) with
+  		| Success exp, list ->  Success (Exp_prefix (op, exp)), list
+  		| Error e, list -> Error e, list)
 		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) Empty expression or unexpected token: %s" l (token_to_string x)), (l,x)::list
-	| [] -> Error "Unexpected EOF while parsing expression.", []
 and
 (* funcall = ')' | actargs *)
 funcall_parser list =
