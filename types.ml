@@ -12,8 +12,8 @@ type op2 =
 	| Logop of logop 
 	| Eqop of eqop 
 	| Compop of compop
-	| Strongop of strongop 
 	| Weakop of weakop
+	| Strongop of strongop 
 type fieldtoken = Hd | Tl | Fst | Snd
 type field = Field of fieldtoken list
 type exp = 
