@@ -1,8 +1,19 @@
 (*==    structure    ==*)
 type id = Id of string
 type inttoken = Inttoken of int
-type op1 = Op1 of string
-type op2 = Op2 of string
+type op1 = Not | Neg
+type logop = And | Or
+type eqop = Eq | Neq
+type compop = Less | Greater | LeEq | GrEq
+type strongop = Times | Divide | Modulo
+type weakop = Plus | Minus
+type op2 = 
+	| Listop 
+	| Logop of logop 
+	| Eqop of eqop 
+	| Compop of compop
+	| Weakop of weakop
+	| Strongop of strongop 
 type fieldtoken = Hd | Tl | Fst | Snd
 type field = Field of fieldtoken list
 type exp = 

@@ -27,21 +27,3 @@ let is_lowercase c = 'a' <= c && c <= 'z';;
 
 let is_letter c =
   is_uppercase c || is_lowercase c;;
-
-let is_op1 c =
-	c = "!" || c = "-";;
-
-let is_op_colon c =
-	c = ":";;
-
-let is_op_logical c =
-	c = "||" || c = "&&";;
-
-let is_op_eq c =
-	c = "==" || c = ">=" || c = "<=" || c = "!=" || c = "<" || c = ">";;
-
-let is_op_plus c =
-	c = "+" || c = "-";;
-
-let is_op_times c =
-	c = "*" || c = "/" || c = "%";;
