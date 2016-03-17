@@ -9,7 +9,7 @@ let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l (token_to_string x)), (l,x)::list
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
-	| list -> Success (Field (List.rev field_list)), list;;
+	| list -> Success (List.rev field_list), list;;
 
 let parse_listop = function
 	| (_,Optok ":")::list -> Success Listop, list

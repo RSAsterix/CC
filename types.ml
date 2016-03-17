@@ -29,7 +29,7 @@ type stmt =
 	| Stmt_if of exp *  stmt list
 	| Stmt_if_else of exp *  stmt list *  stmt list
 	| Stmt_while of exp *  stmt list
-	| Stmt_define of id * field * exp
+	| Stmt_define of id * field list * exp
 	| Stmt_function_call of id *  exp list
 	| Stmt_return of exp option
 type fargs = Fargs of id list
@@ -67,7 +67,7 @@ type token =
 	| IF | ELSE | WHILE | RETURN
 	| FALSE | TRUE
 	| PERIOD 
-	| Fieldtoken of fieldtoken
+	| Fieldtoken of field
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
