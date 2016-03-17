@@ -10,14 +10,13 @@ type weakop = Plus | Minus
 type op2 = 
 	| Listop 
 	| Logop of logop 
-	| Eqop of eqop 
+	| Eqop of eqop
 	| Compop of compop
 	| Weakop of weakop
-	| Strongop of strongop 
-type fieldtoken = Hd | Tl | Fst | Snd
-type field = Field of fieldtoken list
+	| Strongop of strongop
+type field = Hd | Tl | Fst | Snd
 type exp = 
-	| Exp_field of id * field
+	| Exp_field of id * field list
 	| Exp_infix of exp * op2 * exp
 	| Exp_prefix of op1 * exp
 	| Exp_int of inttoken
