@@ -40,11 +40,11 @@ let print_op2 ppf = function
 
 (* print een lijst van fields met punten ertussen *)
 let rec print_fields ppf = function
-	| Field [] -> ();
-	| Field (Hd::ls) -> fprintf ppf "%a.hd" print_fields (Field ls);
-	| Field (Tl::ls) -> fprintf ppf "%a.tl" print_fields (Field ls);
-	| Field (Fst::ls) -> fprintf ppf "%a.fst" print_fields (Field ls);
-	| Field (Snd::ls) -> fprintf ppf "%a.snd" print_fields (Field ls);;
+	| [] -> ();
+	| Hd::ls -> fprintf ppf "%a.hd" print_fields ls;
+	| Tl::ls -> fprintf ppf "%a.tl" print_fields ls;
+	| Fst::ls -> fprintf ppf "%a.fst" print_fields ls;
+	| Snd::ls -> fprintf ppf "%a.snd" print_fields ls;;
 
 (* levert het niveau van sterkte van een operator *)
 (* hoe hoger, hoe sterker                         *)
