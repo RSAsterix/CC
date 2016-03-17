@@ -93,11 +93,42 @@ let u t1 t2 =
 (* Env: (x,a,t) ? *)
 let rec m env exp = function
 	| var -> m_help env var exp
-and m_help env var = function
+and m_exp env var = function
 	| Exp_int _ -> u Int var
 	| Exp_bool _ -> u Bool var
 	| Exp_char _ -> u Char var
-	| Exp_infix (e1, (Op2 op), e2) when (is_op_plus op || is_op_times op) ->
+	| Exp_infix (e1, op, e2) ->
+		(match op with
+		| Listop ->
+			fresh;
+			(match m env e1 (Var !v) with
+			| Success x1 ->
+				(match m (substitute x1 env) e2 (Lis (substitute x1 (Var !v))) with
+				| Success res1 ->
+					(let x = o res1 x1 in
+					(match u (substitute x var) (substitute x (Lis (Var !v))) with
+					| Success res2 -> Success (o res2 x)
+					| Error e -> Error ("List ill-typed because of:\n" ^ e)))
+				| Error e -> Error ("Tail ill-typed because of:\n" ^ e))
+			|	Error e -> Error ("Head ill-typed because of:\n" ^ e))
+		| Logop ->
+			(match m env e1 Bool with
+			| Success x1 ->
+				(match m (substitute x1 env) e2 Bool with
+				| Success res1 ->
+					(let x = o res1 x1 in
+					
+				| Error e -> Error ("Second part of expression ill-typed because of:\n" ^ e))
+			| Error e -> Error ("First part of expression ill-typed because of:\n" ^ e))
+					 
+			
+
+
+		
+		
+		
+		
+		
 		(match m env e1 Int with
 		| Success x1 ->
 			(match m (substitute x1 env) e2 Int with (* Wat staat er in die environment? *)
