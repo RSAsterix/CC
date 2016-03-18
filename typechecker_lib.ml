@@ -112,11 +112,24 @@ let u t1 t2 =
 			(match t with
 			| Lis s1 -> u_help [] s1 t1
 			| Var a when (not (isIn a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
-			| _ -> Error (unexpected (Lis t1) t))
+			| _ -> Error (unexpected t (Lis t1)))
   	| t1 ->
 			(match t with
 			| Var a when (not (isIn a (tv t1))) -> Success (List.rev ((a,t1)::list))
 			| t2 when (t1 = t2) -> Success (List.rev list)
 			| _ -> Error (unexpected t1 t)) in
 	u_help [] t1 t2;;
-  
+
+(* Converts operator of an expression (x op y) like this: *)
+(* (type x),(type y),(type (x op y)) *) 
+let op2_to_subs = function
+	| Listop -> fresh(); (Var !v), (Lis (Var !v)), (Lis (Var !v))
+	| Logop _ -> Bool, Bool, Bool
+	| Eqop _ -> fresh(); (Var !v), (Var !v), Bool
+	| Compop _ -> Int, Int, Bool
+	| Weakop _ -> Int, Int, Int
+	| Strongop _ -> Int, Int, Int;;
+
+let op1_to_subs = function
+	| Not -> Bool
+	| Neg -> Int;;
