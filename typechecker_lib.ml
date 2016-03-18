@@ -58,6 +58,12 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
+let substitute_list subs env =
+	let rec sub_list_help subs list = function
+		| [] -> List.rev list
+		| (var,var_type)::xs -> sub_list_help subs ((var, (substitute subs var_type))::list) xs in
+	sub_list_help subs [] env;;
+	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
 let o s1 s2 =
