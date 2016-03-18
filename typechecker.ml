@@ -42,7 +42,7 @@ and m_exp env var = function
 				(match m (substitute_list x1 env) e2 (substitute x1 opR) with
 				| Success res1 ->
 					(let x = o res1 x1 in
-					(match u (substitute x var) (substitute x opRES) with
+					(match u (substitute x opRES) (substitute x var) with
 					| Success res2 -> Success (o res2 x)
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
 				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
@@ -84,6 +84,6 @@ and m_exp env var = function
 			| Error e -> Error ("Field ill-typed:\n" ^ e)))) (* Hier nog een case *)
 	| _ -> Error "Unsupported expression";;
 
-match (m [("variabele a is gedefinieerd",(["t"],Int))] (Exp_field (Id "variabele a is gedefinieerd", [Hd])) (Var "b")) with
+match (m [] (Exp_infix (Exp_bool false, Listop, (Exp_infix (Exp_emptylist, Listop, Exp_emptylist)))) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
