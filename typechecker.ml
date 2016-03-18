@@ -19,6 +19,17 @@ and m_field env var = function
 		(let a1 = Var !v in
 		fresh();
 		u var (Imp (Tup (a1, (Var !v)), (Var !v))))
+and m_id env var = function
+	| Id s ->
+		(match env_find s env with
+		| Success (bound, t) ->
+			(let rec rewritables list = function
+				| [] -> List.rev list
+				| a::rest ->
+					fresh();
+					rewritables ((a,(Var !v))::list) rest in
+			u (substitute (rewritables [] bound) t) var)
+		| Error _ -> Error (sprintf "Variable '%s' not found in environment." s))
 and m_exp env var = function
 	| Exp_int _ -> u Int var
 	| Exp_bool _ -> u Bool var
@@ -59,8 +70,20 @@ and m_exp env var = function
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)))
+	| Exp_field (id, fields) ->
+		(match fields with
+		| [] -> m_id env var id
+		| [f] ->
+			fresh();
+			(let a = (Var !v) in
+			(match m_field env (Imp (a, var)) f with
+			| Success x ->
+				(match m_id (substitute_list x env) (substitute x a) id with
+				| Success res1 -> Success (o res1 x)
+				| Error e -> Error ("Field applied to unexpected type:\n" ^ e))
+			| Error e -> Error ("Field ill-typed:\n" ^ e)))) (* Hier nog een case *)
 	| _ -> Error "Unsupported expression";;
 
-match (m [] (Exp_tuple (Exp_bool true, Exp_char 'a')) (Var "b")) with
+match (m [("variabele a is gedefinieerd",(["t"],Int))] (Exp_field (Id "variabele a is gedefinieerd", [Hd])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
