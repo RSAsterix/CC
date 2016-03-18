@@ -61,7 +61,7 @@ let rec substitute subs = function
 let substitute_list subs env =
 	let rec sub_list_help subs list = function
 		| [] -> List.rev list
-		| (var,var_type)::xs -> sub_list_help subs ((var, (substitute subs var_type))::list) xs in
+		| (var,(bound,var_type))::xs -> sub_list_help subs ((var,(bound,(substitute subs var_type)))::list) xs in
 	sub_list_help subs [] env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
@@ -118,7 +118,7 @@ let u t1 t2 =
 			(match t with
 			| Lis s1 -> u_help [] s1 t1
 			| Var a when (not (isIn a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
-			| _ -> Error (unexpected t (Lis t1)))
+			| _ -> Error (unexpected (Lis t1) t))
   	| t1 ->
 			(match t with
 			| Var a when (not (isIn a (tv t1))) -> Success (List.rev ((a,t1)::list))
@@ -139,3 +139,8 @@ let op2_to_subs = function
 let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
+
+let rec env_find x = function
+	| [] -> Error ""
+	| (var,t)::rest when (x = var) -> Success t
+	| _::rest -> env_find x rest;;
