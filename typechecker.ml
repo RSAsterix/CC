@@ -70,20 +70,10 @@ and m_exp env var = function
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)))
-	| Exp_field (id, fields) ->
-		(match fields with
-		| [] -> m_id env var id
-		| [f] ->
-			fresh();
-			(let a = (Var !v) in
-			(match m_field env (Imp (a, var)) f with
-			| Success x ->
-				(match m_id (substitute_list x env) (substitute x a) id with
-				| Success res1 -> Success (o res1 x)
-				| Error e -> Error ("Field applied to unexpected type:\n" ^ e))
-			| Error e -> Error ("Field ill-typed:\n" ^ e)))) (* Hier nog een case *)
 	| _ -> Error "Unsupported expression";;
 
-match (m [] (Exp_infix (Exp_bool false, Listop, (Exp_infix (Exp_emptylist, Listop, Exp_emptylist)))) (Var "b")) with
+
+
+match (m [("a",([],Lis Bool))] (Exp_field (Id "a", [Tl;Hd;Hd])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
