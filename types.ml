@@ -15,8 +15,11 @@ type op2 =
 	| Weakop of weakop
 	| Strongop of strongop
 type field = Hd | Tl | Fst | Snd
+type fieldexp = 
+	| Nofield of id
+	| Field of fieldexp * field
 type exp = 
-	| Exp_field of id * field list
+	| Exp_field of fieldexp
 	| Exp_infix of exp * op2 * exp
 	| Exp_prefix of op1 * exp
 	| Exp_int of inttoken
