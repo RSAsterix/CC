@@ -26,8 +26,8 @@ let print_subs out subs =
 	let rec subs_print_help out = function
 	| [] -> ()
 	| [(x,nx)] -> fprintf out "%s |-> %s" x (string_of_type nx)
-	| el::xs -> fprintf out "%a, %a" subs_print_help [el] subs_print_help xs in
-	fprintf out "[%a]" subs_print_help subs;;
+	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
+	fprintf out "[%a\n]" subs_print_help subs;;
 
 let isIn el lst = List.exists (fun x -> x = el) lst;;
 
