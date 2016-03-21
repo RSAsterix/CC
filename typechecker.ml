@@ -48,9 +48,9 @@ and m_exp env var = function
 	| Exp_emptylist -> fresh(); u var (Lis (Var !v))
 	| Exp_infix (e1, op, e2) ->
 		(let (opL, opR, opRES) = op2_to_subs op in
-		(match m env e1 opL with
+		(match m_exp env opL e1 with
 			| Success x1 ->
-				(match m (substitute_list x1 env) e2 (substitute x1 opR) with
+				(match m_exp (substitute_list x1 env) (substitute x1 opR) e2 with
 				| Success res1 ->
 					(let x = o res1 x1 in
 					(match u (substitute x opRES) (substitute x var) with
@@ -60,7 +60,7 @@ and m_exp env var = function
 			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
 	| Exp_prefix (op, e1) ->
 		(let opRES = op1_to_subs op in
-		(match m env e1 opRES with
+		(match m_exp env opRES e1 with
 		| Success x ->
 			(match u (substitute x var) opRES with
 			| Success res1 -> Success (o res1 x)
@@ -69,11 +69,11 @@ and m_exp env var = function
 	| Exp_tuple (e1, e2) ->
 		fresh();
 		(let a1 = (Var !v) in
-		(match m env e1 a1 with
+		(match m_exp env a1 e1 with
 		| Success x1 ->
 			fresh();
 			(let a2 = (Var !v) in
-			(match m (substitute_list x1 env) e2 a2 with
+			(match m_exp (substitute_list x1 env) a2 e2 with
 			| Success res1 ->
 				(let x = o res1 x1 in
 				(match u (substitute x var) (substitute x (Tup (a1, a2))) with
@@ -86,6 +86,6 @@ and m_exp env var = function
 
 
 
-match (m [("a",([],Lis Bool))] (Exp_field (Field ((Nofield (Id "a")), Hd))) (Var "b")) with
+match (m [("a",([],Lis Bool))] (Exp_field (Field (Field ((Nofield (Id "a")), Tl), Hd))) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
