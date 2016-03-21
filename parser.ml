@@ -9,7 +9,7 @@ let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l (token_to_string x)), (l,x)::list
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
-	| list -> Success (List.rev field_list), list;;
+	| list -> Success field_list, list;;
 
 let parse_listop = function
 	| (_,Optok ":")::list -> Success Listop, list
@@ -132,10 +132,14 @@ exp_strongest = function
 		(match funcall_parser list with
 		| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
 		| Error e, list -> Error e, list)
-	|	(_,IDtok id)::list -> 
+	|	(_,IDtok id)::list ->
 		(match field_parser [] list with
-		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
-		| Error e, list -> Error e, list)
+		| Success fieldlist, list ->
+			(let rec packer = function
+				| [] -> (Nofield (Id id))
+				| f::rest -> Field (packer rest, f) in 
+			Success (Exp_field (packer fieldlist)), list)
+		| Error e, list -> Error e, list)		
 	| (l0,OPEN_PAR)::list -> 
 		(match (exp_parser list) with
 		| Success exp1, (l1,COMMA)::list -> 
