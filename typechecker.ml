@@ -45,27 +45,9 @@ and m_exp env var = function
 	| Exp_int _ -> u Int var
 	| Exp_bool _ -> u Bool var
 	| Exp_char _ -> u Char var
-	| Exp_emptylist -> fresh(); u var (Lis (Var !v))
-	| Exp_infix (e1, op, e2) ->
-		(let (opL, opR, opRES) = op2_to_subs op in
-		(match m_exp env opL e1 with
-			| Success x1 ->
-				(match m_exp (substitute_list x1 env) (substitute x1 opR) e2 with
-				| Success res1 ->
-					(let x = o res1 x1 in
-					(match u (substitute x opRES) (substitute x var) with
-					| Success res2 -> Success (o res2 x)
-					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
-				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
-			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
-	| Exp_prefix (op, e1) ->
-		(let opRES = op1_to_subs op in
-		(match m_exp env opRES e1 with
-		| Success x ->
-			(match u (substitute x var) opRES with
-			| Success res1 -> Success (o res1 x)
-			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
-		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
+	| Exp_emptylist ->
+		fresh();
+		u var (Lis (Var !v))
 	| Exp_tuple (e1, e2) ->
 		fresh();
 		(let a1 = (Var !v) in
@@ -81,7 +63,28 @@ and m_exp env var = function
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)))
+	| Exp_prefix (op, e1) ->
+		(let opRES = op1_to_subs op in
+		(match m_exp env opRES e1 with
+		| Success x ->
+			(match u (substitute x var) opRES with
+			| Success res1 -> Success (o res1 x)
+			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
+		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
+	| Exp_infix (e1, op, e2) ->
+		(let (opL, opR, opRES) = op2_to_subs op in
+		(match m_exp env opL e1 with
+			| Success x1 ->
+				(match m_exp (substitute_list x1 env) (substitute x1 opR) e2 with
+				| Success res1 ->
+					(let x = o res1 x1 in
+					(match u (substitute x opRES) (substitute x var) with
+					| Success res2 -> Success (o res2 x)
+					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
+				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
+			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
 	| Exp_field fieldexp -> m_fieldexp env var fieldexp
+	| Exp_function_call (id, explist) -> (* verder *)
 	| _ -> Error "Unsupported expression";;
 
 
