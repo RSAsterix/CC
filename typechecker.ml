@@ -74,6 +74,6 @@ and m_exp env var = function
 
 
 
-match (m [("a",([],Lis Bool))] (Exp_field (Id "a", [Tl;Hd;Hd])) (Var "b")) with
+match (m [("a",([],Lis Bool))] (Exp_field (Nofield (Id "a"))) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
