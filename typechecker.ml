@@ -30,6 +30,17 @@ and m_id env var = function
 					rewritables ((a,(Var !v))::list) rest in
 			u (substitute (rewritables [] bound) t) var)
 		| Error _ -> Error (sprintf "Variable '%s' not found in environment." s))
+and m_fieldexp env var = function
+	| Nofield id -> m_id env var id
+	| Field (fieldexp, field) ->
+		fresh();
+		(let a = Var !v in
+		(match m_field env (Imp (a, var)) field with
+		| Success x ->
+			(match m_fieldexp (substitute_list x env) (substitute x a) fieldexp with
+			| Success res1 -> Success (o res1 x)
+			| Error e -> Error ("Field cannot be applied to expression because of:\n" ^ e))
+		| Error e -> Error ("Field ill-typed because of:\n" ^ e))) 
 and m_exp env var = function
 	| Exp_int _ -> u Int var
 	| Exp_bool _ -> u Bool var
@@ -70,10 +81,11 @@ and m_exp env var = function
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)))
+	| Exp_field fieldexp -> m_fieldexp env var fieldexp
 	| _ -> Error "Unsupported expression";;
 
 
 
-match (m [("a",([],Lis Bool))] (Exp_field (Nofield (Id "a"))) (Var "b")) with
+match (m [("a",([],Lis Bool))] (Exp_field (Field ((Nofield (Id "a")), Hd))) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
