@@ -84,11 +84,30 @@ and m_exp env var = function
 				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
 			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
 	| Exp_field fieldexp -> m_fieldexp env var fieldexp
-	| Exp_function_call (id, explist) -> (* verder *)
-	| _ -> Error "Unsupported expression";;
+	| Exp_function_call (id, args) ->
+		fresh();
+		(let temp = !v in
+		(match m_id env (Var temp) id with
+		| Success x ->
+			(match env_find temp x with
+			| Success t ->
+				(let unpack a = function
+					| Imp (argimp,res) ->
+						(match a with
+						| [] -> Error "Result is a function."
+						| [arg] ->
+							(match m_exp (substitute_list x env) (substitute x argimp) arg with
+							| Success res1 ->
+								(match u res var with
+								| Success res2 -> Success (o (o res1 x) res2)
+								| Error e -> Error ("Wat gebeurt hier?\n" ^ e))
+							| Error e -> Error ("Argument not matching with function type:\n" ^ e))
+						| arg::rest -> Error "Jup")
+					| res -> Success x in
+				unpack (List.rev args) t)
+			| Error e -> Error e)
+		| Error e -> Error ("Function ill-typed because of:\n" ^ e)));;
 
-
-
-match (m [("a",([],Lis Bool))] (Exp_field (Field (Field ((Nofield (Id "a")), Tl), Hd))) (Var "b")) with
+match (m [("a",([],Imp(Int,Void)))] (Exp_function_call (Id "a", [Exp_bool true; Exp_infix (Exp_int (Inttoken 3), Weakop Plus, (Exp_int (Inttoken 3)))])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
