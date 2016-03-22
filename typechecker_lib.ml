@@ -2,10 +2,10 @@ open Printf
 open Types
 
 type types = 
-	| Var of string
-	| Imp of types * types
-	| Tup of types * types
-	| Lis of types
+	| Var of string 				(* Var "a" *)
+	| Imp of types * types 	(* Imp(a,b) = a -> b *)
+	| Tup of types * types 	(* Tup(a,b) = (a,b) *)
+	| Lis of types 					(* Lis a = [a] *)
 	| Int | Bool | Char | Void;;
 
 let rec remove_dups lst = 
@@ -33,7 +33,7 @@ let print_subs out subs =
 let isIn el lst = List.exists (fun x -> x = el) lst;;
 
 (* nieuwe variabele genereren:*)
-(* roep eerst fresh() aan*)
+(* roep eerst fresh(); aan*)
 (* gebruik vervolgens "Var !v" voor een verse variabele*)
 (* dit gaat goed, omdat een normale Var nooit met een cijfer kan beginnen*)
 let c = ref 0;;

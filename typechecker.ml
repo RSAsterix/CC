@@ -7,18 +7,18 @@ open Printf
 let rec m env exp = function
 	| var -> m_exp env var exp
 and m_field env var = function
-	| Hd -> fresh(); u var (Imp (Lis (Var !v), (Var !v)))
-	| Tl -> fresh(); u var (Imp (Lis (Var !v), Lis (Var !v)))
+	| Hd -> fresh(); u (Imp (Lis (Var !v), (Var !v))) var
+	| Tl -> fresh(); u (Imp (Lis (Var !v), Lis (Var !v))) var
 	| Fst -> 
 		fresh();
 		(let a1 = Var !v in
 		fresh();
-		u var (Imp (Tup (a1, (Var !v)), a1)))
+		u (Imp (Tup (a1, (Var !v)), a1)) var)
 	| Snd ->
 		fresh();
 		(let a1 = Var !v in
 		fresh();
-		u var (Imp (Tup (a1, (Var !v)), (Var !v))))
+		u (Imp (Tup (a1, (Var !v)), (Var !v))) var)
 and m_id env var = function
 	| Id s ->
 		(match env_find s env with
@@ -47,7 +47,7 @@ and m_exp env var = function
 	| Exp_char _ -> u Char var
 	| Exp_emptylist ->
 		fresh();
-		u var (Lis (Var !v))
+		u (Lis (Var !v)) var
 	| Exp_tuple (e1, e2) ->
 		fresh();
 		(let a1 = (Var !v) in
@@ -64,21 +64,21 @@ and m_exp env var = function
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)))
 	| Exp_prefix (op, e1) ->
-		(let opRES = op1_to_subs op in
-		(match m_exp env opRES e1 with
+		(let typeRES = op1_to_subs op in
+		(match m_exp env typeRES e1 with
 		| Success x ->
-			(match u (substitute x var) opRES with
+			(match u typeRES (substitute x var) with
 			| Success res1 -> Success (o res1 x)
 			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
 		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
 	| Exp_infix (e1, op, e2) ->
-		(let (opL, opR, opRES) = op2_to_subs op in
-		(match m_exp env opL e1 with
+		(let (typeL, typeR, typeRES) = op2_to_subs op in
+		(match m_exp env typeL e1 with
 			| Success x1 ->
-				(match m_exp (substitute_list x1 env) (substitute x1 opR) e2 with
+				(match m_exp (substitute_list x1 env) (substitute x1 typeR) e2 with
 				| Success res1 ->
 					(let x = o res1 x1 in
-					(match u (substitute x opRES) (substitute x var) with
+					(match u (substitute x typeRES) (substitute x var) with
 					| Success res2 -> Success (o res2 x)
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
 				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
@@ -108,6 +108,6 @@ and m_exp env var = function
 			| Error e -> Error e)
 		| Error e -> Error ("Function ill-typed because of:\n" ^ e)));;
 
-match (m [("a",([],Imp(Int,Void)))] (Exp_function_call (Id "a", [Exp_bool true; Exp_infix (Exp_int (Inttoken 3), Weakop Plus, (Exp_int (Inttoken 3)))])) (Var "b")) with
+match (m [("a",([],Imp(Int, Imp(Int,Void))))] (Exp_function_call (Id "a", [Exp_infix (Exp_int (Inttoken 3), Weakop Plus, (Exp_int (Inttoken 3)))])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
