@@ -6,7 +6,7 @@ type types =
 	| Imp of types * types
 	| Tup of types * types
 	| Lis of types
-	| Int | Bool | Char;;
+	| Int | Bool | Char | Void;;
 
 let rec remove_dups lst = 
 	match lst with
@@ -18,9 +18,10 @@ let rec string_of_type = function
 	| Imp (t1,t2) -> sprintf "%s -> %s" (string_of_type t1) (string_of_type t2)
 	| Tup (t1,t2) -> sprintf "(%s,%s)" (string_of_type t1) (string_of_type t2)
 	| Lis t -> sprintf "[%s]" (string_of_type t)
-	| Int -> sprintf "int"
-	| Bool -> sprintf "bool"
-	| Char -> sprintf "char";;
+	| Int -> sprintf "Int"
+	| Bool -> sprintf "Bool"
+	| Char -> sprintf "Char"
+	| Void -> sprintf "Void";;
 
 let print_subs out subs =
 	let rec subs_print_help out = function
