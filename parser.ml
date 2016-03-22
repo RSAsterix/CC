@@ -21,7 +21,6 @@ let rec field_parser field_list = function
 
 (* a+b:tail betekent a + (b:tail)*)
 type tlt = (int*token) list (*TokenListType*) 
-type expf = tlt -> exp result * tlt
 
 let rec exp_parser list :  (exp result * tlt) = 
 	match get_atom list with 
@@ -34,7 +33,7 @@ let rec exp_parser list :  (exp result * tlt) =
 			| Error e, list -> Error e, list
 			| expright, list -> choosepath (expleft) (opstruct) (expright) (list)))
 and
-choosepath expleft opstruct1 expbetween list :(exp result * tlt) = 
+choosepath (expleft:exp) (opstruct1:opstruct) (expbetween:exp) (list:tlt) :(exp result * tlt) = 
 	match get_opstruct list with
 	| None, list -> Success (Exp_infix (expleft,opstruct1,expbetween)), list
 	| Some opstruct2, list ->
@@ -42,16 +41,16 @@ choosepath expleft opstruct1 expbetween list :(exp result * tlt) =
 		| Error e, list -> Error e, list
   	| Success expright, list ->
   		if opstruct2.opval > opstruct1.opval then
-				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright)
+				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright) list
 			else if opstruct2.opval < opstruct1.opval then
-				(match choosepath expbetween opstruct2 expright with
-				| Success expright, list -> choosepath expleft opstruct1 expright
+				(match choosepath expbetween opstruct2 expright list with
+				| Success expright, list -> choosepath expleft opstruct1 expright list
 				| Error e, list -> Error e, list)
 			else if opstruct1.aso = Left then
-				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright)
+				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright) list
 			else
-				(match choosepath expbetween opstruct2 expright with
-				| Success expright, list -> choosepath (expleft) (opstruct1) (expright)
+				(match choosepath expbetween opstruct2 expright list with
+				| Success expright, list -> choosepath (expleft) (opstruct1) (expright) list
 				| Error e, list -> Error e, list))
 and					
 get_opstruct list :(opstruct option * tlt) = match list with
@@ -81,7 +80,7 @@ and
 (* 							| '(' exp ',' exp ')' *)
 (* 							| '(' exp ')'         *)
 (* 							| op1 exp             *)
-get_atom list list: (exp result * tlt) = match list with
+get_atom list: (exp result * tlt) = match list with
 	| (_,Inttok i)::list -> Success (Exp_int (Inttoken i)), list
 	| (_,Chartok c)::list -> Success (Exp_char c), list
 	| (_,FALSE)::list -> Success (Exp_bool false), list
