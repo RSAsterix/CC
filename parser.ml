@@ -3,6 +3,14 @@ open Tokenizer
 open Char_func
 open Printf
 
+type aso = Left | Right
+type opstruct = 
+	{
+		op : op2;
+		opval : int; (*hoe lager hoe sterker*)
+		aso : aso;
+	}
+	
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
 let rec field_parser field_list = function
@@ -11,106 +19,57 @@ let rec field_parser field_list = function
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
 	| list -> Success (List.rev field_list), list;;
 
-let parse_listop = function
-	| (_,Optok ":")::list -> Success Listop, list
-	| list -> Error "Not a listop.", list;;
+(* a+b:tail betekent a + (b:tail)*)
+type tlt = (int*token) list (*TokenListType*) 
+type expf = tlt -> exp result * tlt
 
-let parse_logop = function
-	| (_,Optok "||")::list -> Success (Logop Or), list
-	| (_,Optok "&&")::list -> Success (Logop And), list
-	| list -> Error "Not a logop.", list;;
-
-let parse_eqcompop = function
-	| (_,Optok "==")::list -> Success (Eqop Eq), list
-	| (_,Optok "!=")::list -> Success (Eqop Neq), list
-	| (_,Optok "<")::list -> Success (Compop Less), list
-	| (_,Optok ">")::list -> Success (Compop Greater), list
-	| (_,Optok "<=")::list -> Success (Compop LeEq), list
-	| (_,Optok ">=")::list -> Success (Compop GrEq), list
-	| list -> Error "Not an eqop or compop.", list;;
-
-let parse_strongop = function
-	| (_,Optok "*")::list -> Success (Strongop Times), list
-	| (_,Optok "/")::list -> Success (Strongop Divide), list
-	| (_,Optok "%")::list -> Success (Strongop Modulo), list
-	| list -> Error "Not a strongop.", list;;
-
-let parse_weakop = function
-	| (_,Optok "+")::list -> Success (Weakop Plus), list
-	| (_,Optok "-")::list -> Success (Weakop Minus), list
-	| list -> Error "Not a weakop.", list;;
-
-let parse_op1 = function
-	| (_,Optok "!")::list -> Success Not, list
-	| (_,Optok "-")::list -> Success Neg, list
-	| (l,x)::list -> 
-		Error (sprintf "(r.%i) Empty expression or unexpected token: %s" l (token_to_string x)), (l,x)::list
-	| [] -> Error "Unexpected EOF while parsing expression.", []
-
-(* exp = expLogical [opColon exp]             *)
-let rec exp_parser = function
-	| list -> 
-		(match exp_logical list with
-    | Success exp1, list -> 
-			(match parse_listop list with
-			| Success op, list -> 
-				(match exp_parser list with
-				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
-				| Error e, list -> Error e, list)
-			| Error _, _ -> Success exp1, list)
-		| Error e, list -> Error e, list)
+let rec exp_parser list :  (exp result * tlt) = 
+	match get_atom list with 
+	| Error e, list -> Error e, list
+	| Success expleft, list -> 
+		(match get_opstruct list with
+		| None, list -> expleft, list
+		| Some opstruct, list ->
+			(match get_atom list with
+			| Error e, list -> Error e, list
+			| expright, list -> choosepath (expleft) (opstruct) (expright) (list)))
 and
-(* expLogical = expEq [opLogical expLogical]  *)
-exp_logical = function
-	| list -> 
-		(match exp_eq list with
-    | Success exp1, list ->
-			(match parse_logop list with
-			| Success op, list ->
-				(match exp_logical list with
-				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
+choosepath expleft opstruct1 expbetween list :(exp result * tlt) = 
+	match get_opstruct list with
+	| None, list -> Success (Exp_infix (expleft,opstruct1,expbetween)), list
+	| Some opstruct2, list ->
+  	(match get_atom list with
+		| Error e, list -> Error e, list
+  	| Success expright, list ->
+  		if opstruct2.opval > opstruct1.opval then
+				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright)
+			else if opstruct2.opval < opstruct1.opval then
+				(match choosepath expbetween opstruct2 expright with
+				| Success expright, list -> choosepath expleft opstruct1 expright
 				| Error e, list -> Error e, list)
-			| Error _, _ -> Success exp1, list)
-		| Error e, list -> Error e, list)
-and
-(* expEq = expPlus [opEq expEq]               *)
-exp_eq = function
-	| list -> 
-		(match exp_plus list with
-    | Success exp1, list ->
-			(match parse_eqcompop list with
-			| Success op, list ->
-				(match exp_eq list with
-  			| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
-  			| Error e, list -> Error e, list)
-			| Error _, _ -> Success exp1, list)
-		| Error e, list -> Error e, list)
-and
-(* expPlus = expTimes [opPlus expPlus]        *)
-exp_plus = function
-	| list -> 
-		(match exp_times list with
-    | Success exp1, list ->
-			(match parse_weakop list with
-			| Success op, list ->
-				(match exp_plus list with
-				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
-				| Error e, list -> Error e, list)
-			| Error _, _ -> Success exp1, list)
-		| Error e, list -> Error e, list)
-and
-(* expTimes = expStrongest [opTimes expTimes] *)
-exp_times = function
-	| list -> 
-		(match exp_strongest list with
-    | Success exp1, list ->
-			(match parse_strongop list with
-			| Success op, list ->
-				(match exp_times list with
-				| Success exp2, list -> Success (Exp_infix (exp1, op, exp2)), list
-				| Error e, list -> Error e, list)
-			| Error _, _ -> Success exp1, list)
-		| Error e, list -> Error e, list)
+			else if opstruct1.aso = Left then
+				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright)
+			else
+				(match choosepath expbetween opstruct2 expright with
+				| Success expright, list -> choosepath (expleft) (opstruct1) (expright)
+				| Error e, list -> Error e, list))
+and					
+get_opstruct list :(opstruct option * tlt) = match list with
+	| (_,Optok ":")::list -> Some{op = Listop; opval = 0; aso = Right}, list
+	| (_,Optok "*")::list -> Some{op = Strongop Times; opval = 1; aso = Left}, list
+  | (_,Optok "/")::list -> Some{op = Strongop Divide; opval = 1; aso = Left}, list
+  | (_,Optok "%")::list -> Some{op = Strongop Modulo; opval = 1; aso = Left}, list
+  | (_,Optok "+")::list -> Some{op = Weakop Plus; opval = 2; aso = Left}, list
+  | (_,Optok "-")::list -> Some{op = Weakop Minus; opval = 2; aso = Left}, list
+  | (_,Optok "==")::list -> Some{op = Eqop Eq; opval = 3; aso = Left}, list
+  | (_,Optok "!=")::list -> Some{op = Eqop Neq; opval = 3; aso = Left}, list
+  | (_,Optok "<")::list -> Some{op = Compop Less; opval = 3; aso = Left}, list
+  | (_,Optok ">")::list -> Some{op = Compop Greater; opval = 3; aso = Left}, list
+  | (_,Optok "<=")::list -> Some{op = Compop LeEq; opval = 3; aso = Left}, list
+  | (_,Optok ">=")::list -> Some{op = Compop GrEq; opval = 3; aso = Left}, list
+  | (_,Optok "&&")::list -> Some{op = Logop And; opval = 4; aso = Left}, list
+  | (_,Optok "||")::list -> Some{op = Logop Or; opval = 5; aso = Left}, list
+	| list -> None, list
 and
 (* expStrongest =	int                 *)
 (* 							| char                *)
@@ -122,7 +81,7 @@ and
 (* 							| '(' exp ',' exp ')' *)
 (* 							| '(' exp ')'         *)
 (* 							| op1 exp             *)
-exp_strongest = function
+get_atom list list: (exp result * tlt) = match list with
 	| (_,Inttok i)::list -> Success (Exp_int (Inttoken i)), list
 	| (_,Chartok c)::list -> Success (Exp_char c), list
 	| (_,FALSE)::list -> Success (Exp_bool false), list
@@ -157,7 +116,7 @@ exp_strongest = function
 		| Error e, list -> Error e, list)
 and
 (* funcall = ')' | actargs *)
-funcall_parser list =
+funcall_parser list :(exp list * tlt) =
 	(* actargs = exp ')' | exp ',' actargs *)
 	let rec actargs_parser arg_list list = (match (exp_parser list) with
 		| Success exp, (_,CLOSE_PAR)::list -> Success (List.rev (exp::arg_list)), list
