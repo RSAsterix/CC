@@ -18,28 +18,43 @@ let print_inttoken ppf = function
 
 (* print de operator van een Op1 *)
 let print_op1 ppf = function
-	| Op1 o -> fprintf ppf "%s" o;;
+	| Not -> fprintf ppf "!";
+	| Neg -> fprintf ppf "-";;
 
 (* print de operator van een Op2 *)
 let print_op2 ppf = function
-	| Op2 o -> fprintf ppf "%s" o;;
+	| Listop -> fprintf ppf ":"
+	| Logop And -> fprintf ppf "&&"
+	| Logop Or -> fprintf ppf "||"
+	| Eqop Eq -> fprintf ppf "=="
+	| Eqop Neq -> fprintf ppf "!="
+	| Compop Less -> fprintf ppf "<"
+	| Compop Greater -> fprintf ppf ">"
+	| Compop LeEq -> fprintf ppf "<="
+	| Compop GrEq -> fprintf ppf ">="
+	| Strongop Times -> fprintf ppf "*"
+	| Strongop Divide -> fprintf ppf "/"
+	| Strongop Modulo -> fprintf ppf "%%"
+	| Weakop Plus -> fprintf ppf "+"
+	| Weakop Minus -> fprintf ppf "-";;
 
 (* print een lijst van fields met punten ertussen *)
 let rec print_fields ppf = function
-	| Field [] -> ();
-	| Field (Hd::ls) -> fprintf ppf "%a.hd" print_fields (Field ls);
-	| Field (Tl::ls) -> fprintf ppf "%a.tl" print_fields (Field ls);
-	| Field (Fst::ls) -> fprintf ppf "%a.fst" print_fields (Field ls);
-	| Field (Snd::ls) -> fprintf ppf "%a.snd" print_fields (Field ls);;
+	| [] -> ();
+	| Hd::ls -> fprintf ppf "%a.hd" print_fields ls;
+	| Tl::ls -> fprintf ppf "%a.tl" print_fields ls;
+	| Fst::ls -> fprintf ppf "%a.fst" print_fields ls;
+	| Snd::ls -> fprintf ppf "%a.snd" print_fields ls;;
 
 (* levert het niveau van sterkte van een operator *)
 (* hoe hoger, hoe sterker                         *)
 let op_map = function
-	| Op2 c when (is_op_colon c) -> 1
-	| Op2 c when (is_op_logical c) -> 2
-	| Op2 c when (is_op_eq c) -> 3
-	| Op2 c when (is_op_plus c) -> 4
-	| Op2 c when (is_op_times c) -> 5;;
+	| Listop -> 1
+	| Logop _ -> 2
+	| Eqop _ -> 3
+	| Compop _ -> 3
+	| Weakop _ -> 4
+	| Strongop _ -> 5;;
 
 (* Levert true als de eerste expressie een infix-expressie is *)
 (* met een zwakkere operator                                  *)

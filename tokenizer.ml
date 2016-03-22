@@ -76,26 +76,26 @@ let rec scan_line l = function
 
 let token_to_string t = match t with
 	| VAR -> "var "
-	| EQ -> " = "
-	| SEMICOLON -> "; "
+	| EQ -> "="
+	| SEMICOLON -> ";"
 	| OPEN_PAR -> "("
 	| CLOSE_PAR -> ")"
-	| DDPOINT -> " :: "
+	| DDPOINT -> "::"
 	| OPEN_ACO -> "{"
 	| CLOSE_ACO -> "}"
 	| VOID -> "Void"
-	| ARROW -> "-> "
-	| COMMA -> ", "
+	| ARROW -> "->"
+	| COMMA -> ","
 	| OPEN_BRACK -> "["
 	| CLOSE_BRACK -> "]"
 	| EMPTYLIST -> "[]"
-	| Basictoken Type_int -> "Int "
-	| Basictoken Type_bool -> "Bool "
-	| Basictoken Type_char -> "Char "
+	| Basictoken Type_int -> "Int"
+	| Basictoken Type_bool -> "Bool"
+	| Basictoken Type_char -> "Char"
 	| IF -> "if"
 	| ELSE -> "else"
 	| WHILE -> "while"
-	| RETURN -> "return "
+	| RETURN -> "return"
 	| FALSE -> "False"
 	| TRUE -> "True"
 	| PERIOD -> "."
@@ -103,10 +103,10 @@ let token_to_string t = match t with
 	| Fieldtoken Tl -> "tl"
 	| Fieldtoken Fst -> "fst"
 	| Fieldtoken Snd -> "snd"
-	| Optok a -> a ^ " "
-	| Inttok a -> string_of_int a ^ " "
+	| Optok a -> a
+	| Inttok a -> string_of_int a
 	| IDtok a -> a
-	| Chartok a -> implode ['\'';a;'\'';' '] ;;
+	| Chartok a -> implode ['\'';a;'\''] ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 

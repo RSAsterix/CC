@@ -1,12 +1,22 @@
 (*==    structure    ==*)
 type id = Id of string
 type inttoken = Inttoken of int
-type op1 = Op1 of string
-type op2 = Op2 of string
-type fieldtoken = Hd | Tl | Fst | Snd
-type field = Field of fieldtoken list
+type op1 = Not | Neg
+type logop = And | Or
+type eqop = Eq | Neq
+type compop = Less | Greater | LeEq | GrEq
+type strongop = Times | Divide | Modulo
+type weakop = Plus | Minus
+type op2 = 
+	| Listop 
+	| Logop of logop 
+	| Eqop of eqop
+	| Compop of compop
+	| Weakop of weakop
+	| Strongop of strongop
+type field = Hd | Tl | Fst | Snd
 type exp = 
-	| Exp_field of id * field
+	| Exp_field of id * field list
 	| Exp_infix of exp * op2 * exp
 	| Exp_prefix of op1 * exp
 	| Exp_int of inttoken
@@ -19,7 +29,7 @@ type stmt =
 	| Stmt_if of exp *  stmt list
 	| Stmt_if_else of exp *  stmt list *  stmt list
 	| Stmt_while of exp *  stmt list
-	| Stmt_define of id * field * exp
+	| Stmt_define of id * field list * exp
 	| Stmt_function_call of id *  exp list
 	| Stmt_return of exp option
 type fargs = Fargs of id list
@@ -57,7 +67,7 @@ type token =
 	| IF | ELSE | WHILE | RETURN
 	| FALSE | TRUE
 	| PERIOD 
-	| Fieldtoken of fieldtoken
+	| Fieldtoken of field
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
