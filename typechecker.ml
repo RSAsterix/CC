@@ -88,26 +88,40 @@ and m_exp env var = function
 		fresh();
 		(let temp = !v in
 		(match m_id env (Var temp) id with
-		| Success x ->
-			(match env_find temp x with
+		| Success expected_function_type ->
+			(match env_find temp expected_function_type with
+			| Success (Imp (expected_arglist,expected_result)) ->
+				(let rec unpack given_args = function
+					| Imp (expected_arglist2,expected_arg) ->
+						(match given_args with
+						| [] -> Error "Too few arguments."
+						| given_arg::rest ->
+							(match m_exp (substitute_list expected_function_type env) (substitute expected_function_type expected_arg) given_arg with
+							| Success x ->
+								(match unpack rest expected_arglist2 with
+								| Success res1 -> Success (o res1 x)
+								| Error e -> Error e)
+							| Error e -> Error ("Argument did not match expected type:\n" ^ e)))
+					| expected_arg ->
+						(match given_args with
+						| [] -> Error "Too few arguments."
+						| [given_arg] -> 
+							(match m_exp (substitute_list expected_function_type env) (substitute expected_function_type expected_arg) given_arg with
+							| Success x ->
+								(match u expected_result var with
+								| Success res1 -> Success (o (o res1 x) expected_function_type)
+								|	Error e -> Error ("Result ill-typed because of:\n" ^ e))  
+							| Error e -> Error ("Hier\n" ^ e))
+						| _ -> Error "Too many arguments.")							
+					in
+				unpack (List.rev args) expected_arglist)
 			| Success t ->
-				(let unpack a = function
-					| Imp (argimp,res) ->
-						(match a with
-						| [] -> Error "Result is a function."
-						| [arg] ->
-							(match m_exp (substitute_list x env) (substitute x argimp) arg with
-							| Success res1 ->
-								(match u res var with
-								| Success res2 -> Success (o (o res1 x) res2)
-								| Error e -> Error ("Wat gebeurt hier?\n" ^ e))
-							| Error e -> Error ("Argument not matching with function type:\n" ^ e))
-						| arg::rest -> Error "Jup")
-					| res -> Success x in
-				unpack (List.rev args) t)
+				(match args with
+				| [] -> u t var
+				| _ -> Error "Too many arguments." )
 			| Error e -> Error e)
 		| Error e -> Error ("Function ill-typed because of:\n" ^ e)));;
 
-match (m [("a",([],Imp(Int, Imp(Int,Void))))] (Exp_function_call (Id "a", [Exp_infix (Exp_int (Inttoken 3), Weakop Plus, (Exp_int (Inttoken 3)))])) (Var "b")) with
+match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int (Inttoken 3)])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
