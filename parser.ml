@@ -10,17 +10,19 @@ type opstruct =
 		opval : int; (*hoe lager hoe sterker*)
 		aso : aso;
 	}
-	
+
+type tlt = (int*token) list (*TokenListType*)
+
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
-let rec field_parser field_list = function
+let rec field_parser (field_list:fieldtoken list) (list:tlt): fieldtoken list result * tlt = match list with
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l (token_to_string x)), (l,x)::list
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
 	| list -> Success (List.rev field_list), list;;
 
 (* a+b:tail betekent a + (b:tail)*)
-type tlt = (int*token) list (*TokenListType*) 
+ 
 
 let rec exp_parser list :  (exp result * tlt) = 
 	match get_atom list with 
@@ -115,7 +117,7 @@ get_atom list: (exp result * tlt) = match list with
 		| Error e, list -> Error e, list)
 and
 (* funcall = ')' | actargs *)
-funcall_parser list :(exp list * tlt) =
+funcall_parser list :(exp list result * tlt) =
 	(* actargs = exp ')' | exp ',' actargs *)
 	let rec actargs_parser arg_list list = (match (exp_parser list) with
 		| Success exp, (_,CLOSE_PAR)::list -> Success (List.rev (exp::arg_list)), list
