@@ -15,7 +15,7 @@ type tlt = (int*token) list (*TokenListType*)
 
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
-let rec field_parser (field_list:fieldtoken list) (list:tlt): fieldtoken list result * tlt = match list with
+let rec field_parser (field_list:field list) (list:tlt): field list result * tlt = match list with
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l (token_to_string x)), (l,x)::list
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
@@ -23,39 +23,44 @@ let rec field_parser (field_list:fieldtoken list) (list:tlt): fieldtoken list re
 
 (* a+b:tail betekent a + (b:tail)*)
  
+let parse_op1 (list:tlt):op1 option * tlt = match list with
+	| (_,Optok "!")::list -> Some Not, list
+	| (_,Optok "-")::list -> Some Neg, list
+	| list -> None, list
 
 let rec exp_parser list :  (exp result * tlt) = 
-	match get_atom list with 
-	| Error e, list -> Error e, list
-	| Success expleft, list -> 
-		(match get_opstruct list with
-		| None, list -> expleft, list
-		| Some opstruct, list ->
-			(match get_atom list with
-			| Error e, list -> Error e, list
-			| expright, list -> choosepath (expleft) (opstruct) (expright) (list)))
+	match atom_parser list with 
+	| None, list -> Error ( sprintf "No expression, but: %s" (token_to_string x)), list
+	| Some Error e, list -> Error e, list
+	| Some Success exp, list -> choosepath (None) (None) (exp) (list)))
 and
-choosepath (expleft:exp) (opstruct1:opstruct) (expbetween:exp) (list:tlt) :(exp result * tlt) = 
-	match get_opstruct list with
-	| None, list -> Success (Exp_infix (expleft,opstruct1,expbetween)), list
+choosepath (expleftop:exp option) (opstruct1op:opstruct option) (expbetweenop:exp option) (list:tlt) :exp option*opstruct option*tlt = 
+	match opstruct_parser list with
+	| None, list -> Success (Exp_infix (expleft,opstruct1.op,expbetween)), list
 	| Some opstruct2, list ->
-  	(match get_atom list with
+  	(match atom_parser list with
+		| None, list -> Error ( sprintf "No expression after infix operator, but: %s" (token_to_string x)), list
 		| Error e, list -> Error e, list
-  	| Success expright, list ->
-  		if opstruct2.opval > opstruct1.opval then
-				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright) list
-			else if opstruct2.opval < opstruct1.opval then
+  	| Success expright, list -> 
+			match opstruct1op with
+			| None 
+			| Some opstruct1 when opstruct2.opval > opstruct1.opval -> (Some Exp_infix(expleft,opstruct1.op,expbetween), Some opstruct2)
+			| Some opstruct1 when opstruct2.opval < opstruct1.opval -> 
 				(match choosepath expbetween opstruct2 expright list with
-				| Success expright, list -> choosepath expleft opstruct1 expright list
+				| (Some expright, Some opstruct2), list -> (*HIER BEN IK*)choosepath expleft opstruct1 expright list
 				| Error e, list -> Error e, list)
+  		if opstruct2.opval > opstruct1.opval then
+				 choosepath () (opstruct2) (expright) (list)
+			else if opstruct2.opval < opstruct1.opval then
+				
 			else if opstruct1.aso = Left then
-				 choosepath Exp_infix(expleft,opstruct1.op,expbetween) opstruct2 (expright) list
+				 choosepath (Exp_infix(expleft,opstruct1.op,expbetween)) (opstruct2) (expright) (list)
 			else
 				(match choosepath expbetween opstruct2 expright list with
 				| Success expright, list -> choosepath (expleft) (opstruct1) (expright) list
 				| Error e, list -> Error e, list))
 and					
-get_opstruct list :(opstruct option * tlt) = match list with
+opstruct_parser list :(opstruct option * tlt) = match list with
 	| (_,Optok ":")::list -> Some{op = Listop; opval = 0; aso = Right}, list
 	| (_,Optok "*")::list -> Some{op = Strongop Times; opval = 1; aso = Left}, list
   | (_,Optok "/")::list -> Some{op = Strongop Divide; opval = 1; aso = Left}, list
@@ -82,42 +87,42 @@ and
 (* 							| '(' exp ',' exp ')' *)
 (* 							| '(' exp ')'         *)
 (* 							| op1 exp             *)
-get_atom list: (exp result * tlt) = match list with
-	| (_,Inttok i)::list -> Success (Exp_int (Inttoken i)), list
-	| (_,Chartok c)::list -> Success (Exp_char c), list
-	| (_,FALSE)::list -> Success (Exp_bool false), list
-	| (_,TRUE)::list -> Success (Exp_bool true), list
-	| (_,EMPTYLIST)::list -> Success (Exp_emptylist), list
+atom_parser (list:tlt): (exp result option* tlt) = match list with
+	| (_,Inttok i)::list -> Some Success (Exp_int (Inttoken i)), list
+	| (_,Chartok c)::list -> Some Success (Exp_char c), list
+	| (_,FALSE)::list -> Some Success (Exp_bool false), list
+	| (_,TRUE)::list -> Some Success (Exp_bool true), list
+	| (_,EMPTYLIST)::list -> Some Success (Exp_emptylist), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
-		| Success exps, list -> Success (Exp_function_call ((Id id), exps)), list 
-		| Error e, list -> Error e, list)
+		| Success exps, list -> Some Success (Exp_function_call ((Id id), exps)), list 
+		| Error e, list -> Some Error e, list)
 	|	(_,IDtok id)::list -> 
 		(match field_parser [] list with
-		| Success fieldlist, list -> Success (Exp_field (Id id, fieldlist)), list
-		| Error e, list -> Error e, list)
+		| Success fieldlist, list -> Some Success (Exp_field (Id id, fieldlist)), list
+		| Error e, list -> Some Error e, list)
 	| (l0,OPEN_PAR)::list -> 
 		(match (exp_parser list) with
 		| Success exp1, (l1,COMMA)::list -> 
 			(match (exp_parser list) with
-			| Success exp2, (_,CLOSE_PAR)::list -> Success (Exp_tuple (exp1,exp2)), list
-			| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis after comma, but: %s" l (token_to_string x)), (l,x)::list
-			| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after comma." l1), []
-			| Error e, list -> Error e, list)
-		| Success exp, (_,CLOSE_PAR)::list -> Success exp, list
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
-		| Error e, list -> Error e, list)
+			| Success exp2, (_,CLOSE_PAR)::list -> Some Success (Exp_tuple (exp1,exp2)), list
+			| Success _, (l,x)::list -> Some Error (sprintf "(r.%i) No closing parenthesis after comma, but: %s" l (token_to_string x)), (l,x)::list
+			| Success _, [] -> Some Error (sprintf "(r.%i) Unexpected EOF after comma." l1), []
+			| Error e, list -> Some Error e, list)
+		| Success exp, (_,CLOSE_PAR)::list -> Some Success exp, list
+		| Success _, (l,x)::list -> Some Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
+		| Success _, [] -> Some Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
+		| Error e, list -> Some Error e, list)
 	| list ->
 		(match parse_op1 list with
-		| Success op, list ->
+		| Some op, list ->
 			(match (exp_parser list) with
-  		| Success exp, list ->  Success (Exp_prefix (op, exp)), list
-  		| Error e, list -> Error e, list)
-		| Error e, list -> Error e, list)
+  		| Success exp, list ->  Some Success (Exp_prefix (op, exp)), list
+  		| Error e, list -> Some Error e, list)
+		| None, list -> None, list)
 and
 (* funcall = ')' | actargs *)
-funcall_parser list :(exp list result * tlt) =
+funcall_parser (list:tlt) :(exp list result * tlt) =
 	(* actargs = exp ')' | exp ',' actargs *)
 	let rec actargs_parser arg_list list = (match (exp_parser list) with
 		| Success exp, (_,CLOSE_PAR)::list -> Success (List.rev (exp::arg_list)), list
