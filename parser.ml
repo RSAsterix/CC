@@ -1,8 +1,10 @@
-open Types
-open Tokenizer
 open Char_func
+open Types
 open Printf
+open Tokenizer
+open Exp_parser
 
+<<<<<<< HEAD
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
 let rec field_parser field_list = function
@@ -172,6 +174,8 @@ funcall_parser list =
 	match list with
 	| (_,CLOSE_PAR)::list -> Success([]), list
 	| list -> actargs_parser [] list;;
+=======
+>>>>>>> refs/remotes/origin/associativiteit
 
 (* type =    basictype       *)
 (* 		| id                  *)
