@@ -21,7 +21,7 @@ and m_field env var = function
 		u (Imp (Tup (a1, (Var !v)), (Var !v))) var)
 and m_id env var = function
 	| Id s ->
-		(match env_find s env with
+		(match env_find (Var s) env with
 		| Success (bound, t) ->
 			(let rec rewritables list = function
 				| [] -> List.rev list
@@ -86,42 +86,31 @@ and m_exp env var = function
 	| Exp_field fieldexp -> m_fieldexp env var fieldexp
 	| Exp_function_call (id, args) ->
 		fresh();
-		(let temp = !v in
-		(match m_id env (Var temp) id with
-		| Success expected_function_type ->
-			(match env_find temp expected_function_type with
-			| Success (Imp (expected_arglist,expected_result)) ->
-				(let rec unpack given_args = function
-					| Imp (expected_arglist2,expected_arg) ->
-						(match given_args with
+		(let a = Var !v in
+		(match m_id env a id with
+		| Success function_subs ->
+			(match env_find a function_subs with
+			| Success function_type ->
+				(let rec match_args_with_funtype all_args rest_args (* function_type *) = function
+					| Imp (left,right) ->
+						(match all_args with
 						| [] -> Error "Too few arguments."
-						| given_arg::rest ->
-							(match m_exp (substitute_list expected_function_type env) (substitute expected_function_type expected_arg) given_arg with
-							| Success x ->
-								(match unpack rest expected_arglist2 with
-								| Success res1 -> Success (o res1 x)
-								| Error e -> Error e)
-							| Error e -> Error ("Argument did not match expected type:\n" ^ e)))
-					| expected_arg ->
-						(match given_args with
-						| [] -> Error "Too few arguments."
-						| [given_arg] -> 
-							(match m_exp (substitute_list expected_function_type env) (substitute expected_function_type expected_arg) given_arg with
-							| Success x ->
-								(match u expected_result var with
-								| Success res1 -> Success (o (o res1 x) expected_function_type)
-								|	Error e -> Error ("Result ill-typed because of:\n" ^ e))  
-							| Error e -> Error ("Hier\n" ^ e))
-						| _ -> Error "Too many arguments.")							
-					in
-				unpack (List.rev args) expected_arglist)
-			| Success t ->
-				(match args with
-				| [] -> u t var
-				| _ -> Error "Too many arguments." )
-			| Error e -> Error e)
-		| Error e -> Error ("Function ill-typed because of:\n" ^ e)));;
+						| arg1::rest ->
+							match_args_with_funtype rest (arg1::rest_args) left)
+					| rettype ->
+						(match all_args with
+						| [] ->
+							(match List.rev rest_args with
+							| [] -> Success []
+							| arg1::rest ->
+								(match m_exp (substitute_list function_subs env) rettype arg1 with
+								| Success arg1_type_subs ->
+								| Error e -> Error ("Argument cannot be typed:\n" ^ e)))
+						| _ -> Error "Too many arguments.") in
+				match_args_with_funtype args [] function_type)
+			| Error _ -> Error "This shouldn't happen.")
+		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
 
-match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int (Inttoken 3)])) (Var "b")) with
+match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int (Inttoken 3);Exp_bool true;Exp_bool true])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
