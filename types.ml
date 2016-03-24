@@ -1,6 +1,5 @@
 (*==    structure    ==*)
 type id = Id of string
-type inttoken = Inttoken of int
 type op1 = Not | Neg
 type logop = And | Or
 type eqop = Eq | Neq
@@ -19,7 +18,7 @@ type exp =
 	| Exp_field of id * field list
 	| Exp_infix of exp * op2 * exp
 	| Exp_prefix of op1 * exp
-	| Exp_int of inttoken
+	| Exp_int of int
 	| Exp_char of char
 	| Exp_bool of bool
 	| Exp_function_call of id * exp list
