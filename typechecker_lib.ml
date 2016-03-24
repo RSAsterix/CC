@@ -143,5 +143,6 @@ let op1_to_subs = function
 
 let rec env_find x = function
 	| [] -> Error ""
-	| (var,t)::rest when (x = var) -> Success t
+	| (var,t)::rest when (x = Var var) -> Success t
 	| _::rest -> env_find x rest;;
+	
