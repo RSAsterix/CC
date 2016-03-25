@@ -63,7 +63,7 @@ let isLower exp op = match exp with
 
 (* Print een expressie *)
 let rec print_exp ppf = function
-	| Exp_field (id, flds) -> fprintf ppf "%a%a" print_id id print_fields flds;
+	| Exp_field fieldexp -> fprintf ppf "%a" print_fieldexp fieldexp;
 	| Exp_infix (exp1, op2, exp2) -> 
 		fprintf ppf "(%a" print_exp exp1;
 		fprintf ppf " %a " print_op2 op2;
