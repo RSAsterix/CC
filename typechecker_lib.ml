@@ -145,4 +145,14 @@ let rec env_find x = function
 	| [] -> Error ""
 	| (var,t)::rest when (x = Var var) -> Success t
 	| _::rest -> env_find x rest;;
-	
+
+let first list =
+	let rec f_help result = function
+		| [] -> []
+		| [_] -> List.rev result
+		| a::rest -> f_help (a::result) rest in
+	f_help [] list;;
+
+let rec last = function
+	| [a] -> a
+	| _::rest -> last rest;;

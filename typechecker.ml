@@ -90,32 +90,37 @@ and m_exp env var = function
 		(match m_id env a id with
 		| Success function_subs ->
 			(match env_find a function_subs with
-			| Success function_type ->
-				(let rec match_args_with_funtype all_args rest_args (* function_type *) = function
+			| Success (Imp (arg_types, rettype)) ->
+				(let rec mawf arg_list (*arg_types*) = function
 					| Imp (left,right) ->
-						(match all_args with
+						(match arg_list with
 						| [] -> Error "Too few arguments."
-						| arg1::rest ->
-							(match match_args_with_funtype (arg1::rest) rest left with
+						| [a] -> Error "Too few arguments."
+						| _ ->
+							(match mawf (first arg_list) left with
 							| Success x ->
-								(match match_args_with_funtype rest rest (substitute x right) with
-								| Success res1 -> Success (o res1 x)
-								| Error e -> Error ("Could not match argument(s) with expected type:\n" ^ e))
-							|	Error e -> Error ("Could not match argument(s) with expected type:\n" ^ e)))
-					| rettype ->
-						(match all_args with
-						| [] ->
-							(match List.rev rest_args with
-							| [] -> u rettype var
-							| _ -> Error "Too few arguments.")
-						| arg1::rest ->
-  						(match m_exp (substitute_list function_subs env) rettype arg1 with
-  						| Success arg1_type_subs -> Success arg1_type_subs
-  						| Error e -> Error ("Argument cannot be typed:\n" ^ e))) in
-				match_args_with_funtype args [] function_type)
+								(match m_exp (substitute_list x env) right (last arg_list) with
+								| Success res -> Success (o (o function_subs res) x)
+								| Error e -> Error ("Argument not matching:\n" ^ e))
+							| Error e -> Error ("Deeper argumenttyper says:\n" ^ e)))
+					| arg_type ->
+						(match arg_list with
+						| [] -> Error "Too few arguments."
+						| [a] -> m_exp env arg_type a
+						| _ -> Error "Too many arguments.") in
+				(match mawf args arg_types with
+				| Success x ->
+					(match u rettype var with
+					| Success res -> Success (o res x)
+					| Error e -> Error ("Return value ill-typed:\n" ^ e))
+				| Error e -> Error ("Argumenttyper says:\n" ^ e)))
+			| Success rettype ->
+				(match args with
+				| [] -> u rettype var
+				| _ -> Error "Too many arguments." )
 			| Error _ -> Error "This shouldn't happen.")
 		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
 
-match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int 3])) (Var "b")) with
+match (m [("a",([],Imp(Imp(Bool,Int),Void)))] (Exp_function_call (Id "a", [Exp_bool true; Exp_infix (Exp_int 3, Weakop Plus, Exp_int 3)])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
