@@ -139,12 +139,16 @@ stmt_parser = function
 		| Error e, list -> Error e, list)
 	| (l0,IDtok id)::list ->
 		(match (field_parser [] list) with
-		| Success fieldlist, (l1,EQ)::list -> 
+		| Success fieldlist, (l1,EQ)::list ->
+			(let rec packer = function
+				| [] -> (Nofield (Id id))
+				| f::rest -> Field (packer rest, f) in
     	(match exp_parser list with
-    	| Success exp, (_,SEMICOLON)::list -> Success (Stmt_define (Id id, fieldlist, exp)), list
+    	| Success exp, (_,SEMICOLON)::list ->
+				Success (Stmt_define (packer fieldlist, exp)), list
     	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
 			| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing '='." l1), []   
-			| Error e, list -> Error e, list)
+			| Error e, list -> Error e, list))
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No '=', but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing %s" l0 id), []
 		| Error e, list -> Error e, list)

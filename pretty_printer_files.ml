@@ -35,12 +35,15 @@ let print_op2 ppf = function
 	| Weakop Minus -> fprintf ppf "-";;
 
 (* print een lijst van fields met punten ertussen *)
-let rec print_fields ppf = function
-	| [] -> ();
-	| Hd::ls -> fprintf ppf "%a.hd" print_fields ls;
-	| Tl::ls -> fprintf ppf "%a.tl" print_fields ls;
-	| Fst::ls -> fprintf ppf "%a.fst" print_fields ls;
-	| Snd::ls -> fprintf ppf "%a.snd" print_fields ls;;
+let rec print_field ppf = function
+	| Hd -> fprintf ppf ".hd";
+	| Tl -> fprintf ppf ".tl";
+	| Fst -> fprintf ppf ".fst";
+	| Snd -> fprintf ppf ".snd";;
+
+let rec print_fieldexp ppf = function
+	| Nofield id -> fprintf ppf "%a" print_id id;
+	| Field (fieldexp, field) -> fprintf ppf "%a%a" print_fieldexp fieldexp print_field field;;
 
 (* levert het niveau van sterkte van een operator *)
 (* hoe hoger, hoe sterker                         *)
@@ -60,7 +63,7 @@ let isLower exp op = match exp with
 
 (* Print een expressie *)
 let rec print_exp ppf = function
-	| Exp_field (id, flds) -> fprintf ppf "%a%a" print_id id print_fields flds;
+	| Exp_field fieldexp -> fprintf ppf "%a" print_fieldexp fieldexp;
 	| Exp_infix (exp1, op2, exp2) -> 
 		fprintf ppf "(%a" print_exp exp1;
 		fprintf ppf " %a " print_op2 op2;
@@ -89,8 +92,8 @@ and print_stmt ppf = function
 		fprintf ppf "if(%a){@;<0 2>@[<v 0>%a@]@,}else{@;<0 2>@[<v 0>%a@]@,}" print_exp exp print_stmt_list stmt_list1 print_stmt_list stmt_list2; 
 	| Stmt_while (exp, stmt_list) ->
 		fprintf ppf "while(%a){@;<0 2>@[<v 0>%a@]@,}" print_exp exp print_stmt_list stmt_list;
-	| Stmt_define (id, fields, exp) ->
-		fprintf ppf "%a%a = %a;" print_id id print_fields fields print_exp exp;
+	| Stmt_define (fieldexp, exp) ->
+		fprintf ppf "%a = %a;" print_fieldexp fieldexp print_exp exp;
 	| Stmt_function_call (id, exps) ->
 		fprintf ppf "%a;" print_funcall (id, exps)
 	| Stmt_return x ->
