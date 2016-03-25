@@ -66,11 +66,11 @@ type tlt = (int*token) list (*TokenListType*)
 
 (* field = '.' fieldtoken [field] *)
 (* fieldtoken = 'hd' | 'tl' | 'fst' | 'snd' *)
-let rec field_parser (field_list:field list) (list:tlt): field list result * tlt = match list with
+let rec field_parser field_list = function
 	| (_,PERIOD)::(_,Fieldtoken t)::list -> field_parser (t::field_list) list
 	| (_,PERIOD)::(l,x)::list -> Error (sprintf "(r.%i) No field, but: %s" l (token_to_string x)), (l,x)::list
 	| (l,PERIOD)::[] -> Error (sprintf "(r.%l) Unexpected EOF while parsing a field." l), []
-	| list -> Success (List.rev field_list), list;;
+	| list -> Success field_list, list;;
 
 (* a+b:tail betekent a + (b:tail)*)
  
@@ -164,9 +164,13 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 		(match funcall_parser list with
 		| Success exps, list -> Success (Some (Exp_function_call ((Id id), exps))), list 
 		| Error e, list -> Error e, list)
-	|	(_,IDtok id)::list -> 
+	|	(_,IDtok id)::list ->
 		(match field_parser [] list with
-		| Success fieldlist, list -> Success (Some (Exp_field (Id id, fieldlist))), list
+		| Success fieldlist, list ->
+			(let rec packer = function
+				| [] -> (Nofield (Id id))
+				| f::rest -> Field (packer rest, f) in 
+			Success (Some (Exp_field (packer fieldlist))), list)
 		| Error e, list -> Error e, list)
 	| (l0,OPEN_PAR)::list -> 
 		(match (exp_parser list) with
