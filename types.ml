@@ -14,8 +14,11 @@ type op2 =
 	| Weakop of weakop
 	| Strongop of strongop
 type field = Hd | Tl | Fst | Snd
+type fieldexp = 
+	| Nofield of id
+	| Field of fieldexp * field
 type exp = 
-	| Exp_field of id * field list
+	| Exp_field of fieldexp
 	| Exp_infix of exp * op2 * exp
 	| Exp_prefix of op1 * exp
 	| Exp_int of int
@@ -28,7 +31,7 @@ type stmt =
 	| Stmt_if of exp *  stmt list
 	| Stmt_if_else of exp *  stmt list *  stmt list
 	| Stmt_while of exp *  stmt list
-	| Stmt_define of id * field list * exp
+	| Stmt_define of fieldexp * exp
 	| Stmt_function_call of id *  exp list
 	| Stmt_return of exp option
 type fargs = Fargs of id list
