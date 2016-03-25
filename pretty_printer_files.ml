@@ -92,8 +92,8 @@ and print_stmt ppf = function
 		fprintf ppf "if(%a){@;<0 2>@[<v 0>%a@]@,}else{@;<0 2>@[<v 0>%a@]@,}" print_exp exp print_stmt_list stmt_list1 print_stmt_list stmt_list2; 
 	| Stmt_while (exp, stmt_list) ->
 		fprintf ppf "while(%a){@;<0 2>@[<v 0>%a@]@,}" print_exp exp print_stmt_list stmt_list;
-	| Stmt_define (id, fields, exp) ->
-		fprintf ppf "%a%a = %a;" print_id id print_fields fields print_exp exp;
+	| Stmt_define (fieldexp, exp) ->
+		fprintf ppf "%a = %a;" print_fieldexp fieldexp print_exp exp;
 	| Stmt_function_call (id, exps) ->
 		fprintf ppf "%a;" print_funcall (id, exps)
 	| Stmt_return x ->
