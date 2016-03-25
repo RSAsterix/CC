@@ -156,7 +156,7 @@ and
 (* 							| '(' exp ')'         *)
 (* 							| op1 exp             *)
 atom_parser (list:tlt): (exp option result* tlt) = match list with
-	| (_,Inttok i)::list -> Success (Some (Exp_int (Inttoken i))), list
+	| (_,Inttok i)::list -> Success (Some (Exp_int i)), list
 	| (_,Chartok c)::list -> Success (Some (Exp_char c)), list
 	| (_,FALSE)::list -> Success (Some (Exp_bool false)), list
 	| (_,TRUE)::list -> Success (Some (Exp_bool true)), list

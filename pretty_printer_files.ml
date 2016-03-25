@@ -12,10 +12,6 @@ let print_bool ppf = function
 let print_id ppf = function
 	| Id id -> fprintf ppf "%s" id;;
 
-(* print de integer van een Inttoken *)
-let print_inttoken ppf = function
-	| Inttoken i -> fprintf ppf "%i" i;;
-
 (* print de operator van een Op1 *)
 let print_op1 ppf = function
 	| Not -> fprintf ppf "!";
@@ -75,7 +71,7 @@ let rec print_exp ppf = function
 	| Exp_prefix (op1, exp) ->
 		fprintf ppf "%a%a" print_op1 op1 print_exp exp;
 	| Exp_int int ->
-		fprintf ppf "%a" print_inttoken int;
+		fprintf ppf "%i" int;
 	| Exp_char c -> fprintf ppf "'%c'" c;
 	| Exp_bool b -> fprintf ppf "%a" print_bool b;
 	| Exp_function_call (id, exps) -> fprintf ppf "%a" print_funcall (id, exps);
