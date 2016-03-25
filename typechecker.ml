@@ -96,12 +96,17 @@ and m_exp env var = function
 						(match all_args with
 						| [] -> Error "Too few arguments."
 						| arg1::rest ->
-							match_args_with_funtype (arg1::rest) rest left)
+							(match match_args_with_funtype (arg1::rest) rest left with
+							| Success x ->
+								(match match_args_with_funtype rest rest (substitute x right) with
+								| Success res1 -> Success (o res1 x)
+								| Error e -> Error ("Could not match argument(s) with expected type:\n" ^ e))
+							|	Error e -> Error ("Could not match argument(s) with expected type:\n" ^ e)))
 					| rettype ->
 						(match all_args with
 						| [] ->
 							(match List.rev rest_args with
-							| [] -> Success []
+							| [] -> u rettype var
 							| _ -> Error "Too few arguments.")
 						| arg1::rest ->
   						(match m_exp (substitute_list function_subs env) rettype arg1 with
@@ -111,6 +116,6 @@ and m_exp env var = function
 			| Error _ -> Error "This shouldn't happen.")
 		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
 
-match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int 3;Exp_bool true;Exp_bool true])) (Var "b")) with
+match (m [("a",([],Imp(Imp(Int,Bool),Bool)))] (Exp_function_call (Id "a", [Exp_int 3])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
