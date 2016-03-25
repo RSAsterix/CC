@@ -5,7 +5,7 @@ open Printf
 
 (* Env: (x,a,t) ? *)
 let rec m env exp = function
-	| var -> m_exp env var exp
+	| var -> m_stmt env var exp
 and m_field env var = function
 	| Hd -> fresh(); u (Imp (Lis (Var !v), (Var !v))) var
 	| Tl -> fresh(); u (Imp (Lis (Var !v), Lis (Var !v))) var
@@ -119,8 +119,38 @@ and m_exp env var = function
 				| [] -> u rettype var
 				| _ -> Error "Too many arguments." )
 			| Error _ -> Error "This shouldn't happen.")
-		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
+		| Error e -> Error ("Function ill-typed:\n" ^ e)))
+and m_stmt env var = function
+	| Stmt_return None -> u var Void
+	| Stmt_return (Some exp) -> m_exp env var exp
+	| Stmt_function_call (id,args) -> m_exp env var (Exp_function_call (id,args))
+	| Stmt_while (exp,[stmts]) ->
+		(match m_stmt env var stmts with
+		| Success x ->
+			(match m_exp (substitute_list x env) Bool exp with
+			| Success res -> Success (o res x)
+			| Error e -> Error ("Condition not a boolean:\n" ^ e))
+		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e))
+	| Stmt_if (exp,[stmts]) ->
+		(match m_stmt env var stmts with
+		| Success x ->
+			(match m_exp (substitute_list x env) Bool exp with
+			| Success res -> Success (o res x)
+			| Error e -> Error ("Condition not a boolean:\n" ^ e))
+		| Error e -> Error ("Body of 'then' ill-typed:\n" ^ e))
+	| Stmt_if_else (exp,[stmts1],[stmts2]) ->
+		(match m_stmt env var stmts1 with
+		| Success x1 ->
+			(match m_stmt (substitute_list x1 env) (substitute x1 var) stmts2 with
+			| Success res1 ->
+				(let x = o res1 x1 in
+				(match m_exp (substitute_list x env) Bool exp with
+  			| Success res -> Success (o res x)
+  			| Error e -> Error ("Condition not a boolean:\n" ^ e)))
+			| Error e -> Error ("Body of 'else' ill-typed:\n" ^ e))
+		| Error e -> Error ("Body of 'then' ill-typed:\n" ^ e))
+	| _ -> Error "Unsupported statement.";;
 
-match (m [("a",([],Imp(Imp(Bool,Int),Void)))] (Exp_function_call (Id "a", [Exp_bool true; Exp_infix (Exp_int 3, Weakop Plus, Exp_int 3)])) (Var "b")) with
+match (m [] (Stmt_if_else (Exp_bool true, [Stmt_return (Some (Exp_bool true))], [Stmt_return (Some (Exp_int 3))])) (Var "b")) with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
