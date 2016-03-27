@@ -10,7 +10,7 @@ let print_bool ppf = function
 
 (* print de string van een Id *)
 let print_id ppf = function
-	| Id id -> fprintf ppf "%s" id;;
+	| id -> fprintf ppf "%s" id;;
 
 (* print de operator van een Op1 *)
 let print_op1 ppf = function
@@ -115,11 +115,11 @@ and print_funcall ppf = function
 
 (* Print een lijst van function arguments *)
 let rec print_fargs ppf = function
-	| Fargs [] -> ()
-	| Fargs [a] ->
+	| [] -> ()
+	| [a] ->
 		fprintf ppf "%a" print_id a;
-	| Fargs (a::list) ->
-		fprintf ppf "%a, %a" print_id a print_fargs (Fargs list);;
+	| (a::list) ->
+		fprintf ppf "%a, %a" print_id a print_fargs list;;
 
 (* Print basictypes int, bool of char *)
 let print_basictype ppf = function
@@ -141,8 +141,8 @@ let print_rettype ppf = function
 
 (* Print een functietype *)
 let rec print_funtype ppf = function
-	| Funtype ([], ret) -> fprintf ppf "-> %a " print_rettype ret;
-	| Funtype (a::list, ret) -> fprintf ppf "%a %a" print_typetoken a print_funtype (Funtype (list, ret));;
+	| ([], ret) -> fprintf ppf "-> %a " print_rettype ret;
+	| (a::list, ret) -> fprintf ppf "%a %a" print_typetoken a print_funtype (list, ret);;
 
 (* Nodig omdat een vardecl ofwel 'var' heeft, ofwel een type *)
 let print_var_option ppf = function
@@ -150,7 +150,7 @@ let print_var_option ppf = function
 	| Some t -> fprintf ppf "%a" print_typetoken t;;
 
 let rec print_vardecl ppf = function
-	| Vardecl (t, id, exp) -> fprintf ppf "%a %a = %a;" print_var_option t print_id id print_exp exp;;
+	| (t, id, exp) -> fprintf ppf "%a %a = %a;" print_var_option t print_id id print_exp exp;;
 
 let rec print_vardecl_list ppf = function
 	| [] -> ();
@@ -161,13 +161,13 @@ let print_funtype_option ppf = function
 	| Some ft -> fprintf ppf " :: %a" print_funtype ft;;
 
 let rec print_fundecl ppf = function
-	| Fundecl (id, fargs, funtype, vardecl_list, stmt_list) -> 
+	| (id, fargs, funtype, vardecl_list, stmt_list) -> 
 		fprintf ppf "%a(%a)%a{@;<0 2>@[<v 0>%a%a@]@,}" print_id id print_fargs fargs print_funtype_option funtype print_vardecl_list vardecl_list print_stmt_list stmt_list;;
 
 let print_decl ppf = function
-	| Decl_var v -> fprintf ppf "%a" print_vardecl v;
-	| Decl_fun f -> fprintf ppf "%a" print_fundecl f;;
+	| Vardecl v -> fprintf ppf "%a" print_vardecl v;
+	| Fundecl f -> fprintf ppf "%a" print_fundecl f;;
 
 let rec print_spl ppf = function
-	| SPL [] -> ();
-	| SPL (x::list) -> fprintf ppf "@[<v 0>%a@]@.@.%a" print_decl x print_spl (SPL list);;
+	| [] -> ();
+	| (x::list) -> fprintf ppf "@[<v 0>%a@]@.@.%a" print_decl x print_spl list;;

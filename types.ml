@@ -1,5 +1,5 @@
 (*==    structure    ==*)
-type id = Id of string
+type id = string
 type op1 = Not | Neg
 type logop = And | Or
 type eqop = Eq | Neq
@@ -34,18 +34,18 @@ type stmt =
 	| Stmt_define of fieldexp * exp
 	| Stmt_function_call of id * exp list
 	| Stmt_return of exp option
-type fargs = Fargs of id list
+type fargs = id list
 type basictype = Type_int | Type_bool | Type_char
 type typetoken = Basictype of basictype
 	| Type_tuple of typetoken * typetoken
 	| Type_list of typetoken
 	| Type_id of id
 type rettype = Rettype of typetoken | Type_void
-type funtype = Funtype of typetoken list * rettype
-type vardecl = Vardecl of typetoken option * id * exp 
-type fundecl = Fundecl of id * fargs * funtype option * vardecl list * stmt list
-type decl = Decl_var of vardecl | Decl_fun of fundecl
-type spl = SPL of decl list;;
+type funtype = typetoken list * rettype
+type vardecl = typetoken option * id * exp 
+type fundecl = id * fargs * funtype option * vardecl list * stmt list
+type decl = Vardecl of vardecl | Fundecl of fundecl
+type spl = decl list;;
 
 
 (*==    result    ==*)
