@@ -162,13 +162,13 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 	| (_,EMPTYLIST)::list -> Success (Some (Exp_emptylist)), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
-		| Success exps, list -> Success (Some (Exp_function_call ((Id id), exps))), list 
+		| Success exps, list -> Success (Some (Exp_function_call (id, exps))), list 
 		| Error e, list -> Error e, list)
 	|	(_,IDtok id)::list ->
 		(match field_parser [] list with
 		| Success fieldlist, list ->
 			(let rec packer = function
-				| [] -> (Nofield (Id id))
+				| [] -> (Nofield id)
 				| f::rest -> Field (packer rest, f) in 
 			Success (Some (Exp_field (packer fieldlist))), list)
 		| Error e, list -> Error e, list)
