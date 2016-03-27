@@ -40,10 +40,7 @@ let vardecl_gen info code decl =
 		match typetoken with
 		| Basictype _ -> 
 
-let spl_gen code info structure = 
-  	let spl_gen' code info = function
+let spl_gen code info = function
   	| [] -> code
-  	| Decl_var decl -> vardecl_gen code info decl
-  	| Decl_fun decl -> fundecl_gen code info decl in
-	match structure with
-	| SPL decllist -> spl_gen' code info decllist
+  	| Vardecl (Some typetoken,id,exp) -> vardecl_gen code info decl
+  	| Decl_fun decl -> fundecl_gen code info decl
