@@ -18,17 +18,16 @@ let m_field env var = function
 		fresh();
 		u (Imp (Tup (a1, (Var !v)), (Var !v))) var);;
 
-let m_id env var = function
-	| Id s ->
-		(match env_find (Var s) env with
-		| Success (bound, t) ->
-			(let rec rewritables list = function
-				| [] -> List.rev list
-				| a::rest ->
-					fresh();
-					rewritables ((a,(Var !v))::list) rest in
-			u (substitute (rewritables [] bound) t) var)
-		| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
+let m_id env var s =
+	(match env_find (Var s) env with
+	| Success (bound, t) ->
+		(let rec rewritables list = function
+			| [] -> List.rev list
+			| a::rest ->
+				fresh();
+				rewritables ((a,(Var !v))::list) rest in
+		u (substitute (rewritables [] bound) t) var)
+	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
 	| Nofield id -> m_id env var id
@@ -59,7 +58,7 @@ let rec m_exp env var = function
 			(match m_exp (substitute_list x1 env) a2 e2 with
 			| Success res1 ->
 				(let x = o res1 x1 in
-				(match u (substitute x var) (substitute x (Tup (a1, a2))) with
+				(match u (substitute x (Tup (a1, a2))) (substitute x var) with
 				| Success res2 -> Success (o res2 x)
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
@@ -92,7 +91,7 @@ let rec m_exp env var = function
 		| Success function_subs ->
 			(match env_find a function_subs with
 			| Success t ->
-				(let rec match_type list with
+				(let rec match_type list = function
 				| Imp (argtype1,resttype) ->
 					(match list with
 					| [] -> Error "Too few arguments."
@@ -105,9 +104,9 @@ let rec m_exp env var = function
 						| Error e -> Error ("Argument not matching:\n" ^ e)))
 				| rettype ->
 					(match list with
-					| [] -> u var rettype
+					| [] -> u rettype var
 					| _ -> Error "Too many arguments.") in
-				(* doe functie *) 
+				match_type args t) 
 			| Error _ -> Error "This shouldn't happen.")
 		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
 
@@ -125,7 +124,7 @@ let rec m_stmts env var = function
 			| Error e -> Error e)
 		| Error e -> Error e)
 and m_stmt env var = function
-	| Stmt_return None -> u var Void
+	| Stmt_return None -> u Void var
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
 		fresh();
@@ -171,23 +170,30 @@ let rec convert_typetoken = function
 	| Basictype Type_char -> Char
 	| Type_tuple (t1,t2) -> Tup (convert_typetoken t1, convert_typetoken t2)
 	| Type_list t -> Lis (convert_typetoken t)
-	| Type_id (Id id) -> Var id;;  
+	| Type_id id -> Var id;;  
 
 let convert_rettype = function
 	| Type_void -> Void
 	| Rettype t -> convert_typetoken t;;
 
 let rec make_type = function
-	| Funtype ([],rettype) -> convert_rettype rettype
-	| Funtype (a::rest,rettype) -> Imp (convert_typetoken a, make_type (Funtype (rest,rettype)));;
+	| ([],rettype) -> convert_rettype rettype
+	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
 		
 let m_funtype env var = function
 	| None -> Success []
-	| Some funtype -> u var (make_type funtype);;
+	| Some funtype -> u (make_type funtype) var;;
 
 let rec m env exp = function
 	| var -> m_stmt env var exp;;
 
-match (m [("a",([],Int))] (Stmt_if (Exp_bool true, [Stmt_define (Nofield (Id "a"), Exp_int 3);Stmt_return (Some (Exp_int 3));Stmt_return (Some (Exp_prefix (Neg,Exp_int 3)))])) (Var "b")) with
+match m [("a",([],Imp(Int,Imp(Bool,Void))))] (Stmt_return (Some (Exp_function_call("a",[Exp_int 3;Exp_bool true])))) (Var "b") with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
+
+(*
+#directory "C:/Users/tom_e/workspace/CC/_build/";;
+#load "typechecker_lib.cmo";;
+open Typechecker_lib;;
+#use "typechecker.ml";;
+*)
