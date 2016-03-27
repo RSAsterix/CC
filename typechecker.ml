@@ -19,7 +19,7 @@ let m_field env var = function
 		u (Imp (Tup (a1, (Var !v)), (Var !v))) var);;
 
 let m_id env var s =
-	(match env_find (Var s) env with
+	(match env_find s env with
 	| Success (bound, t) ->
 		(let rec rewritables list = function
 			| [] -> List.rev list
@@ -89,8 +89,8 @@ let rec m_exp env var = function
 		(let a = Var !v in
 		(match m_id env a id with
 		| Success function_subs ->
-			(match env_find a function_subs with
-			| Success t ->
+			(match substitute function_subs a with
+			| t ->
 				(let rec match_type list = function
 				| Imp (argtype1,resttype) ->
 					(match list with
@@ -106,8 +106,7 @@ let rec m_exp env var = function
 					(match list with
 					| [] -> u rettype var
 					| _ -> Error "Too many arguments.") in
-				match_type args t) 
-			| Error _ -> Error "This shouldn't happen.")
+				match_type args t))
 		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
 
 let rec m_stmts env var = function
@@ -164,30 +163,14 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec convert_typetoken = function
-	| Basictype Type_int -> Int
-	| Basictype Type_bool -> Bool
-	| Basictype Type_char -> Char
-	| Type_tuple (t1,t2) -> Tup (convert_typetoken t1, convert_typetoken t2)
-	| Type_list t -> Lis (convert_typetoken t)
-	| Type_id id -> Var id;;  
-
-let convert_rettype = function
-	| Type_void -> Void
-	| Rettype t -> convert_typetoken t;;
-
-let rec make_type = function
-	| ([],rettype) -> convert_rettype rettype
-	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
-		
-let m_funtype env var = function
+let m_funtype var = function
 	| None -> Success []
 	| Some funtype -> u (make_type funtype) var;;
 
 let rec m env exp = function
 	| var -> m_stmt env var exp;;
 
-match m [("a",([],Imp(Int,Imp(Bool,Void))))] (Stmt_return (Some (Exp_function_call("a",[Exp_int 3;Exp_bool true])))) (Var "b") with
+match m [("a",([],Imp(Int,Imp(Int,Void))))] (Stmt_return (Some (Exp_function_call("a",[Exp_int 3;Exp_int 3])))) (Var "b") with
 | Success x -> print_subs stdout x
 | Error e -> print_string e;;
 

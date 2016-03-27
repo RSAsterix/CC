@@ -143,7 +143,7 @@ let op1_to_subs = function
 
 let rec env_find x = function
 	| [] -> Error ""
-	| (var,t)::rest when (x = Var var) -> Success t
+	| (var,t)::rest when (x = var) -> Success t
 	| _::rest -> env_find x rest;;
 
 let first list =
@@ -154,5 +154,22 @@ let first list =
 	f_help [] list;;
 
 let rec last = function
+	[] -> ()
 	| [a] -> a
 	| _::rest -> last rest;;
+
+let rec convert_typetoken = function
+	| Type_int -> Int
+	| Type_bool -> Bool
+	| Type_char -> Char
+	| Type_tuple (t1,t2) -> Tup (convert_typetoken t1, convert_typetoken t2)
+	| Type_list t -> Lis (convert_typetoken t)
+	| Type_id id -> Var id;;  
+
+let convert_rettype = function
+	| Type_void -> Void
+	| Rettype t -> convert_typetoken t;;
+
+let rec make_type = function
+	| ([],rettype) -> convert_rettype rettype
+	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
