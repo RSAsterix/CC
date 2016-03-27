@@ -1,16 +1,13 @@
 open String
 
 (* TODO: *)
-(* it should be possible to functions and global variables before they are defined *)
-(* zijn er nog types uit de AST te slopen? vardecl en fundecl niet. *)
+(* it should be possible to use functions and global variables before they are defined *)
 (* onze tokenizer moet comments wegmieteren *)
 
 (* besluiten *)
 (* "<type> id = exp" maakt een id *)
-(* "var id = exp" verandert een id *) 
-
-type requestresult = Success of info * string | Request of string
-(* als een id nog niet gedefinieerd is, terwijl hij wel nodig is, wordt een request voor dat id gegeven *)
+(* "var id = exp" verandert een id *)
+(* simpele oplosing vars en function declaration dependence: maak 'lege' vars: slechts gereserveerde plekken in het geheugen *)  
 
 type info = (* alle side information nodig naast de structure en de code *)
 	{
