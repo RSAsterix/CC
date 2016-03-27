@@ -10,7 +10,9 @@ open Exp_parser
 (* 		| '[' type ']'        *)
 (* basictype = 'Int' | 'Bool' | 'Char' *)
 let rec type_parser = function
-	| (_,Basictoken a)::list -> Success (Basictype a),list
+	| (_,Basic_int)::list -> Success (Type_int),list
+	| (_,Basic_bool)::list -> Success (Type_bool),list
+	| (_,Basic_char)::list -> Success (Type_char),list
 	| (_,IDtok id)::list -> Success (Type_id id),list
 	| (l0,OPEN_PAR)::list -> 
 		(match (type_parser list) with
