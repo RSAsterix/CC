@@ -163,9 +163,26 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let m_funtype var = function
-	| None -> Success []
-	| Some funtype -> u (make_type funtype) var;;
+let rec m_vardecl env var = function
+	| (None,id,exp) ->
+		fresh();
+		(let a = Var !v in
+		(match m_exp ((id,([],a))::env) a exp with
+		| Success x ->
+			(let b = diff (tv (substitute x a)) (tv_list (substitute_list x env)) in
+			Error "unsupported.")
+		| Error e -> Error ("Vardecl expression ill-typed:\n" ^ e)))
+	| (Some typetoken,id,exp) -> Error "unsupported."
+
+let rec m_fundecl env var = function
+	| (id,fargs,None,vardecls,stmts) -> Error "uns"
+	| (id,fargs,Some funtype,vardecls,stmts) -> Error "un"
+
+let rec m_decl env var = function
+	| [] -> Success []
+	| [Vardecl x] -> m_vardecl env var x
+	| [Fundecl x] -> m_fundecl env var x
+	| x::rest -> m_decl env var rest
 
 let rec m env exp = function
 	| var -> m_stmt env var exp;;

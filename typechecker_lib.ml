@@ -13,6 +13,8 @@ let rec remove_dups lst =
 	| [] -> []
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
+let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
+
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
 	| Imp (t1,t2) -> sprintf "%s -> %s" (string_of_type t1) (string_of_type t2)
@@ -80,6 +82,14 @@ let tv t =
   	| Lis t -> tv_help list t
   	| t -> [] in
 	remove_dups (tv_help [] t);;
+
+let tv_list env =
+	let rec tv_help free bound = function
+		| [] -> List.rev free
+		| (id,(idbound,idtype))::rest ->
+			(let newbound = List.append idbound (id::bound) in
+			tv_help (diff (tv idtype) newbound) newbound rest) in
+	tv_help [] [] env;;
 
 let unexpected expected found = 
 	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
