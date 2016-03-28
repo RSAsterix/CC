@@ -163,33 +163,52 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec m_vardecl env var = function
-	| (None,id,exp) ->
-		fresh();
-		(let a = Var !v in
-		(match m_exp ((id,([],a))::env) a exp with
-		| Success x ->
-			(let b = diff (tv (substitute x a)) (tv_list (substitute_list x env)) in
-			Error "unsupported.")
-		| Error e -> Error ("Vardecl expression ill-typed:\n" ^ e)))
-	| (Some typetoken,id,exp) -> Error "unsupported."
-
-let rec m_fundecl env var = function
-	| (id,fargs,None,vardecls,stmts) -> Error "uns"
-	| (id,fargs,Some funtype,vardecls,stmts) -> Error "un"
-
-let rec m_decl env var = function
+let rec m_spl env var = function
 	| [] -> Success []
-	| [Vardecl x] -> m_vardecl env var x
-	| [Fundecl x] -> m_fundecl env var x
-	| x::rest -> m_decl env var rest
+	| Vardecl (pretyped,id,exp)::rest ->
+		(match env_find id env with
+		| Error _ ->
+			(let gettype = function
+			| None -> fresh(); Var !v
+			| Some typetoken -> convert_typetoken typetoken in
+			(let a = gettype pretyped in
+			(match m_exp ((id,([],a))::env) a exp with
+			| Success x ->
+				(match m_spl (substitute_list x ((id,([],a))::env)) (substitute x a) rest with
+				| Success res1 -> Success (o res1 x)
+				| Error e -> Error e)
+			| Error e -> Error e)))
+		| Success _ -> print_env stdout env; Error "\nVariable already declared.")
+	| Fundecl (id,fargs,pretyped,vardecls,stmts)::rest ->
+		(match env_find id env with
+		| Error _ ->
+			(let gettype = function
+			| None -> fresh(); Var !v
+			| Some funtype -> make_type funtype in
+			(let a = gettype pretyped in
+			(let env' = (id,(fargs,a))::env in
+			(match m_spl env' a (List.map (fun x -> Vardecl x) vardecls) with
+			| Success x1 ->
+				(match m_stmts (substitute_list x1 env') (substitute x1 a) stmts with
+				| Success res1 ->
+					(let x2 = o res1 x1 in
+					(match m_spl (substitute_list x2 env') (substitute x2 a) rest with
+					| Success res2 -> Success (o res2 x2)
+					| Error e -> Error e))
+				| Error e -> Error e)
+			| Error e -> Error e))))
+		| Success _ -> print_env stdout env; Error "\nFunction already declared.");;
 
-let rec m env exp = function
-	| var -> m_stmt env var exp;;
+let m env exp = m_spl env (Var "0") exp;;
 
-match m [("a",([],Imp(Int,Imp(Int,Void))))] (Stmt_return (Some (Exp_function_call("a",[Exp_int 3;Exp_int 3])))) (Var "b") with
-| Success x -> print_subs stdout x
-| Error e -> print_string e;;
+(* fargs shouldn't be in environment *)
+(* fargs should be placed in environment with fresh types *)
+
+(* match m [] ([Vardecl (None,"a",Exp_int 3);                              *)
+(* Fundecl ("c",["arg1"],None,[(None,"d",Exp_int 3)],[Stmt_return None]);  *)
+(* Vardecl (None,"b",Exp_function_call ("a",[]))]) (Var "b") with          *)
+(* | Success x -> print_subs stdout x                                      *)
+(* | Error e -> print_string e;;                                           *)
 
 (*
 #directory "C:/Users/tom_e/workspace/CC/_build/";;
