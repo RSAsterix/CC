@@ -32,6 +32,19 @@ let print_subs out subs =
 	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
 	fprintf out "[%a\n]" subs_print_help subs;;
 
+let rec print_list out = function
+	| [] -> ()
+	| [a] -> fprintf out "%s" a
+	| a::rest -> fprintf out "%s %a" a print_list rest;;
+
+let print_env out env =
+	let rec subs_print_help out = function
+	| [] -> ()
+	| [(x,([],t))] -> fprintf out "%s |-> %s" x (string_of_type t)
+	| [(x,(forall,t))] -> fprintf out "%s |-> forall %a, %s" x print_list forall (string_of_type t)
+	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
+	fprintf out "[%a\n]" subs_print_help env;;
+
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
 (* gebruik vervolgens "Var !v" voor een verse variabele*)
