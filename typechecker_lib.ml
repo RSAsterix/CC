@@ -30,8 +30,6 @@ let print_subs out subs =
 	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
 	fprintf out "[%a\n]" subs_print_help subs;;
 
-let isIn el lst = List.exists (fun x -> x = el) lst;;
-
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
 (* gebruik vervolgens "Var !v" voor een verse variabele*)
@@ -91,7 +89,7 @@ let u t1 t2 =
   	| Var a ->
   		(match t with
   		| Var a1 when (a = a1) -> Success (List.rev list)
-  		| x when (not (isIn a (tv x))) -> Success (List.rev ((a,x)::list))
+  		| x when (not (List.mem a (tv x))) -> Success (List.rev ((a,x)::list))
 			| _ -> Error (unexpected (Var a) t))
   	| Imp (t1,t2) ->
 			(match t with
@@ -102,7 +100,7 @@ let u t1 t2 =
 					| Success left -> Success (o left x)
 					| Error e -> Error ("Unable to unify arguments, due to:\n" ^ e))
 				| Error e -> Error ("Unable to unify result, due to:\n" ^ e))
-			| Var a when (not (isIn a (tv (Imp (t1,t2))))) -> Success (List.rev ((a,Imp (t1,t2))::list))
+			| Var a when (not (List.mem a (tv (Imp (t1,t2))))) -> Success (List.rev ((a,Imp (t1,t2))::list))
 			| _ -> Error (unexpected (Imp (t1,t2)) t))
   	| Tup (t1,t2) ->
 			(match t with
@@ -113,16 +111,16 @@ let u t1 t2 =
 					| Success left -> Success (o left x)
 					| Error e -> Error ("Unable to unify right side of tuples, due to:\n" ^ e))
 				| Error e -> Error ("Unable to unify left side of tuples, due to:\n" ^ e))
-			| Var a when (not (isIn a (tv (Tup (t1,t2))))) -> Success (List.rev ((a,Tup (t1,t2))::list))
+			| Var a when (not (List.mem a (tv (Tup (t1,t2))))) -> Success (List.rev ((a,Tup (t1,t2))::list))
 			| _ -> Error (unexpected (Tup (t1,t2)) t))
   	| Lis t1 ->
 			(match t with
 			| Lis s1 -> u_help [] s1 t1
-			| Var a when (not (isIn a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
+			| Var a when (not (List.mem a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
 			| _ -> Error (unexpected (Lis t1) t))
   	| t1 ->
 			(match t with
-			| Var a when (not (isIn a (tv t1))) -> Success (List.rev ((a,t1)::list))
+			| Var a when (not (List.mem a (tv t1))) -> Success (List.rev ((a,t1)::list))
 			| t2 when (t1 = t2) -> Success (List.rev list)
 			| _ -> Error (unexpected t1 t)) in
 	u_help [] t1 t2;;
