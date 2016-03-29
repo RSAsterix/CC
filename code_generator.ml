@@ -3,6 +3,7 @@ open Types
 open Char
 open Codefragments
 open List
+open Pretty_printer_files
 	
 let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen alist) ("")
 
@@ -12,6 +13,8 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 (* checken of een functie altijd returnt? *)
 (* exp_gen kan alleen nog maar global vars aan *)
 (* adding something to a list creates a whole new list *)
+(* load return register staat voor de branch *)
+
 
 (* besluiten *)
 (* "var id = exp" betekent niks anders dan dat je geen zin had om de type van id te specificeren *) 
@@ -62,7 +65,9 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 	LDC	3
 	ADD *)
 
-let get_idstruct id vars = find (fun x -> x.id=id) vars
+let get_idstruct id vars = 
+	try find (fun x -> x.id=id) vars with
+	| Not_found -> empty_idstruct
 
 (* Deze functie gaat er nog even van uit dat alle vars global zijn *)
 (* let rec field_gen vars = function                                        *)
@@ -83,9 +88,10 @@ let rec exp_gen vars exp =
 	| Exp_bool true -> ldc 1
 	| Exp_bool false -> ldc 0
 	| Exp_field (Nofield id) -> let idstruct = get_idstruct id vars in code_get idstruct
+	| Exp_field _ -> "exp_gen henk"
 	| Exp_infix (exp1,op,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ (op2code op)
 	| Exp_prefix (op,exp) -> (exp_gen vars exp) ^ (op1code op)
-	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id)
+	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id (length explist))
 	| Exp_emptylist -> get_emptylistcode
 	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode
 	
@@ -108,33 +114,34 @@ let rec exp_gen vars exp =
 (* parse de localvars *)
 (* parse de stmts *)
 
-let rec stmt_gen (vars: 'a list) (fid:string) (i:int) (farglength:int) (stmt:stmt):(string*int) = match stmt with
+let rec stmt_gen (vars: 'a list) (fid:string) (i:int) (stmt:stmt):(string*int) = match stmt with
 	| Stmt_if (exp,stmts) -> 
-		(match stmtlist_gen vars fid (i+1) farglength stmts with
+		(match stmtlist_gen vars fid (i+1) stmts with
 		| (code,j) -> (((exp_gen vars exp)^ (ifcode fid i) ^ (code) ^ (endifcode fid i)), j))
 	| Stmt_if_else (exp,stmtsif,stmtselse) -> 
-		(match stmtlist_gen vars fid (i+1) farglength stmtsif with
+		(match stmtlist_gen vars fid (i+1) stmtsif with
 		| (code1,j) ->
-			(match stmtlist_gen vars fid (j+1) farglength stmtselse with
+			(match stmtlist_gen vars fid (j+1) stmtselse with
 			| (code2,k) -> ((exp_gen vars exp) ^ ifcode fid i ^ code1 ^ elsecode fid i ^ endifcode fid i ^ code2 ^endelsecode fid i, k)))
 	| Stmt_while (exp,stmts) -> 
-		(match stmtlist_gen vars fid (i+1) farglength stmts with
+		(match stmtlist_gen vars fid (i+1) stmts with
 		| (code,j) -> (beforewhilecode fid i^ (exp_gen vars exp) ^ whilecode fid i^ code ^ endwhilecode fid i, j))
 	| Stmt_define (Nofield id,exp) -> let idstruct = get_idstruct id vars in ((exp_gen vars exp) ^ code_set idstruct, i)
-	| Stmt_function_call (id,explist) -> ((list_gen (exp_gen vars) (explist)) ^ (none_funcallcode id), i)
-	| Stmt_return (Some exp) -> ((exp_gen vars exp) ^ (return_some_code farglength),i)
-	| Stmt_return None -> ((return_none_code farglength),i)
+	| Stmt_define _ -> ("stmt_gen henk",i)
+	| Stmt_function_call (id,explist) -> ((list_gen (exp_gen vars) (explist)) ^ (none_funcallcode id (length explist)), i)
+	| Stmt_return (Some exp) -> ((exp_gen vars exp) ^ (return_some_code),i)
+	| Stmt_return None -> ((return_none_code),i)
 and
-stmtlist_gen (vars:'a list) (fid:string) (i:int) (farglength:int) = function
+stmtlist_gen (vars:'a list) (fid:string) (i:int) = function
 	| stmt::stmtlist -> 
-		(match stmt_gen vars fid i farglength stmt with
+		(match stmt_gen vars fid i stmt with
 		| (codehd,i) -> 
-			(match stmtlist_gen vars fid i farglength stmtlist with
+			(match stmtlist_gen vars fid i stmtlist with
 			| (codetl,i) -> (codehd^codetl,i)))
 	| [] -> ("",i)
 
 let rec fargs_to_idstructs i = function
-	| id::fargs -> {global=false;basic=true; id=id; index=i}::(fargs_to_idstructs (i-1) fargs) 
+	| id::fargs -> {global=false;basic=true; id=id; index=i}::(fargs_to_idstructs (i+1) fargs) 
 	| [] -> []
 
 let rec vardecl_gen vars = function
@@ -147,9 +154,9 @@ let rec vardecl_gen vars = function
 let rec append_unique l1 = function
 	| el2::l2 -> 
 		if mem el2 l1 then
-			append_unique (el2::l1) l2
-		else
 			append_unique l1 l2
+		else
+			append_unique (el2::l1) l2
 	| [] -> l1 
 
 (* Als een var in fargs voorkomt bindt die sterker dan als in gvars *)
@@ -162,6 +169,10 @@ let rec get_vars global i = function
 	| [] -> []
 	| _::decllist -> get_vars global i decllist
 
+let rec print_vars = function
+	| var::vars -> var.id ^ " " ^ (print_vars vars)
+	| [] -> " # "
+
 (* in order: *)
 (* set branchname*)
 (* reserve space for the local vars *)
@@ -169,26 +180,32 @@ let rec get_vars global i = function
 (* parse de stmts. This includes return *)
 let rec functions_gen (gvars:'a list) = function
 	| (fid,fargs,_,vardecllist,stmtlist)::decllist -> 
-		let fargs = fargs_to_idstructs (-1) fargs in
+		let fargs = fargs_to_idstructs (-1-(length fargs)) fargs in
 		let lvars = get_vars false 0 vardecllist in
 		let localknown = localknown fargs lvars gvars in
-		let stmtlistcode = fst (stmtlist_gen localknown fid 0 (length fargs) stmtlist) in 
+		let stmtlistcode = fst (stmtlist_gen localknown fid 0 stmtlist) in 
+		(* print_vars fargs ^ print_vars lvars ^ print_vars gvars ^ print_vars localknown ^ *)
 		(fid ^": "^ (reservelocalcode (length lvars)) ^ (vardecl_gen localknown vardecllist) ^ stmtlistcode)^(functions_gen gvars decllist)
 	| [] -> ""
 
-let isvardecl = function
-	| Vardecl _ -> true
-	| Fundecl _ -> false
-let isfundecl = function
-	| Vardecl _ -> false
-	| Fundecl _ -> true
-let get_vardecls spl = map (fun x-> match x with Vardecl y -> y)(filter (isvardecl) spl)
-let get_fundecls spl = map (fun x-> match x with Fundecl y -> y) (filter	(isfundecl) spl)			
+let rec get_vardecls = function
+	| (Vardecl vardecl)::spl -> vardecl::(get_vardecls spl)
+	| (Fundecl fundecl)::spl -> get_vardecls spl
+	| [] -> []
+
+let rec get_fundecls = function
+	| (Fundecl fundecl)::spl -> fundecl::(get_fundecls spl)
+	| (Vardecl vardecl)::spl -> get_fundecls spl
+	| [] -> []
+
+let rec print_vardecls = function
+	| (_,id,_)::list -> id ^" "^(print_vardecls list)
+	| [] -> " # "
 (* in order: *)
 (* make the startcode: define emptylist and branch to main *)
 (* reserve space for all global vars *)
 (* define all functions *)
 (* generate main: only look at vardecls *)
 let code_gen (spl:decl list) = let gvars = get_vars true 1 (get_vardecls spl) in
-	 branch_to_maincode ^ (functions_gen gvars (get_fundecls spl)) ^ "main: "^ reserve_emptylistcode ^  (reservecode (length gvars)) ^ (vardecl_gen gvars (get_vardecls spl))
+	branch_to_maincode ^ (functions_gen gvars (get_fundecls spl)) ^ "main: "^ reserve_emptylistcode ^  (reservecode (length gvars)) ^ (vardecl_gen gvars (get_vardecls spl))
 

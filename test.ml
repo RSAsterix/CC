@@ -11,7 +11,7 @@ open Code_generator
 (* (Stream.next lines) aan te roepen *)
 
 (* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
-let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
+let filename = "C:/Users/Martin/workspace/CC/input.txt";;
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
@@ -32,7 +32,7 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 (* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
 (* let oc = open_out outfile;; *)
 match structure with
-| Error e -> print_endline e;
+| Error e -> print_endline ((token_list_to_string (!tokenlist)) ^ e);
 | Success x -> print_string (code_gen x);;
 	(* print_spl (Format.formatter_of_out_channel stdout) x;; *)
 (* close_out oc;; *)

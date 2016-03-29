@@ -33,6 +33,8 @@ type idstruct = {
 	id: string;
 	index: int;
 	}
+	
+let empty_idstruct = {global=false;basic=true;id="henkst";index=20}
 
 let code_set id = 
 	if id.global then
@@ -48,15 +50,13 @@ let code_get id =
 	else
 		sprintf "ldl %i \n" id.index
 		
-let return_some_code arglength = 
+let return_some_code = 
   "str RR \n"^
 	"unlink \n"^
-	(sprintf "ajs -%i" arglength)^
 	"ret \n"
 
-let return_none_code arglength =sprintf 
+let return_none_code  =
   "unlink \n"^
-	(sprintf "ajs -%i" arglength)^
 	"ret \n"
 
 let firstof_code ="ldh 0 \n"
@@ -77,11 +77,14 @@ let op1code  = function
 	| Not -> "not \n"
 	| Neg -> "neg \n"
 
-let some_funcallcode id =
-"ldr RR \n"^
-"bsr "^id^" \n"
+let some_funcallcode id arglength=
+"bsr "^id^" \n"^
+(sprintf "ajs -%i \n" arglength)^
+"ldr RR \n"
 
-let none_funcallcode id ="bsr "^id^" \n"
+let none_funcallcode id arglength=
+"bsr "^id^" \n"^
+(sprintf "ajs -%i \n" arglength)
 
 let op2code = function
 	| Listop ->  listappendcode
