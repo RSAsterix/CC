@@ -25,9 +25,9 @@ let rec scan_line l = function
 	| [] -> []
 	| 'v'::'a'::'r'::line when (match_next line) -> (l, VAR)::(scan_line l line)
 	| 'V'::'o'::'i'::'d'::line when (match_next line) -> (l, VOID)::(scan_line l line)
-	| 'I'::'n'::'t'::line when (match_next line) -> (l, Basictoken Type_int)::(scan_line l line)
-	| 'B'::'o'::'o'::'l'::line when (match_next line) -> (l, Basictoken Type_bool)::(scan_line l line)
-	| 'C'::'h'::'a'::'r'::line when (match_next line) -> (l, Basictoken Type_char)::(scan_line l line)
+	| 'I'::'n'::'t'::line when (match_next line) -> (l, Basic_int)::(scan_line l line)
+	| 'B'::'o'::'o'::'l'::line when (match_next line) -> (l, Basic_bool)::(scan_line l line)
+	| 'C'::'h'::'a'::'r'::line when (match_next line) -> (l, Basic_char)::(scan_line l line)
 	| 'i'::'f'::line when (match_next line) -> (l, IF)::(scan_line l line)
 	| 'e'::'l'::'s'::'e'::line when (match_next line) -> (l, ELSE)::(scan_line l line)
 	| 'w'::'h'::'i'::'l'::'e'::line when (match_next line) -> (l, WHILE)::(scan_line l line)
@@ -89,9 +89,9 @@ let token_to_string t = match t with
 	| OPEN_BRACK -> "["
 	| CLOSE_BRACK -> "]"
 	| EMPTYLIST -> "[]"
-	| Basictoken Type_int -> "Int"
-	| Basictoken Type_bool -> "Bool"
-	| Basictoken Type_char -> "Char"
+	| Basic_int -> "Int"
+	| Basic_bool -> "Bool"
+	| Basic_char -> "Char"
 	| IF -> "if"
 	| ELSE -> "else"
 	| WHILE -> "while"

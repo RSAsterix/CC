@@ -11,8 +11,10 @@ open Exp_parser
 (* 		| '[' type ']'        *)
 (* basictype = 'Int' | 'Bool' | 'Char' *)
 let rec type_parser = function
-	| (_,Basictoken a)::list -> Success (Basictype a),list
-	| (_,IDtok id)::list -> Success (Type_id (Id id)),list
+	| (_,Basic_int)::list -> Success (Type_int),list
+	| (_,Basic_bool)::list -> Success (Type_bool),list
+	| (_,Basic_char)::list -> Success (Type_char),list
+	| (_,IDtok id)::list -> Success (Type_id id),list
 	| (l0,OPEN_PAR)::list -> 
 		(match (type_parser list) with
 		| Success type1, (l1,COMMA)::list -> 
@@ -45,7 +47,7 @@ let rettype_parser = function
 let rec funtype_parser type_list = function
   | (_,ARROW)::list	-> 
 		(match rettype_parser list with
-  	| Success rettype, list -> Success (Funtype ((List.rev type_list), rettype)), list
+  	| Success rettype, list -> Success ((List.rev type_list), rettype), list
   	| Error e, list -> Error e, list)
   | list -> 
 		(match type_parser list with
@@ -57,7 +59,7 @@ let message = "If this is a variable declaration, you probably forgot the type o
 let vardecl_rest_parser typetoken = function
 	| (_,IDtok id)::(l0,EQ)::list -> 
 		(match exp_parser list with
-		| Success exp, (_,SEMICOLON)::list -> Success (Vardecl (typetoken, Id id, exp)), list
+		| Success exp, (_,SEMICOLON)::list -> Success (typetoken, id, exp), list
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after '='." l0), []   
 		| Error e, list -> Error e, list)
@@ -135,13 +137,13 @@ stmt_parser = function
 		| Error e, list -> Error e, list)
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
   	(match funcall_parser list with
-  	| Success exp_list, list -> Success (Stmt_function_call (Id id, exp_list)), list
+  	| Success exp_list, list -> Success (Stmt_function_call (id, exp_list)), list
 		| Error e, list -> Error e, list)
 	| (l0,IDtok id)::list ->
 		(match (field_parser [] list) with
 		| Success fieldlist, (l1,EQ)::list ->
 			(let rec packer = function
-				| [] -> (Nofield (Id id))
+				| [] -> (Nofield id)
 				| f::rest -> Field (packer rest, f) in
     	(match exp_parser list with
     	| Success exp, (_,SEMICOLON)::list ->
@@ -160,13 +162,13 @@ stmt_parser = function
 (*opgesplitst in twee functies, zodat fargs ook '()' mag zijn*)
 let fargs_parser list =
 	let rec fargs2_parser id_list = function
-		| (_,IDtok id)::(_,CLOSE_PAR)::list	-> Success (Fargs (List.rev ((Id id)::id_list))),list
-  	| (_,IDtok id)::(_,COMMA)::list -> fargs2_parser ((Id id)::id_list) list
+		| (_,IDtok id)::(_,CLOSE_PAR)::list	-> Success (List.rev  (id::id_list)),list
+  	| (_,IDtok id)::(_,COMMA)::list -> fargs2_parser (id::id_list) list
 		| (_,IDtok id)::(l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis or comma, but: %s" l (token_to_string x)), (l,x)::list
 		| (l,x)::list -> Error (sprintf "(r.%i) No id, but: %s" l (token_to_string x)), (l,x)::list
 		| [] -> Error "Unexpected EOF when parsing function arguments.", []
   in match list with
-	| (_,CLOSE_PAR)::list -> Success (Fargs []), list
+	| (_,CLOSE_PAR)::list -> Success [], list
 	| list -> fargs2_parser [] list
 
 (* funDecl = fargs '(' vardeclList stmt stmtList     *)
@@ -182,7 +184,7 @@ let fundecl_parser id list = match fargs_parser list with
   		| Error e, list -> Error e, list
   		| Success [], (l,x)::list -> Error (sprintf "(r.%i) Not the beginning of a statement, but: %s" l (token_to_string x)), (l,x)::list
 			| Success [], [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing opening acolade." l0), [] 
-  		| Success stmt_list, list -> Success (Fundecl (id, fargs, None, vardecl_list, stmt_list)), list))
+  		| Success stmt_list, list -> Success (id, fargs, None, vardecl_list, stmt_list), list))
   | Success fargs, (l0,DDPOINT)::list ->
     (match funtype_parser [] list with
     | Error e, list -> Error e, list
@@ -195,7 +197,7 @@ let fundecl_parser id list = match fargs_parser list with
         | Error e, list -> Error e, list
         | Success [], (l,x)::list -> Error (sprintf "(r.%i) No statement, but: %s" l (token_to_string x)), (l,x)::list
 				| Success [], [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing opening acolade." l0), [] 
-        | Success stmt_list, list -> Success (Fundecl (id, fargs, Some funtype, vardecl_list, stmt_list)), list))
+        | Success stmt_list, list -> Success (id, fargs, Some funtype, vardecl_list, stmt_list), list))
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No opening acolade, but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing '::'." l0), [])
 	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No opening parenthesis or '::', but: %s" l (token_to_string x)), (l,x)::list
@@ -204,18 +206,18 @@ let fundecl_parser id list = match fargs_parser list with
 (* Decl = id '('  FunDecl | VarDecl *)
 let decl_parser = function
 	| (_,IDtok id)::(_,OPEN_PAR)::list ->
-		(match fundecl_parser (Id id) list with
-		| Success fundecl, list -> Success (Decl_fun fundecl), list
+		(match fundecl_parser id list with
+		| Success fundecl, list -> Success (Fundecl fundecl), list
 		| Error e, faillist -> Error e, faillist)
 	| (l,IDtok id)::[] -> Error (sprintf "(r.%i) Unexpected EOF after parsing id.\nBy the way: is '%s' a type for a variable, or a function name without arguments?" l id), []
 	| list -> 
 		(match vardecl_parser list with
-		| Success vardecl, list -> Success (Decl_var vardecl), list
+		| Success vardecl, list -> Success (Vardecl vardecl), list
 		| Error e, faillist -> Error e, faillist);;
 
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
 	match decl_parser tokenlist with
-  | Success decls, [] -> Success (SPL (List.rev (decls::decllist)))
+  | Success decls, [] -> Success  (List.rev (decls::decllist))
   | Success decls, list -> spl_parser (decls::decllist) list
   | Error e, list -> Error e;;
