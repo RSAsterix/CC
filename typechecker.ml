@@ -180,24 +180,42 @@ let rec m_spl env var = function
 			| Error e -> Error e)))
 		| Success _ -> print_env stdout env; Error "\nVariable already declared.")
 	| Fundecl (id,fargs,pretyped,vardecls,stmts)::rest ->
-		(match env_find id env with
-		| Error _ ->
-			(let gettype = function
-			| None -> fresh(); Var !v
-			| Some funtype -> make_type funtype in
-			(let a = gettype pretyped in
-			(let env' = (id,(fargs,a))::env in
-			(match m_spl env' a (List.map (fun x -> Vardecl x) vardecls) with
+		(let rec gettype arglist = function
+			| None ->
+				(match arglist with
+				| [] -> fresh(); Var !v
+				| x::xs -> fresh(); Imp(Var !v, gettype xs None)) 
+			| Some x -> make_type x in
+		(let a = gettype fargs pretyped in
+		(let rec args_to_env list arglist = function
+			| Imp (arg1type,resttype) ->
+				(match arglist with
+				| [] -> Error "Too few arguments listed."
+				| arg1::restargs -> 
+					(match env_find arg1 list with
+					| Error _ ->
+						args_to_env ((arg1,([],arg1type))::list) restargs resttype
+					| Success _ -> print_env stdout list; Error ("\nArgument '" ^ arg1 ^ "' already in environment.")))
+			| rettype ->
+				(match arglist with
+				| [] -> 
+					(match env_find id list with
+					| Error _ -> Success ((List.rev ((id,(fargs,a))::list)),rettype)
+					| Success _ -> print_env stdout list; Error ("\nFunction '" ^ id ^ "' name already in environment.")) 
+				| _ -> Error "Too many arguments.") in
+		(match args_to_env env fargs a with
+		| Error e -> Error e
+		| Success (env',rettype) ->
+			(match m_spl env' rettype (List.map (fun x -> Vardecl x) vardecls) with
 			| Success x1 ->
-				(match m_stmts (substitute_list x1 env') (substitute x1 a) stmts with
+				(match m_stmts (substitute_list x1 env') (substitute x1 rettype) stmts with
 				| Success res1 ->
 					(let x2 = o res1 x1 in
-					(match m_spl (substitute_list x2 env') (substitute x2 a) rest with
+					(match m_spl (substitute_list x2 env) (substitute x2 var) rest with
 					| Success res2 -> Success (o res2 x2)
 					| Error e -> Error e))
 				| Error e -> Error e)
-			| Error e -> Error e))))
-		| Success _ -> print_env stdout env; Error "\nFunction already declared.");;
+			| Error e -> Error e)))));; 
 
 let m env exp = m_spl env (Var "0") exp;;
 
