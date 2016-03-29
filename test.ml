@@ -4,6 +4,7 @@ open Parser
 open Char_func
 open Types
 open Pretty_printer_files
+open Code_generator
 
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
@@ -32,5 +33,6 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
 match structure with
 | Error e -> print_endline e;
-| Success x -> print_spl (Format.formatter_of_out_channel stdout) x;;
+| Success x -> print_string (code_gen x);;
+	(* print_spl (Format.formatter_of_out_channel stdout) x;; *)
 (* close_out oc;; *)

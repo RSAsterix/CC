@@ -1,30 +1,36 @@
 open String
 open Types
+open Char
+open Codefragments
+open List
+	
+let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen alist) ("")
 
 (* TODO: *)
 (* it should be possible to use functions and global variables before they are defined *)
 (* onze tokenizer moet comments wegmieteren *)
-(* ids hebben ook hun type nodig *)
+(* checken of een functie altijd returnt? *)
+(* exp_gen kan alleen nog maar global vars aan *)
+(* adding something to a list creates a whole new list *)
 
 (* besluiten *)
-(* "<type> id = exp" maakt een id *)
-(* "var id = exp" verandert een id *) 
+(* "var id = exp" betekent niks anders dan dat je geen zin had om de type van id te specificeren *) 
 (* lists zijn single linkedlists, oftewel tuples van (waarde, pointer naar volgende plek) *)
 (* Er is een ongebruikte plek in de heap. Als een list hier naar point, is hij empty *)
 
-(* open Set   *)
+(* open Set  *)
 
 
-(* module Id =                                  *)
-(*      struct                                  *)
-(*        type t = int * string                 *)
-(*        let compare (x0,y0) (x1,y1) =         *)
-(*          match Pervasives.compare y0 y1 with *)
-(*            | 0 -> Pervasives.compare x0 x1   *)
-(*            | c -> c                          *)
-(*      end                                     *)
+(* module Id =                 *)
+(*   struct                 *)
+(*    type t = int * string         *)
+(*    let compare (x0,y0) (x1,y1) =     *)
+(*     match Pervasives.compare y0 y1 with *)
+(*      | 0 -> Pervasives.compare x0 x1  *)
+(*      | c -> c             *)
+(*   end                   *)
 
-(* module Ids = Set.Make(Id)                    *)
+(* module Ids = Set.Make(Id)          *)
 
 (* definities: *)
 (* A needs B: decl bevat het id die in B gedefinieerd wordt *)
@@ -46,18 +52,9 @@ open Types
 
 (* Ga over de vardeclarations. *)
 (* Als een basicvar gedeclareerd wordt, reserveer 1 plek *)
-(* Als een lijst of tuple gedeclareerd wordt, reserveer 2 plekken *)
+(* //Als een lijst of tuple gedeclareerd wordt, reserveer 2 plekken *)
+(* Het is vele malen handiger om een pointer hiervoor neer te zetten *)
 (* Skip idtypes voor nu *)
-
-let get_ids ids = function
-	| Vardecl (_,id,_)::decllist -> get_ids (0,id)::ids decllist
-	| Fundecl (id,fargs,_,_,_)::decllist -> get_ids (length fargs,id)::ids decllist
-	| [] -> ids
-
-type info = (* alle side information nodig naast de structure en de code *)
-	{
-		idtypes: (string * typetoken) list
-	}
 
 (* exp_infix voorbeeld *)
 (* 2 + 3 *)
@@ -65,38 +62,133 @@ type info = (* alle side information nodig naast de structure en de code *)
 	LDC	3
 	ADD *)
 
-let rec exp_gen info exp =
+let get_idstruct id vars = find (fun x -> x.id=id) vars
+
+(* Deze functie gaat er nog even van uit dat alle vars global zijn *)
+(* let rec field_gen vars = function                                        *)
+(* 	| Nofield id -> let idstruct = get_idstruct id vars in                 *)
+(* 		if idstruct.basic then                                               *)
+(* 			global_basic_var_address                                           *)
+(* 		else                                                                 *)
+(* 			global_notbasic_var_address                                        *)
+(* 	| Field (fieldexp, Hd)                                                 *)
+(* 	| Field (fieldexp, Fst) -> (field_gen vars fieldexp) ^ get_first_code  *)
+(* 	| Field (fieldexp, Tl)                                                 *)
+(* 	| Field (fieldexp, Snd) -> (field_gen vars fieldexp) ^ get_second_code *)
+
+let rec exp_gen vars exp =
 	match exp with
-	| Exp_field fieldexp -> field_gen fieldexp
-	| Exp_infix (exp1,op,exp2) -> 
-		match exp_gen info exp1 with
-		| Success (info,code1) -> 
-			match exp_gen info exp2 with
-			| Success (info,code2) ->
-				| info, append (code1) (append (code2) (op2_gen op))
-
-let vardecl_gen info code decl = 
-	match decl with
-	| Vardecl (Some (typetoken),id,exp) ->
-		match exp_gen info exp with
-		match typetoken with
-		| Basictype _ -> 
-
-let emptylistcode = "
-ldc 0 \n
-sth \n
-str EMPTYLIST \n
-"
-
-let startcode ids code nr = function
-	| Vardecl(Some(Basictype b),id,_)::decllist -> startcode ((b,id,nr)::ids) ("ldc 0 \nsth \n" ^ code) nr+1 decllist
-	| Vardecl(Some(Type_tuple t),id,_)::decllist
-	| Vardecl(Some(Type_list t),id,_)::decllist -> startcode ((t,id,nr)::ids) ("ldc 0 \nsth \nldc 0 \nsth \n" ^ code) nr+2 decllist
-	| [] -> (ids,emptylist ^ code)
+	| Exp_int x -> ldc x
+	| Exp_char x -> ldc (Char.code x)
+	| Exp_bool true -> ldc 1
+	| Exp_bool false -> ldc 0
+	| Exp_field (Nofield id) -> let idstruct = get_idstruct id vars in code_get idstruct
+	| Exp_infix (exp1,op,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ (op2code op)
+	| Exp_prefix (op,exp) -> (exp_gen vars exp) ^ (op1code op)
+	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id)
+	| Exp_emptylist -> get_emptylistcode
+	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode
 	
+(* sta: *)
+(* Store via Address. *)
+(* Pops 2 values from the stack and *)
+(* stores the second popped value in the location pointed to by the first. *)
+(* The pointer value is offset by a constant offset. *)
 
 
-let spl_gen ids code info = function
-  	| [] -> code
-  	| Vardecl (Some (Basictype,id,exp) -> vardecl_gen code info decl
-  	| Decl_fun decl -> fundecl_gen code info decl
+(* Wat moet er gebeuren met een vardecl (met een nieuw id)? *)
+(* Zoek de var in de vars list en onthoud index i *)
+(* '(var met index i) = x': *)
+(* ldc x \n *)
+(* ldr r5 \n *)
+(* sta i \n *)
+
+(* in order: *)
+(* reserveer plek voor de localvars *)
+(* parse de localvars *)
+(* parse de stmts *)
+
+let rec stmt_gen (vars: 'a list) (fid:string) (i:int) (farglength:int) (stmt:stmt):(string*int) = match stmt with
+	| Stmt_if (exp,stmts) -> 
+		(match stmtlist_gen vars fid (i+1) farglength stmts with
+		| (code,j) -> (((exp_gen vars exp)^ (ifcode fid i) ^ (code) ^ (endifcode fid i)), j))
+	| Stmt_if_else (exp,stmtsif,stmtselse) -> 
+		(match stmtlist_gen vars fid (i+1) farglength stmtsif with
+		| (code1,j) ->
+			(match stmtlist_gen vars fid (j+1) farglength stmtselse with
+			| (code2,k) -> ((exp_gen vars exp) ^ ifcode fid i ^ code1 ^ elsecode fid i ^ endifcode fid i ^ code2 ^endelsecode fid i, k)))
+	| Stmt_while (exp,stmts) -> 
+		(match stmtlist_gen vars fid (i+1) farglength stmts with
+		| (code,j) -> (beforewhilecode fid i^ (exp_gen vars exp) ^ whilecode fid i^ code ^ endwhilecode fid i, j))
+	| Stmt_define (Nofield id,exp) -> let idstruct = get_idstruct id vars in ((exp_gen vars exp) ^ code_set idstruct, i)
+	| Stmt_function_call (id,explist) -> ((list_gen (exp_gen vars) (explist)) ^ (none_funcallcode id), i)
+	| Stmt_return (Some exp) -> ((exp_gen vars exp) ^ (return_some_code farglength),i)
+	| Stmt_return None -> ((return_none_code farglength),i)
+and
+stmtlist_gen (vars:'a list) (fid:string) (i:int) (farglength:int) = function
+	| stmt::stmtlist -> 
+		(match stmt_gen vars fid i farglength stmt with
+		| (codehd,i) -> 
+			(match stmtlist_gen vars fid i farglength stmtlist with
+			| (codetl,i) -> (codehd^codetl,i)))
+	| [] -> ("",i)
+
+let rec fargs_to_idstructs i = function
+	| id::fargs -> {global=false;basic=true; id=id; index=i}::(fargs_to_idstructs (i-1) fargs) 
+	| [] -> []
+
+let rec vardecl_gen vars = function
+	|(_,id,exp)::vardecllist -> 
+		let id= get_idstruct id vars in
+		(exp_gen vars exp) ^ (code_set id)^(vardecl_gen vars vardecllist)
+	| [] -> ""
+
+(* append_unique l1 l2: append el l2 als hij niet voorkomt in l1 *)
+let rec append_unique l1 = function
+	| el2::l2 -> 
+		if mem el2 l1 then
+			append_unique (el2::l1) l2
+		else
+			append_unique l1 l2
+	| [] -> l1 
+
+(* Als een var in fargs voorkomt bindt die sterker dan als in gvars *)
+(* Als een var in lvars voorkomt en ook in fargs hoeft er geen ruimte voor gereserveerd te worden *)
+let localknown fargs lvars gvars = append_unique lvars (append_unique fargs gvars)
+
+let rec get_vars global i = function
+	| (Some (Basictype _),id,_)::decllist
+	| ((None),id,_)::decllist -> {global=global;basic=true; id=id; index=i}::(get_vars global (i+1) decllist)
+	| [] -> []
+	| _::decllist -> get_vars global i decllist
+
+(* in order: *)
+(* set branchname*)
+(* reserve space for the local vars *)
+(* parse the local vars *)
+(* parse de stmts. This includes return *)
+let rec functions_gen (gvars:'a list) = function
+	| (fid,fargs,_,vardecllist,stmtlist)::decllist -> 
+		let fargs = fargs_to_idstructs (-1) fargs in
+		let lvars = get_vars false 0 vardecllist in
+		let localknown = localknown fargs lvars gvars in
+		let stmtlistcode = fst (stmtlist_gen localknown fid 0 (length fargs) stmtlist) in 
+		(fid ^" "^ (reservelocalcode (length lvars)) ^ (vardecl_gen localknown vardecllist) ^ stmtlistcode)^(functions_gen gvars decllist)
+	| [] -> ""
+
+let isvardecl = function
+	| Vardecl _ -> true
+	| Fundecl _ -> false
+let isfundecl = function
+	| Vardecl _ -> false
+	| Fundecl _ -> true
+let get_vardecls spl = map (fun x-> match x with Vardecl y -> y)(filter (isvardecl) spl)
+let get_fundecls spl = map (fun x-> match x with Fundecl y -> y) (filter	(isfundecl) spl)			
+(* in order: *)
+(* make the startcode: define emptylist and branch to main *)
+(* reserve space for all global vars *)
+(* define all functions *)
+(* generate main: only look at vardecls *)
+let code_gen (spl:decl list) = let gvars = get_vars true 1 (get_vardecls spl) in
+	 branch_to_maincode ^ (functions_gen gvars (get_fundecls spl)) ^ "main "^ reserve_emptylistcode ^  (reservecode (length gvars)) ^ (vardecl_gen gvars (get_vardecls spl))
+
