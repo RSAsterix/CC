@@ -3,7 +3,7 @@ open Types
 open Printf
 open Tokenizer
 open Exp_parser
-
+open Parser_lib
 
 (* type =    basictype       *)
 (* 		| id                  *)
@@ -20,8 +20,8 @@ let rec type_parser = function
 		| Success type1, (l1,COMMA)::list -> 
 			(match (type_parser list) with
 			| Success type2, (_,CLOSE_PAR)::list -> Success (Type_tuple (type1,type2)),list
-			| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
-			| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after comma." l1), []
+			| Success _, (l,x)::list -> err_unexpected l CLOSE_PAR x, list
+			| Success _, [] -> err_eof l1 COMMA, []
 			| Error e, list -> Error e, list)
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after comma." l0), []
