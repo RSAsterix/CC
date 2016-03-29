@@ -40,22 +40,25 @@ let rec type_parser = function
 
 (* rettype = 'Void' | type *)
 let rettype_parser = function
-	| (_,VOID)::list -> Success Type_void, list
+	| (_,VOID)::list 																			-> Success Type_void, list
 	| list -> 
 		(match type_parser list with
-		| Success type1, list -> Success (Rettype type1), list
-		| Error e, list -> Error e, list);;
+		| Success type1, list 															-> Success (Rettype type1), list
+		| Error e, list 																		-> Error e, list
+		);;
 
 (* varDeclRest = id '=' exp ';' *)
 let rec funtype_parser type_list = function
   | (_,ARROW)::list	-> 
 		(match rettype_parser list with
-  	| Success rettype, list -> Success ((List.rev type_list), rettype), list
-  	| Error e, list -> Error e, list)
+  	| Success rettype, list 														-> Success ((List.rev type_list), rettype), list
+  	| Error e, list 																		-> Error e, list
+		)
   | list -> 
 		(match type_parser list with
-  	| Success type1, list -> funtype_parser (type1::type_list) list
-		| Error e, list -> Error e, list);;
+  	| Success type1, list 															-> funtype_parser (type1::type_list) list
+		| Error e, list 																		-> Error e, list
+		);;
 
 (* varDeclRest = id '=' exp ';' *)
 let message = "If this is a variable declaration, you probably forgot the type or the 'var' keyword.";;
