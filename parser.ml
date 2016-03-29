@@ -5,35 +5,38 @@ open Tokenizer
 open Exp_parser
 open Parser_lib
 
-(* type =    basictype       *)
-(* 		| id                  *)
-(* 		| '(' type , type ')' *)
-(* 		| '[' type ']'        *)
-(* basictype = 'Int' | 'Bool' | 'Char' *)
+(* type =
+		| Type_int | Type_bool | Type_char
+		| id
+		| '(' type , type ')'
+		| '[' type ']'
+*)
 let rec type_parser = function
-	| (_,Basic_int)::list -> Success (Type_int),list
-	| (_,Basic_bool)::list -> Success (Type_bool),list
-	| (_,Basic_char)::list -> Success (Type_char),list
-	| (_,IDtok id)::list -> Success (Type_id id),list
+	| (_,Basic_int)::list 																-> Success (Type_int), list
+	| (_,Basic_bool)::list 																-> Success (Type_bool), list
+	| (_,Basic_char)::list 																-> Success (Type_char), list
+	| (_,IDtok id)::list 																	-> Success (Type_id id), list
 	| (l0,OPEN_PAR)::list -> 
 		(match (type_parser list) with
 		| Success type1, (l1,COMMA)::list -> 
 			(match (type_parser list) with
-			| Success type2, (_,CLOSE_PAR)::list -> Success (Type_tuple (type1,type2)),list
-			| Success _, (l,x)::list -> err_unexpected l CLOSE_PAR x, list
-			| Success _, [] -> err_eof l1 COMMA, []
-			| Error e, list -> Error e, list)
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after comma." l0), []
-		| Error e, list -> Error e, list)
+			| Success type2, (_,CLOSE_PAR)::list 							-> Success (Type_tuple (type1,type2)), list
+			| Success _, (l,x)::_ 														-> err_unex l CLOSE_PAR x, list
+			| Success _, [] 																	-> err_eof l1 COMMA, []
+			| Error e, list 																	-> Error e, list
+			)
+		| Success _, (l,x)::_ 															-> err_unex l CLOSE_PAR x, list
+		| Success _, [] 																		-> err_eof l0 COMMA, []
+		| Error e, list 																		-> Error e, list)
 	| (l0,OPEN_BRACK)::list -> 
 		(match (type_parser list) with
-		| Success type1, (_,CLOSE_BRACK)::list -> Success (Type_list type1), list
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing bracket, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening bracket." l0), [] 
-		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) Unexpected token: %s" l (token_to_string x)), (l,x)::list
-	| [] -> Error "Unexpected EOF while parsing type.", [];;
+		| Success type1, (_,CLOSE_BRACK)::list 							-> Success (Type_list type1), list
+		| Success _, (l,x)::_ 															-> err_unex l CLOSE_BRACK x, list
+		| Success _, [] 																		-> err_eof l0 OPEN_BRACK, [] 
+		| Error e, list 																		-> Error e, list
+		)
+	| (l,x)::list 																				-> err_unex_unknown l x, (l,x)::list
+	| [] 																									-> err_eof_end "type", [];;
 
 (* rettype = 'Void' | type *)
 let rettype_parser = function
