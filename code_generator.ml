@@ -173,7 +173,7 @@ let rec functions_gen (gvars:'a list) = function
 		let lvars = get_vars false 0 vardecllist in
 		let localknown = localknown fargs lvars gvars in
 		let stmtlistcode = fst (stmtlist_gen localknown fid 0 (length fargs) stmtlist) in 
-		(fid ^" "^ (reservelocalcode (length lvars)) ^ (vardecl_gen localknown vardecllist) ^ stmtlistcode)^(functions_gen gvars decllist)
+		(fid ^": "^ (reservelocalcode (length lvars)) ^ (vardecl_gen localknown vardecllist) ^ stmtlistcode)^(functions_gen gvars decllist)
 	| [] -> ""
 
 let isvardecl = function
@@ -190,5 +190,5 @@ let get_fundecls spl = map (fun x-> match x with Fundecl y -> y) (filter	(isfund
 (* define all functions *)
 (* generate main: only look at vardecls *)
 let code_gen (spl:decl list) = let gvars = get_vars true 1 (get_vardecls spl) in
-	 branch_to_maincode ^ (functions_gen gvars (get_fundecls spl)) ^ "main "^ reserve_emptylistcode ^  (reservecode (length gvars)) ^ (vardecl_gen gvars (get_vardecls spl))
+	 branch_to_maincode ^ (functions_gen gvars (get_fundecls spl)) ^ "main: "^ reserve_emptylistcode ^  (reservecode (length gvars)) ^ (vardecl_gen gvars (get_vardecls spl))
 

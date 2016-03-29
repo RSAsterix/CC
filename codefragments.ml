@@ -4,7 +4,7 @@ open Types
 let reserve_emptylistcode = 
 "ldc 0 \n"^
 "sth \n"^
-"str r5 \n"
+"str R5 \n"
 
 
 let ifcode fid i = sprintf "brf endif%s%i \n" fid i
@@ -21,17 +21,11 @@ let branch_to_maincode ="bra main \n"
 
 let reservelocalcode i = sprintf "link %i \n" i
 
-let rec reservecode = function
-	| 0 -> ""
-	| n -> 
-"ldc 0 \n"^
-"sth \n"^ 
-	reservecode (n-1) 
-
-(* De nieuwe waarde staat al op de stack *)
-(* returnt niks *)	
-
-let global_basic_var_address = "ldr r5 \n"
+let rec reservecode i = 
+"ldr HP \n"^
+(sprintf "ldc %i \n" i)^ 
+"add \n"^
+"str HP \n"
 
 type idstruct = {
 	global: bool;
@@ -42,13 +36,15 @@ type idstruct = {
 
 let code_set id = 
 	if id.global then
-	 	sprintf "sta %i \n" id.index
+		"ldr R5 \n"^
+		(sprintf "sta %i \n" id.index)
 	else
 		sprintf "stl %i \n" id.index
 
 let code_get id =
 	if id.global then
-		sprintf "lda %i \n" id.index
+		"ldr R5 \n"^
+		(sprintf "lda %i \n" id.index)
 	else
 		sprintf "ldl %i \n" id.index
 		
