@@ -11,7 +11,7 @@ open Code_generator
 (* (Stream.next lines) aan te roepen *)
 
 (* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
-let filename = "C:/Users/Martin/workspace/CC/input.txt";;
+let filename = "C:/Users/Martin/workspace/CC/input4.txt";;
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;

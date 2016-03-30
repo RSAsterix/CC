@@ -1,23 +1,21 @@
 open Printf
 open Types
+open String
 
 let reserve_emptylistcode = 
 "ldc 0 \n"^
 "sth \n"^
 "str R5 \n"
 
+let pointlabel l = l^": " 
+let brf l = "brf "^l^" \n"
+let endiflabel fid i = sprintf "endif%s%i" fid i
+let bra l = "bra "^l^" \n"
+let endelselabel fid i = sprintf "endelse%s%i" fid i
+let startwhilelabel fid i= sprintf "startwhile%s%i" fid i
+let brt l = "brt "^l^" \n"
+let endwhilelabel fid i = (sprintf "endwhile%s%i" fid i)
 
-let ifcode fid i = sprintf "brf endif%s%i \n" fid i
-let endifcode fid i = sprintf "endif%s%i " fid i
-let elsecode fid i = sprintf "bra endelse%s%i \n" fid i
-let endelsecode fid i = sprintf "endelse%s%i " fid i
-let beforewhilecode fid i= sprintf "startwhile%s%i " fid i
-let whilecode fid i = sprintf "brt endwhile%s%i \n" fid i
-let endwhilecode fid i = 
-	(sprintf "bra startwhile%s%i \n" fid i)^
-	(sprintf "endwhile%s%i \n" fid i)
-
-let branch_to_maincode ="bra main \n"
 
 let reservelocalcode i = sprintf "link %i \n" i
 
