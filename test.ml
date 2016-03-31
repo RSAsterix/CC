@@ -11,8 +11,8 @@ open Typechecker_lib
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-(* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
-let filename = "C:/Users/Tom/workspace/CC/input.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/input.txt";;
+(* let filename = "C:/Users/Tom/workspace/CC/input.txt";; *)
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;
