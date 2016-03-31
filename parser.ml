@@ -61,34 +61,35 @@ let rec funtype_parser type_list = function
 		);;
 
 (* varDeclRest = id '=' exp ';' *)
-let message = "If this is a variable declaration, you probably forgot the type or the 'var' keyword.";;
 let vardecl_rest_parser typetoken = function
 	| (_,IDtok id)::(l0,EQ)::list -> 
 		(match exp_parser list with
-		| Success exp, (_,SEMICOLON)::list -> Success (typetoken, id, exp), list
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after '='." l0), []   
-		| Error e, list -> Error e, list)
-	| (_,IDtok id)::(l,x)::list -> Error (sprintf "(r.%i) No '=', but: %s" l (token_to_string x)), (l,x)::list
-	| (l,EQ)::list -> Error (sprintf "(r.%i) No id, but '=' detected.\n%s" l message), (l,EQ)::list
-	| (l,x)::list -> Error (sprintf "(r.%i) No id, but: %s" l (token_to_string x)), (l,x)::list
-	| [] -> Error "Unexpected EOF when parsing the rest of the variable declaration.", []
+		| Success exp, (_,SEMICOLON)::list 									-> Success (typetoken, id, exp), list
+		| Success _, (l,x)::list 														-> err_unex l SEMICOLON x, (l,x)::list
+		| Success _, [] 																		-> err_eof l0 EQ, []   
+		| Error e, list 																		-> Error e, list
+		)
+	| (_,IDtok id)::(l,x)::list 													-> err_unex l EQ x, (l,x)::list
+	| (l,EQ)::list 																				-> err_unex_extra l (IDtok "identifier") EQ, (l,EQ)::list
+	| (l,x)::list 																				-> err_unex l (IDtok "identifier") x, (l,x)::list
+	| [] 																									-> err_eof_end "variable declaration", []
 
 (* VarDecl = 'var' VarDeclRest *)
 (* 		| type VarDeclRest      *)
 let vardecl_parser = function
-  | (_,VAR)::list -> vardecl_rest_parser None list
+  | (_,VAR)::list 																			-> vardecl_rest_parser None list
   | list -> 
 		(match type_parser list with
-		| Success type1, list -> vardecl_rest_parser (Some type1) list
-		| Error e, list -> Error e, list);;
+		| Success type1, list 															-> vardecl_rest_parser (Some type1) list
+		| Error e, list 																		-> Error e, list
+		);;
 
 (* vardeclList = varDecl* *)
 let rec vardecl_list_parser vardecl_list = function
 	| list ->
 		(match vardecl_parser list with
-		| Error e, _ -> Success (List.rev vardecl_list), list
-		| Success vardecl, list -> vardecl_list_parser (vardecl::vardecl_list) list);; 
+		| Error e, _ 																				-> Success (List.rev vardecl_list), list
+		| Success vardecl, list 														-> vardecl_list_parser (vardecl::vardecl_list) list);; 
 
 (* stmtList = '}' | stmt stmtList                              *)
 (* stmt =   'if' '(' exp ')' '{' stmtList 'else' '{' stmtList  *)
@@ -99,51 +100,56 @@ let rec vardecl_list_parser vardecl_list = function
 (* 		| id '(' funcall                                        *)
 (* 		| id field '=' exp                                      *)
 let rec stmt_list_parser stmt_list = function
-	| (_,CLOSE_ACO)::list -> Success (List.rev stmt_list), list 
+	| (_,CLOSE_ACO)::list 																-> Success (List.rev stmt_list), list 
 	| list ->
 		(match stmt_parser list with
-		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
-		| Error e, list -> Error e, list)
-and
-stmt_parser = function
+		| Success stmt, list 																-> stmt_list_parser (stmt::stmt_list) list
+		| Error e, list 																		-> Error e, list
+		)
+and stmt_parser = function
   | (_,IF)::(l0,OPEN_PAR)::list ->
   	(match exp_parser list with
 		| Success exp, (_,CLOSE_PAR)::(_,OPEN_ACO)::list ->
 			(match stmt_list_parser [] list with
 			| Success stmt_list1, (_,ELSE)::(_,OPEN_ACO)::list ->
 				(match stmt_list_parser [] list with
-				| Success stmt_list2, list -> Success (Stmt_if_else (exp, stmt_list1, stmt_list2)), list
+				| Success stmt_list2, list 											-> Success (Stmt_if_else (exp, stmt_list1, stmt_list2)), list
 				| Error e, list -> Error e, list)
-			| Success _, (_,ELSE)::(l,x)::list -> Error (sprintf "(r.%i) No opening acolade, but: %s" l (token_to_string x)), (l,x)::list
-			| Success _, (l,ELSE)::[] -> Error (sprintf "(r.%i) Unexpected EOF after 'else'." l), (l,ELSE)::[] 
-			| Success stmt_list1, list -> Success (Stmt_if (exp, stmt_list1)), list
-			| Error e, list -> Error e, list)
-		| Success _, (_,CLOSE_PAR)::(l,x)::list -> Error (sprintf "(r.%i) No opening acolade, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, (l,CLOSE_PAR)::[] -> Error (sprintf "(r.%i) Unexpected EOF after closing parenthesis." l), (l,CLOSE_PAR)::[]
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i)  No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), []
-		| Error e, list -> Error e, list)
+			| Success _, (_,ELSE)::(l,x)::list 								-> err_unex l OPEN_ACO x, (l,x)::list
+			| Success _, (l,ELSE)::[] 												-> err_eof l ELSE, (l,ELSE)::[] 
+			| Success stmt_list1, list 												-> Success (Stmt_if (exp, stmt_list1)), list
+			| Error e, list 																	-> Error e, list
+			)
+		| Success _, (_,CLOSE_PAR)::(l,x)::list 						-> err_unex l OPEN_ACO x, (l,x)::list
+		| Success _, (l,CLOSE_PAR)::[] 											-> err_eof l CLOSE_PAR, (l,CLOSE_PAR)::[]
+		| Success _, (l,x)::list 														-> err_unex l CLOSE_PAR x, (l,x)::list
+		| Success _, [] 																		-> err_eof l0 OPEN_PAR, []
+		| Error e, list 																		-> Error e, list
+		)
 	| (_,WHILE)::(l0,OPEN_PAR)::list ->
 		(match exp_parser list with
 		| Success exp, (_,CLOSE_PAR)::(_,OPEN_ACO)::list ->
 			(match stmt_list_parser [] list with
-			| Success stmt_list, list -> Success (Stmt_while (exp, stmt_list)), list
-			| Error e, list -> Error e, list)
-		| Success _, (_,CLOSE_PAR)::(l,x)::list -> Error (sprintf "(r.%i) No opening acolade, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, (l,CLOSE_PAR)::[] -> Error (sprintf "(r.%i) Unexpected EOF after closing parenthesis." l), (l,CLOSE_PAR)::[]
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
-		| Error e, list -> Error e, list)
-	| (_,RETURN)::(_,SEMICOLON)::list -> Success (Stmt_return(None)), list
+			| Success stmt_list, list 												-> Success (Stmt_while (exp, stmt_list)), list
+			| Error e, list 																	-> Error e, list
+			)
+		| Success _, (_,CLOSE_PAR)::(l,x)::list 						-> err_unex l OPEN_ACO x, (l,x)::list
+		| Success _, (l,CLOSE_PAR)::[] 											-> err_eof l CLOSE_PAR, (l,CLOSE_PAR)::[]
+		| Success _, (l,x)::list 														-> err_unex l CLOSE_PAR x, (l,x)::list
+		| Success _, [] 																		-> err_eof l0 OPEN_PAR, [] 
+		| Error e, list 																		-> Error e, list
+		)
+	| (_,RETURN)::(_,SEMICOLON)::list 										-> Success (Stmt_return(None)), list
 	| (l0,RETURN)::list ->
 		(match exp_parser list with
-		| Success exp, (_,SEMICOLON)::list -> Success (Stmt_return(Some(exp))), list
-		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), list
-		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing 'return'." l0), [] 
-		| Error e, list -> Error e, list)
+		| Success exp, (_,SEMICOLON)::list 									-> Success (Stmt_return(Some(exp))), list
+		| Success _, (l,x)::list 														-> err_unex l SEMICOLON x, (l,x)::list
+		| Success _, [] 																		-> err_eof l0 RETURN, [] 
+		| Error e, list 																		-> Error e, list
+		)
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
   	(match funcall_parser list with
-  	| Success exp_list, list -> Success (Stmt_function_call (id, exp_list)), list
+  	| Success exp_list, list 														-> Success (Stmt_function_call (id, exp_list)), list
 		| Error e, list -> Error e, list)
 	| (l0,IDtok id)::list ->
 		(match (field_parser [] list) with
@@ -154,7 +160,7 @@ stmt_parser = function
     	(match exp_parser list with
     	| Success exp, (_,SEMICOLON)::list ->
 				Success (Stmt_define (packer fieldlist, exp)), list
-    	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
+    	| Success _, (l,x)::list 													-> err_unex l SEMICOLON x, (l,x)::list
 			| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing '='." l1), []   
 			| Error e, list -> Error e, list))
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No '=', but: %s" l (token_to_string x)), (l,x)::list
