@@ -12,7 +12,7 @@ let index = ref 0;;
 let s = ref [];;
 let increase = index := !index + 1;;
 let push v = s := v::!s;;
-let pop = match List.hd !s with head -> s := List.tl !s; head;;
+let pop = try (match List.hd !s with head -> s := List.tl !s; Some head) with _ -> None;;
 
 let tarjan vertices edges =
 	let rec loop2 v = function
@@ -25,7 +25,7 @@ let tarjan vertices edges =
   		v.lowlink <- min v.lowlink edge.t.index;
   		loop2 v restedges 
   	| _::restedges -> loop2 v restedges
-  and strongconnect = function
+  and strongconnect scc = function
   	| v ->
   		v.i <- index;
   		v.lowlink <- index;
@@ -34,7 +34,13 @@ let tarjan vertices edges =
   		v.onStack <- true;
   		loop2 v edges;
 			if v.lowlink = v.index
-			then 
+			then
+				(match pop with
+				| Some w ->
+					w.onStack <- false;
+					current_scc := w::!current_scc;
+				| None -> []))
+					
 				
   	| 
 		
