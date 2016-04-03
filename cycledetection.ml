@@ -1,9 +1,3 @@
-let index = ref 0;;
-let s = ref [];;
-let increase = index := !index + 1;;
-let push v = s := v::!s;;
-let pop = s := List.tl s;;
-
 type vertex = {
 	id : string;
 	mutable i : int;
@@ -13,6 +7,12 @@ type vertex = {
 type edge = {
 	f : vertex;
 	t : vertex;}
+
+let index = ref 0;;
+let s = ref [];;
+let increase = index := !index + 1;;
+let push v = s := v::!s;;
+let pop = match List.hd !s with head -> s := List.tl !s; head;;
 
 let tarjan vertices edges =
 	let rec loop2 v = function
