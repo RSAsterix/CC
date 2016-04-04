@@ -6,7 +6,6 @@ open Types
 open Pretty_printer_files
 open Typechecker
 open Typechecker_lib
-open Cycledetection
 
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)

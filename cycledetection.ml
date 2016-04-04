@@ -4,11 +4,6 @@ open Type_graph
 let s = create();;
 let index = ref 0;;
 
-let rec from res vertex = function
-	| [] -> res
-	| edge::edges when (edge.f.id = vertex.id) -> from (edge::res) vertex edges
-	| _::edges -> from res vertex edges;;
-
 let tarjan edges vertices =
 	let rec outerloop sccs = function
 		| [] -> sccs
@@ -50,6 +45,7 @@ let tarjan edges vertices =
 		in
 	outerloop [] vertices;; 
 
+(* hulpfunctie voor bij het testen *)
 let rec reset = function
 	| [] ->
 		index := 0;

@@ -2,6 +2,8 @@ open Typechecker_lib
 open Types
 open Char_func
 open Printf
+open Spl_to_graph
+open Cycledetection
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
