@@ -1,57 +1,58 @@
-type vertex = {
-	id : string;
-	mutable i : int;
-	mutable lowlink : int;
-	mutable onStack : bool;}
+open Stack
+open Type_graph
 
-type edge = {
-	f : vertex;
-	t : vertex;}
-
+let s = create();;
 let index = ref 0;;
-let s = ref [];;
-let increase = index := !index + 1;;
-let push v = s := v::!s;;
-let pop = try (match List.hd !s with head -> s := List.tl !s; Some head) with _ -> None;;
 
-let tarjan vertices edges =
-	let rec loop2 v = function
-  	| [] -> ()
-  	| edge::restedges when (edge.t.index = -1) -> 
-  		strongconnect edges edge.t;
-  		v.lowlink <- min v.lowlink, edge.t.index;
-  		loop2 v restedges
-  	| edge::edges when (edge.t.onStack) ->
-  		v.lowlink <- min v.lowlink edge.t.index;
-  		loop2 v restedges 
-  	| _::restedges -> loop2 v restedges
-  and strongconnect scc = function
-  	| v ->
-  		v.i <- index;
-  		v.lowlink <- index;
-  		increase;
-  		push v;
-  		v.onStack <- true;
-  		loop2 v edges;
-			if v.lowlink = v.index
-			then
-				(match pop with
-				| Some w ->
-					w.onStack <- false;
-					current_scc := w::!current_scc;
-				| None -> []))
-					
-				
-  	| 
-		
-		
-		
-		 
+let rec from res vertex = function
+	| [] -> res
+	| edge::edges when (edge.f.id = vertex.id) -> from (edge::res) vertex edges
+	| _::edges -> from res vertex edges;;
 
-let rec loop1 e = function
-	| [] -> ()
-	| v::vertices when (v.index = -1) -> strongconnect e v; loop1 e vertices
-	| _::vertices -> loop1 e vertices;;
+let tarjan edges vertices =
+	let rec outerloop sccs = function
+		| [] -> sccs
+		| v::vs when (v.i = -1) ->
+			outerloop (strongconnect sccs v) vs
+		| _::vs -> outerloop sccs vs 
+	and strongconnect sccs = function
+		| v ->
+			v.i <- !index;
+			v.lowlink <- !index;
+			index := !index + 1;
+			push v s;
+			v.onStack <- true;
+			
+			let rec innerloop sccs' = function
+				| [] -> sccs'
+				| e::es when (e.t.i = -1) ->
+					(let sccs'' = strongconnect sccs' e.t in
+					v.lowlink <- min v.lowlink e.t.lowlink;
+					innerloop sccs'' es)
+				| e::es when (e.t.onStack) ->
+					v.lowlink <- min v.lowlink e.t.i;
+					innerloop sccs' es
+				| _::es -> innerloop sccs' es in
+			
+			(let sccs' = innerloop sccs (from [] v edges) in
+			
+			if v.lowlink = v.i then
+				let rec repeat scc = function
+					| w when (w = v) ->
+						w.onStack <- false;
+						(w::scc)
+					| w ->
+						w.onStack <- false;
+						repeat (w::scc) (pop s) in
+				(repeat [] (pop s))::sccs' 
+			else
+				sccs')
+		in
+	outerloop [] vertices;; 
 
-let tarjan = function
-	| vertices, edges ->   
+let rec reset = function
+	| [] ->
+		index := 0;
+	| v::verts ->
+		v.i <- -1; v.lowlink <- -1; v.onStack <- false;
+		reset verts;;
