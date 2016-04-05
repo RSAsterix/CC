@@ -4,6 +4,7 @@ open Char_func
 open Printf
 open Spl_to_graph
 open Cycledetection
+open Type_graph
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
@@ -211,6 +212,22 @@ let m env exp = m_spl env (Var "0") exp;;
 (* Vardecl (None,"b",Exp_function_call ("a",[]))]) (Var "b") with          *)
 (* | Success x -> print_subs stdout x                                      *)
 (* | Error e -> print_string e;;                                           *)
+
+let rec toString = function
+	| [] -> ""
+	| [scc] ->
+		(let rec helper = function
+			| [] -> ""
+			| [x] -> (v_to_s x)
+			| x::xs -> sprintf "%s, %s" (v_to_s x) (helper xs) in
+		sprintf "[%s]" (helper scc))
+	| scc::rest -> sprintf "%s,\n%s" (toString [scc]) (toString rest);;
+
+match make_graph 
+[Vardecl (None, "v1", Exp_function_call ("v2",[]));
+Vardecl (None, "v2", Exp_function_call ("v1", []))] with
+| Error e -> print_endline e;
+| Success (n,e) -> print_endline (toString (tarjan e n));;
 
 (*
 #directory "C:/Users/tom_e/workspace/CC/_build/";;
