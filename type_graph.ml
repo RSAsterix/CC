@@ -11,33 +11,35 @@ type edge = {
 	f : vertex;
 	t : vertex;}
 
-let add_v s d vertices =
-	if (List.exists (fun x -> s = x.id) vertices)
-	then 
-		(match d with
-		| None -> vertices
-		| _ -> 
-			(get_v s vertices).spl_decl <- d;
-			(let rec replace = function
-				| [] -> ()
-				| e::es -> e.t.spl_decl <- d in 
-			replace (to_v [] (get_v s vertices));
-			vertices))
-	else 
-		{id = s; i = -1; lowlink = -1; onStack = false; spl_decl = d}::vertices;;
+type graph = {
+	mutable v : vertex list;
+	mutable e : edge list;}
 
-let rec get_v s vertices = try (List.find (fun x -> x.id = s) vertices) with
-| _ -> get_v s (add_v s None vertices);;
+let get_v s graph =
+	try Some (List.find (fun x -> x.id = s) graph.v) with
+	| _ -> None;;
 
-let rec from res vertex = function
-	| [] -> res
-	| edge::edges when (edge.f.id = vertex.id) -> from (edge::res) vertex edges
-	| _::edges -> from res vertex edges;;
+let get_e_f s graph =
+	try Some (List.find_all (fun x -> x.f.id = s) graph.e) with
+	| _ -> None;;
 
-let rec to_v res vertex = function
-	| [] -> res
-	| edge::edges when (edge.t.id = vertex.id) -> to_v (edge::res) vertex edges
-	| _::edges -> to_v res vertex edges;;
+let get_e_t s graph =
+	try Some (List.find_all (fun x -> x.t.id = s) graph.e) with
+	| _ -> None;;
 
-let add_e (vertices, edges) src dest = 
-	{f = (get_v src vertices); t = (get_v dest vertices)}::edges;; 
+let add_v s d graph =
+	match get_v s graph with
+	| None -> 
+		graph.v <- {id = s; i = -1; lowlink = -1; onStack = false; spl_decl = d}::graph.v;
+		graph
+	| Some v -> if d = None then graph else (v.spl_decl <- d; graph);;   
+
+let rec add_e src dest graph =
+	(match get_v src graph with
+	| None -> add_e src dest (add_v src None graph)
+	| Some src_v ->
+		(match get_v dest graph with
+		| None -> add_e src dest (add_v dest None graph)
+		| Some dest_v ->
+			graph.e <- {f = src_v; t = dest_v}::graph.e;
+			graph));; 
