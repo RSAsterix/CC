@@ -43,7 +43,7 @@ let tarjan graph =
 			else
 				sccs')
 		in
-	outerloop [] graph.v;; 
+	List.rev (outerloop [] graph.v);; 
 
 (* hulpfunctie voor bij het testen *)
 let rec reset = function

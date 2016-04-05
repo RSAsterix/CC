@@ -224,8 +224,9 @@ let rec toString = function
 	| scc::rest -> sprintf "%s,\n%s" (toString [scc]) (toString rest);;
 
 match make_graph 
-[Vardecl (None, "v1", Exp_function_call ("v2",[]));
-Vardecl (None, "v2", Exp_function_call ("v3", []))] with
+[Fundecl ("v2", [], None, [], [Stmt_function_call ("v1",[])]);
+Vardecl (None, "v1", Exp_function_call ("v",[]));
+Vardecl (None, "v3", Exp_function_call ("v2",[]))] with
 | Error e -> print_endline e;
 | Success graph -> print_endline (toString (tarjan graph));;
 
