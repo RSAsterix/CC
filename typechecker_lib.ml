@@ -32,16 +32,16 @@ let print_subs out subs =
 	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
 	fprintf out "[%a\n]" subs_print_help subs;;
 
-let rec print_list out = function
+let rec print_list = function
 	| [] -> ()
-	| [a] -> fprintf out "%s" a
-	| a::rest -> fprintf out "%s %a" a print_list rest;;
+	| [a] -> sprintf "%s" a
+	| a::rest -> sprintf "%s %s" a (print_list rest);;
 
 let print_env out env =
 	let rec subs_print_help out = function
 	| [] -> ()
 	| [(x,([],t))] -> fprintf out "%s |-> %s" x (string_of_type t)
-	| [(x,(forall,t))] -> fprintf out "%s |-> forall %a, %s" x print_list forall (string_of_type t)
+	| [(x,(forall,t))] -> fprintf out "%s |-> forall %s, %s" x (print_list forall) (string_of_type t)
 	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
 	fprintf out "[%a\n]" subs_print_help env;;
 
@@ -194,3 +194,5 @@ let convert_rettype = function
 let rec make_type = function
 	| ([],rettype) -> convert_rettype rettype
 	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
+
+let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> fst y = x) l2) (List.map (fun x -> fst x) l1);;

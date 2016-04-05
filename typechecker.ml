@@ -166,6 +166,40 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
+let rec m_scc env var = function
+	| ;;
+
+let rec m_sccs env var = function
+	| [] -> Error "Empty program."
+	| [x] -> m_scc env var x
+	| x::xs ->
+		let envrest = (List.map (fun y -> fresh(); (y.id, ([],Var !v))) x) in
+		(match find_dups env envrest with
+		| [] ->
+			(List.append env envrest)
+		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list)));; 
+		
+		
+
+
+
+
+
+
+let rec m_vardecl env var = function
+	| (pretyped,id,exp) ->
+		(match env_find id env with
+		| Error _ ->
+			(let gettype = function
+			| None -> fresh(); Var !v
+			| Some typetoken -> convert_typetoken typetoken in
+			(let a = gettype pretyped in
+			(let env' = (id,([],a))::env in
+			(match m_exp env' a exp with
+			| Success x -> Success (substitute_list x (id,(env 
+			| Error e -> Error e)))
+		| Success _ -> print_env stdout env; Error "\nVariable already declared.")
+
 let rec m_spl env var = function
 	| [] -> Success []
 	| Vardecl (pretyped,id,exp)::rest ->
