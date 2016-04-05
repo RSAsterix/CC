@@ -4,7 +4,7 @@ open Type_graph
 let s = create();;
 let index = ref 0;;
 
-let tarjan edges vertices =
+let tarjan graph =
 	let rec outerloop sccs = function
 		| [] -> sccs
 		| v::vs when (v.i = -1) ->
@@ -29,7 +29,7 @@ let tarjan edges vertices =
 					innerloop sccs' es
 				| _::es -> innerloop sccs' es in
 			
-			(let sccs' = innerloop sccs (from [] v edges) in
+			(let sccs' = innerloop sccs (get_e_f v.id graph) in
 			
 			if v.lowlink = v.i then
 				let rec repeat scc = function
@@ -43,7 +43,7 @@ let tarjan edges vertices =
 			else
 				sccs')
 		in
-	outerloop [] vertices;; 
+	outerloop [] graph.v;; 
 
 (* hulpfunctie voor bij het testen *)
 let rec reset = function

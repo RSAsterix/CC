@@ -59,15 +59,15 @@ let fv_decl = function
 		| Error e -> Error e
 		| Success (free, id) -> Success (id,free));;
 
-let rec fv_spl vertices edges = function
-	| [] -> Success (vertices,edges)
+let rec fv_spl graph = function
+	| [] -> Success graph
 	| decl::decllist ->
 		(match fv_decl decl with
 		| Error e -> Error e
 		| Success (id, needed) ->
-			(let rec make_edges newedges = function
-				| [] -> newedges
-				| n::ns -> make_edges (add_e (vertices, newedges) id n) ns in
-			fv_spl (add_v id (Some decl) vertices) (make_edges edges needed) decllist));;
+			(let rec make_edges graph = function
+				| [] -> graph
+				| n::ns -> make_edges (add_e id n graph) ns in
+			fv_spl (add_v id (Some decl) (make_edges graph needed)) decllist));;
 
-let make_graph spl = fv_spl [] [] spl;;
+let make_graph spl = fv_spl {v = []; e = []} spl;;

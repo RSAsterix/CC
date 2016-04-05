@@ -20,12 +20,12 @@ let get_v s graph =
 	| _ -> None;;
 
 let get_e_f s graph =
-	try Some (List.find_all (fun x -> x.f.id = s) graph.e) with
-	| _ -> None;;
+	try (List.find_all (fun x -> x.f.id = s) graph.e) with
+	| _ -> [];;
 
 let get_e_t s graph =
-	try Some (List.find_all (fun x -> x.t.id = s) graph.e) with
-	| _ -> None;;
+	try (List.find_all (fun x -> x.t.id = s) graph.e) with
+	| _ -> [];;
 
 let add_v s d graph =
 	match get_v s graph with
