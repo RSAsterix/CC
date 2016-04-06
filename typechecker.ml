@@ -166,77 +166,82 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec m_scc env var = function
-	| ;;
-
-let rec m_sccs env var = function
-	| [] -> Error "Empty program."
-	| [x] -> m_scc env var x
-	| x::xs ->
-		let envrest = (List.map (fun y -> fresh(); (y.id, ([],Var !v))) x) in
-		(match find_dups env envrest with
-		| [] ->
-			(List.append env envrest)
-		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list)));; 
-		
-		
-
-
-
-
-
-
-let rec m_vardecl env var = function
-	| (pretyped,id,exp) ->
-		(match env_find id env with
-		| Error _ ->
-			(let gettype = function
-			| None -> fresh(); Var !v
-			| Some typetoken -> convert_typetoken typetoken in
-			(let a = gettype pretyped in
-			(let env' = (id,([],a))::env in
-			(match m_exp env' a exp with
-			| Success x -> Success (substitute_list x (id,(env 
-			| Error e -> Error e)))
-		| Success _ -> print_env stdout env; Error "\nVariable already declared.")
+let gettype envtype = function
+	| None -> []
+	| Some typetoken -> u envtype (convert_typetoken typetoken);;
 
 let rec m_spl env var = function
-	| [] -> Success []
-	| Vardecl (pretyped,id,exp)::rest ->
+	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
-		| Error _ ->
-			(let gettype = function
-			| None -> fresh(); Var !v
-			| Some typetoken -> convert_typetoken typetoken in
-			(let a = gettype pretyped in
-			(match m_exp ((id,([],a))::env) a exp with
-			| Success x ->
-				(match m_spl (substitute_list x ((id,([],a))::env)) (substitute x a) rest with
-				| Success res1 -> Success (o res1 x)
-				| Error e -> Error e)
-			| Error e -> Error e)))
-		| Success _ -> print_env stdout env; Error "\nVariable already declared.")
-	| Fundecl (id,fargs,pretyped,vardecls,stmts)::rest ->
+			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+			| Success (_,(_,t)) ->
+				(let r = gettype t pretyped in
+				m_exp (substitute_list r env) (substitute r t) exp))
+	| Fundecl (id,fargs,pretyped,vardecls,stmts) ->
 		(match env_find id env with
-		| Error _ ->
-			(let gettype = function
-			| None -> fresh(); Var !v
-			| Some funtype -> make_type funtype in
-			(let a = gettype pretyped in
-			(let env' = (id,(fargs,a))::env in
-			(match m_spl env' a (List.map (fun x -> Vardecl x) vardecls) with
-			| Success x1 ->
-				(match m_stmts (substitute_list x1 env') (substitute x1 a) stmts with
-				| Success res1 ->
-					(let x2 = o res1 x1 in
-					(match m_spl (substitute_list x2 env') (substitute x2 a) rest with
-					| Success res2 -> Success (o res2 x2)
-					| Error e -> Error e))
-				| Error e -> Error e)
-			| Error e -> Error e))))
-		| Success _ -> print_env stdout env; Error "\nFunction already declared.");;
+			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+			| Success (_,(forall,t)) ->
+				let r = gettype t pretyped in
+				let rec m_vardecls env var = function
+					| [] -> Success []
+					| vardecl::rest ->
+						(match m_spl env var (Vardecl vardecl) with
+						| Error e -> Error e
+						| Success x ->
+							match m_vardecls (substitute_list x env) (substitute x var) rest with
+							| Error e -> Error e
+							| Success res -> o res x) in
+				match m_vardecls env var vardecls with
+				| Error e -> Error e
+				| Success x ->
+					(match m_stmts (substitute x env) (substitute (* Zitten die vardecls dan wel in de env? *) 
+						
+				
+  			(match m_spl (substitute_list r env) (substitute r t) (List.map (fun x -> Vardecl x) vardecls) with
+  			| Success x1 ->
+  				(match m_stmts (substitute_list x1 env') (substitute x1 a) stmts with
+  				| Success res1 ->
+  					(let x2 = o res1 x1 in
+  					(match m_spl (substitute_list x2 env') (substitute x2 a) rest with
+  					| Success res2 -> Success (o res2 x2)
+  					| Error e -> Error e))
+  				| Error e -> Error e)
+  			| Error e -> Error e))))
+  		| Success _ -> print_env stdout env; Error "\nFunction already declared.");;
 
-let m env exp = m_spl env (Var "0") exp;;
+let rec m_scc env var = function
+	| [] -> Success []
+	| vertex::scc ->
+		match vertex.spl_decl with
+		| None -> Error (sprintf "Unknown identifier '%s'." vertex.id)
+		| Some decl ->
+			match m_decl env var decl with
+			| Error e -> Error e
+			| Success x ->
+				match m_scc (substitute_list x env) (substitute x var) scc with
+				| Error e -> Error e
+				| Success res1 -> o res1 x;; 
+
+let rec m_sccs env var = function
+	| [] -> Success []
+	| scc::sccs ->
+		let envrest = (List.map (fun y -> fresh(); (y.id, ([],Var !v))) scc) in
+		match find_dups env envrest with
+		| [] ->
+			fresh();
+			(match m_scc (List.append env envrest) (Var !v) scc with
+			| Error e -> Error e
+			| Success xn ->
+				(let envrest' = List.map (fun (xi,(forall,ai)) ->
+					(let b = substract (tv (substitute xn ai)) (tv_list (substitute_list xn env)) in
+					(xi,(b,(substitute xn ai)))))
+					envrest in
+				(match m_sccs (substitute_list xn (List.append env envrest')) (substitute xn var) sccs with
+				| Error e -> Error e
+				| Success res1 -> o res1 xn)))
+		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list));; 
+		
+let m env exp = m_sccs env (Var "0") (make_graph exp);;
 
 (* fargs shouldn't be in environment *)
 (* fargs should be placed in environment with fresh types *)

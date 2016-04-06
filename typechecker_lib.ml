@@ -33,7 +33,7 @@ let print_subs out subs =
 	fprintf out "[%a\n]" subs_print_help subs;;
 
 let rec print_list = function
-	| [] -> ()
+	| [] -> ""
 	| [a] -> sprintf "%s" a
 	| a::rest -> sprintf "%s %s" a (print_list rest);;
 
@@ -196,3 +196,4 @@ let rec make_type = function
 	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
 
 let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> fst y = x) l2) (List.map (fun x -> fst x) l1);;
+let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;
