@@ -23,13 +23,11 @@ let m_field env var = function
 
 let m_id env var s =
 	(match env_find s env with
-	| Success (bound, t) ->
-		(let rec rewritables list = function
-			| [] -> List.rev list
-			| a::rest ->
-				fresh();
-				rewritables ((a,(Var !v))::list) rest in
-		u (substitute (rewritables [] bound) t) var)
+	| Success record ->
+		(let rec r = function
+			| [] -> []
+			| x::xs -> fresh(); (x, Var !v)::(r xs) in
+		u (substitute (r record.forall) record.t) var)
 	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
@@ -187,7 +185,7 @@ let rec m_spl env var = function
 				|	None ->
 					(match fargs with
 					| [] -> newenv
-					| arg::rest -> 
+					| arg::rest -> (
 					
 				(* alle t in env omschrijven naar uiteindelijke type van functie *)
 				
