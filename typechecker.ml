@@ -183,18 +183,23 @@ let rec m_spl env var = function
 			| Success (_,(forall,t)) ->
 				let r = gettype t pretyped in
 				let rec m_vardecls env var = function
-					| [] -> Success []
-					| vardecl::rest ->
-						(match m_spl env var (Vardecl vardecl) with
-						| Error e -> Error e
-						| Success x ->
-							match m_vardecls (substitute_list x env) (substitute x var) rest with
+					| [] -> Success ([],env)
+					| (pretype,varid,exp)::rest ->
+						(match env_find id env with
+						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
+						| Error _ ->
+							fresh();
+							(let a = Var !v in
+							(let env' = (varid,([], Var !v))::env in
+							(match m_exp env' a exp with
 							| Error e -> Error e
-							| Success res -> o res x) in
+							| Success x -> m_vardecls env' var rest)))) in
 				match m_vardecls env var vardecls with
 				| Error e -> Error e
-				| Success x ->
-					(match m_stmts (substitute x env) (substitute (* Zitten die vardecls dan wel in de env? *) 
+				| Success (x, env) ->
+					(match m_stmts (substitute x env) (substitute x var) stmts with
+					| Error e -> Error e
+					| Success res -> 
 						
 				
   			(match m_spl (substitute_list r env) (substitute r t) (List.map (fun x -> Vardecl x) vardecls) with
