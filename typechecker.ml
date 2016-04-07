@@ -166,22 +166,39 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let gettype envtype = function
-	| None -> []
-	| Some typetoken -> u envtype (convert_typetoken typetoken);;
-
 let rec m_spl env var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 			| Success (_,(_,t)) ->
-				(let r = gettype t pretyped in
-				m_exp (substitute_list r env) (substitute r t) exp))
-	| Fundecl (id,fargs,pretyped,vardecls,stmts) ->
+				(let gettype = function
+      	| None -> []
+      	| Some typetoken -> u t (convert_typetoken typetoken) in
+				(let r = gettype pretyped in
+				m_exp (substitute_list r env) (substitute r t) exp)))
+	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success (_,(forall,t)) ->
-				let r = gettype t pretyped in
+			| Success (_,(_,t)) -> (* forall = altijd leeg hier *)
+				(let add_to_env arg newenv = function
+				| None -> fresh(); (arg, ([], Var !v))::newenv
+				| Some pretype -> (arg, ([], t))::newenv in
+				(let rec gettype fargs newenv = function (* pakt pretype en fargs en berekent omschrijving *)
+				|	None ->
+					(match fargs with
+					| [] -> newenv
+					| arg::rest -> 
+					
+				(* alle t in env omschrijven naar uiteindelijke type van functie *)
+				
+					
+				
+				
+							
+							
+						
+				
+				
 				let rec m_vardecls env var = function
 					| [] -> Success ([],env)
 					| (pretype,varid,exp)::rest ->
