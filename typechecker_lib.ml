@@ -8,6 +8,12 @@ type types =
 	| Lis of types 					(* Lis a = [a] *)
 	| Int | Bool | Char | Void;;
 
+type env_val = {
+	id : string;
+	mutable forall : string list;
+	mutable t : types
+	}
+
 let rec remove_dups lst = 
 	match lst with
 	| [] -> []
