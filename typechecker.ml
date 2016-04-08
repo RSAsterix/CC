@@ -168,12 +168,12 @@ let rec m_spl env var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success (_,(_,t)) ->
+			| Success el ->
 				(let gettype = function
       	| None -> []
-      	| Some typetoken -> u t (convert_typetoken typetoken) in
+      	| Some typetoken -> u el.t (convert_typetoken typetoken) in
 				(let r = gettype pretyped in
-				m_exp (substitute_list r env) (substitute r t) exp)))
+				m_exp (substitute_list r env) (substitute r el.t) exp)))
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)

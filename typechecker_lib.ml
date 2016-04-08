@@ -14,6 +14,10 @@ type env_val = {
 	mutable t : types
 	}
 
+type environment = {
+	mutable e : env_val list;
+	}
+
 let rec remove_dups lst = 
 	match lst with
 	| [] -> []
@@ -32,9 +36,6 @@ let rec last = function
 	[] -> ()
 	| [a] -> a
 	| _::rest -> last rest;;
-
-
-
 
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
@@ -65,7 +66,7 @@ let print_env env =
 	| [] -> ""
 	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) el.t
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
-	fprintf out "[%a\n]" subs_print_help env;;
+	fprintf out "[%a\n]" subs_print_help env.e;;
 
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
@@ -88,7 +89,7 @@ let rec rewrite subs i =
 
 (* substitutieregels toepassen *)
 let rec substitute subs = function
-	| Var i -> rewrite subs i
+	| Var i -> rewrite subs (Var i)
 	| Imp (t1,t2) -> Imp (substitute subs t1, substitute subs t2)
 	| Tup (t1,t2) -> Tup (substitute subs t1, substitute subs t2)
 	| Lis t -> Lis (substitute subs t)
@@ -98,7 +99,7 @@ let substitute_list subs env =
 	let rec sub_list_help subs = function
 		| [] -> ();
 		| el::xs -> el.t <- (substitute subs el.t); sub_list_help subs xs in
-	sub_list_help subs env;;
+	sub_list_help subs env.e;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -124,7 +125,7 @@ let tv_list env =
 		| el::rest ->
 			(let newbound = List.append el.forall (el.id::bound) in
 			tv_help (diff (tv el.t) newbound) newbound rest) in
-	tv_help [] [] env;;
+	tv_help [] [] env.e;;
 
 let unexpected expected found = 
 	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
@@ -184,10 +185,12 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let rec env_find x = function
+let env_find x env = 
+	let rec help = function
 	| [] -> Error ""
 	| el::rest when (x = el.id) -> Success el
-	| _::rest -> env_find x rest;;
+	| _::rest -> env_find x rest in
+	help env.e;;
 
 let rec convert_typetoken = function
 	| Type_int -> Int
