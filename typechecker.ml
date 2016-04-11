@@ -23,13 +23,11 @@ let m_field env var = function
 
 let m_id env var s =
 	(match env_find s env with
-	| Success (bound, t) ->
-		(let rec rewritables list = function
-			| [] -> List.rev list
-			| a::rest ->
-				fresh();
-				rewritables ((a,(Var !v))::list) rest in
-		u (substitute (rewritables [] bound) t) var)
+	| Success record ->
+		(let rec r = function
+			| [] -> []
+			| x::xs -> fresh(); (x, Var !v)::(r xs) in
+		u (substitute (r record.forall) record.t) var)
 	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
@@ -170,15 +168,31 @@ let rec m_spl env var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success (_,(_,t)) ->
+			| Success el ->
 				(let gettype = function
       	| None -> []
-      	| Some typetoken -> u t (convert_typetoken typetoken) in
+      	| Some typetoken -> u el.t (convert_typetoken typetoken) in
 				(let r = gettype pretyped in
-				m_exp (substitute_list r env) (substitute r t) exp)))
+				m_exp (substitute_list r env) (substitute r el.t) exp)))
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+<<<<<<< HEAD
+			| Success (_,(_,t)) -> (* forall = altijd leeg hier *)
+				(let add_to_env arg newenv = function
+				| None -> fresh(); (arg, ([], Var !v))::newenv
+				| Some pretype -> (arg, ([], t))::newenv in
+				(let rec gettype fargs newenv = function (* pakt pretype en fargs en berekent omschrijving *)
+				|	None ->
+					(match fargs with
+					| [] -> newenv
+					| arg::rest -> (
+					
+				(* alle t in env omschrijven naar uiteindelijke type van functie *)
+				
+					
+				
+=======
 			| Success el -> (* el = {id; bound; id type} *)
 				(let gettype args = function
 					| None ->
@@ -205,6 +219,7 @@ let rec m_spl env var = function
 						(match type_args ttlist fargs with
 						| Error e -> Error e
 						| Success _ -> (* bij None ook een fail *)
+>>>>>>> graphs
 				
 							
 							
