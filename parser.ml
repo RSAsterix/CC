@@ -16,22 +16,22 @@ let rec type_parser = function
 	| (_,Basic_bool)::list 																-> Success (Type_bool), list
 	| (_,Basic_char)::list 																-> Success (Type_char), list
 	| (_,IDtok id)::list 																	-> Success (Type_id id), list
-	| (l0,OPEN_PAR)::list -> 
+	| (l0,OPEN_PAR)::list ->
 		(match (type_parser list) with
-		| Success type1, (l1,COMMA)::list -> 
+		| Success type1, (l1,COMMA)::list ->
 			(match (type_parser list) with
 			| Success type2, (_,CLOSE_PAR)::list 							-> Success (Type_tuple (type1,type2)), list
-			| Success _, (l,x)::_ 														-> err_unex l CLOSE_PAR x, list
+			| Success _, (l,x)::list													-> err_unex l CLOSE_PAR x, (l,x)::list
 			| Success _, [] 																	-> err_eof l1 COMMA, []
 			| Error e, list 																	-> Error e, list
 			)
-		| Success _, (l,x)::_ 															-> err_unex l CLOSE_PAR x, list
+		| Success _, (l,x)::list														-> err_unex l CLOSE_PAR x, (l,x)::list
 		| Success _, [] 																		-> err_eof l0 COMMA, []
 		| Error e, list 																		-> Error e, list)
 	| (l0,OPEN_BRACK)::list -> 
 		(match (type_parser list) with
 		| Success type1, (_,CLOSE_BRACK)::list 							-> Success (Type_list type1), list
-		| Success _, (l,x)::_ 															-> err_unex l CLOSE_BRACK x, list
+		| Success _, (l,x)::list 														-> err_unex l CLOSE_BRACK x, (l,x)::list
 		| Success _, [] 																		-> err_eof l0 OPEN_BRACK, [] 
 		| Error e, list 																		-> Error e, list
 		)
