@@ -177,6 +177,7 @@ let rec m_spl env var = function
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+<<<<<<< HEAD
 			| Success (_,(_,t)) -> (* forall = altijd leeg hier *)
 				(let add_to_env arg newenv = function
 				| None -> fresh(); (arg, ([], Var !v))::newenv
@@ -191,6 +192,34 @@ let rec m_spl env var = function
 				
 					
 				
+=======
+			| Success el -> (* el = {id; bound; id type} *)
+				(let gettype args = function
+					| None ->
+						(match args with
+						| [] -> ()
+						| a::rest -> fresh(); el.t <- (rewrite [el.t, Imp (Var !v, el.t)] el.t); gettype rest None) (*substitute overal*)
+					| Some (ttlist, rettype) ->
+						el.t <- (rewrite [el.t, convert_rettype rettype] el.t);
+						(let rec type_args list = function
+							| [] ->
+								(match list with
+								| [] -> Success []
+								| _ -> Error "Too many arguments given to match type.")
+							| tt::tts ->
+								(match list with
+								| [] -> Error "Too few arguments given to match type."
+								| a::rest ->
+									(match env_find a env with
+									| Error _ ->
+  									env.e <- {id = a; forall = []; t = convert_typetoken tt}; 
+  									el.t <- (rewrite [el.t, Imp (convert_typetoken tt, el.t)] el.t);
+										type_args rest tts
+									| Success _ -> Error (sprintf "Identifier '%s' already declared." a))) in
+						(match type_args ttlist fargs with
+						| Error e -> Error e
+						| Success _ -> (* bij None ook een fail *)
+>>>>>>> graphs
 				
 							
 							
