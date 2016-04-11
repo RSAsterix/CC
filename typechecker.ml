@@ -170,102 +170,72 @@ let rec m_spl env var = function
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 			| Success el ->
 				(let gettype = function
-      	| None -> []
+      	| None -> Success []
       	| Some typetoken -> u el.t (convert_typetoken typetoken) in
-				(let r = gettype pretyped in
-				m_exp (substitute_list r env) (substitute r el.t) exp)))
+				(match gettype pretyped with
+				| Error e -> Error e
+				| Success r -> m_exp (substitute_list r env) (substitute r el.t) exp)))
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success el -> (* el = {id; bound; id type} *)
-				(let gettype args = function
-					| None ->
-						(match args with
-						| [] -> Success []
-						| a::rest ->
-							(match env_find a env with
-							| Success _ -> Error (sprintf "Identifier '%s' already declared." a)
-							| Error _ ->
-								fresh();
-								env.e <- {id = a; forall = []; t = Var !v};
-								el.t <- (rewrite [el.t, Imp (Var !v, el.t)] el.t);
-								gettype rest None)) (*substitute overal*)
-					| Some (ttlist, rettype) as pretyped ->
-						el.t <- (rewrite [el.t, make_type pretyped] el.t); 
-						(let rec type_args list = function
-							| [] ->
-								(match list with
-								| [] -> Success []
-								| _ -> Error "Too many arguments given to match type.")
-							| tt::tts ->
-								(match list with
-								| [] -> Error "Too few arguments given to match type."
-								| a::rest ->
-									(match env_find a env with
-									| Error _ ->
-  									env.e <- {id = a; forall = []; t = convert_typetoken tt}; 
-  									el.t <- (rewrite [el.t, Imp (convert_typetoken tt, el.t)] el.t);
-										type_args rest tts
-									| Success _ -> Error (sprintf "Identifier '%s' already declared." a))) in
-						(match type_args ttlist fargs with
-						| Error e -> Error e
-						| Success _ ->
-							(let rec m_vardecls env' var' = function
-								| [] -> Success []
-								| (None,varid,exp)::rest ->
-      						(match env_find varid env' with
-      						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
-      						| Error _ ->
-      							fresh();
-      							env'.e <- (varid,([], Var !v))::env'.e
-      							(let env' =  in
-      							(match m_exp env' a exp with
-      							| Error e -> Error e
-      							| Success x -> m_vardecls env' var rest)))) in
-      				match m_vardecls env var vardecls with
-      				| Error e -> Error e
-      				| Success (x, env) ->
-      					(match m_stmts (substitute x env) (substitute x var) stmts with
-      					| Error e -> Error e
-      					| Success res -> 
-
-				
-							
-							
-						
-				
-				
-				let rec m_vardecls env var = function
-					| [] -> Success ([],env)
-					| (pretype,varid,exp)::rest ->
-						(match env_find id env with
-						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
-						| Error _ ->
-							fresh();
-							(let a = Var !v in
-							(let env' = (varid,([], Var !v))::env in
-							(match m_exp env' a exp with
-							| Error e -> Error e
-							| Success x -> m_vardecls env' var rest)))) in
-				match m_vardecls env var vardecls with
-				| Error e -> Error e
-				| Success (x, env) ->
-					(match m_stmts (substitute x env) (substitute x var) stmts with
-					| Error e -> Error e
-					| Success res -> 
-						
-				
-  			(match m_spl (substitute_list r env) (substitute r t) (List.map (fun x -> Vardecl x) vardecls) with
-  			| Success x1 ->
-  				(match m_stmts (substitute_list x1 env') (substitute x1 a) stmts with
-  				| Success res1 ->
-  					(let x2 = o res1 x1 in
-  					(match m_spl (substitute_list x2 env') (substitute x2 a) rest with
-  					| Success res2 -> Success (o res2 x2)
-  					| Error e -> Error e))
-  				| Error e -> Error e)
-  			| Error e -> Error e))))
-  		| Success _ -> print_env stdout env; Error "\nFunction already declared.");;
+			| Success el ->
+				(match el.t with
+				| Var elt ->
+  				(let rec gettype args = function
+  					| None ->
+  							(match args with
+    						| [] -> Success []
+    						| a::rest ->
+    							(match env_find a env with
+    							| Success _ -> Error (sprintf "Identifier '%s' already declared." a)
+    							| Error _ ->
+    								fresh();
+    								env.e <- {id = a; forall = []; t = Var !v}::env.e;
+    								el.t <- (Imp (Var !v, el.t)); (* maak van alle el.t ... *)
+    								gettype rest None)) (*substitute overal*)
+  					| Some (ttlist, rettype) ->
+  						el.t <- make_type (ttlist,rettype); 
+  						(let rec type_args list = function
+  							| [] ->
+  								(match list with
+  								| [] -> Success []
+  								| _ -> Error "Too many arguments given to match type.")
+  							| tt::tts ->
+  								(match list with
+  								| [] -> Error "Too few arguments given to match type."
+  								| a::rest ->
+  									(match env_find a env with
+  									| Error _ ->
+    									env.e <- {id = a; forall = []; t = convert_typetoken tt}::env.e; 
+    									el.t <- Imp (convert_typetoken tt, el.t);
+  										type_args rest tts
+  									| Success _ -> Error (sprintf "Identifier '%s' already declared." a))) in
+  						(match type_args fargs ttlist with
+  						| Error e -> Error e
+  						| Success _ -> Success [])) in
+  				(match gettype fargs pretyped with
+  				| Error e -> Error e
+  				| Success _ ->
+  					(let rec m_vardecls env' var' = function
+  						| [] -> Success []
+  						| (None,varid,exp)::rest ->
+    						(match env_find varid env' with
+    						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
+    						| Error _ ->
+    							fresh();
+    							env'.e <- {id = varid; forall = []; t = Var !v}::env'.e;
+    							(match m_exp env' (Var !v) exp with
+    							| Error e -> Error e
+    							| Success x -> m_vardecls env' var rest))
+							| (Some tt,varid,exp)::rest -> Error "unsupported" in
+  					(let env' = {e = env.e} in
+    				(match m_vardecls env' var vardecls with
+    				| Error e -> Error e
+    				| Success x ->
+    					(match m_stmts (substitute_list x env') (substitute x var) stmts with
+    					| Error e -> Error e
+    					| Success res -> Success (o res x)))))))
+				| _ -> Error "Weird-ass type."));;
 
 let rec m_scc env var = function
 	| [] -> Success []
@@ -273,42 +243,30 @@ let rec m_scc env var = function
 		match vertex.spl_decl with
 		| None -> Error (sprintf "Unknown identifier '%s'." vertex.id)
 		| Some decl ->
-			match m_decl env var decl with
+			match m_spl env var decl with
 			| Error e -> Error e
 			| Success x ->
 				match m_scc (substitute_list x env) (substitute x var) scc with
 				| Error e -> Error e
-				| Success res1 -> o res1 x;; 
+				| Success res1 -> Success (o res1 x);;
 
-let rec m_sccs env var = function
+let rec m_sccs (env : environment) var = function
 	| [] -> Success []
 	| scc::sccs ->
-		let envrest = (List.map (fun y -> fresh(); (y.id, ([],Var !v))) scc) in
-		match find_dups env envrest with
+		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v}) scc in
+		match find_dups env.e restenv with
 		| [] ->
 			fresh();
-			(match m_scc (List.append env envrest) (Var !v) scc with
+			(match m_scc {e = List.append env.e restenv} (Var !v) scc with
 			| Error e -> Error e
 			| Success xn ->
-				(let envrest' = List.map (fun (xi,(forall,ai)) ->
-					(let b = substract (tv (substitute xn ai)) (tv_list (substitute_list xn env)) in
-					(xi,(b,(substitute xn ai)))))
-					envrest in
-				(match m_sccs (substitute_list xn (List.append env envrest')) (substitute xn var) sccs with
+				(let envrest' = List.map (fun (el : env_val) ->
+					(let b = substract (tv (substitute xn el.t)) (tv_list (substitute_list xn env)) in
+					{id = el.id; forall = b; t = substitute xn el.t})) restenv in
+				(match m_sccs (substitute_list xn {e = List.append env.e envrest'}) (substitute xn var) sccs with
 				| Error e -> Error e
-				| Success res1 -> o res1 xn)))
+				| Success res1 -> Success (o res1 xn))))
 		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list));; 
-		
-let m env exp = m_sccs env (Var "0") (make_graph exp);;
-
-(* fargs shouldn't be in environment *)
-(* fargs should be placed in environment with fresh types *)
-
-(* match m [] ([Vardecl (None,"a",Exp_int 3);                              *)
-(* Fundecl ("c",["arg1"],None,[(None,"d",Exp_int 3)],[Stmt_return None]);  *)
-(* Vardecl (None,"b",Exp_function_call ("a",[]))]) (Var "b") with          *)
-(* | Success x -> print_subs stdout x                                      *)
-(* | Error e -> print_string e;;                                           *)
 
 let rec toString = function
 	| [] -> ""
@@ -320,12 +278,19 @@ let rec toString = function
 		sprintf "[%s]" (helper scc))
 	| scc::rest -> sprintf "%s,\n%s" (toString [scc]) (toString rest);;
 
-match make_graph 
-[Fundecl ("v2", [], None, [], [Stmt_function_call ("v1",[])]);
-Vardecl (None, "v1", Exp_function_call ("v",[]));
-Vardecl (None, "v3", Exp_function_call ("v2",[]))] with
-| Error e -> print_endline e;
-| Success graph -> print_endline (toString (tarjan graph));;
+let m env exp = 
+  match make_graph exp with
+  | Error e -> Error e
+  | Success graph -> print_endline (toString (tarjan graph)); m_sccs env (Var "0") (tarjan graph);;
+
+(* fargs shouldn't be in environment *)
+(* fargs should be placed in environment with fresh types *)
+
+(* match m [] ([Vardecl (None,"a",Exp_int 3);                              *)
+(* Fundecl ("c",["arg1"],None,[(None,"d",Exp_int 3)],[Stmt_return None]);  *)
+(* Vardecl (None,"b",Exp_function_call ("a",[]))]) (Var "b") with          *)
+(* | Success x -> print_subs stdout x                                      *)
+(* | Error e -> print_string e;;                                           *)
 
 (*
 #directory "C:/Users/tom_e/workspace/CC/_build/";;

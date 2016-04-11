@@ -24,7 +24,7 @@ let rec remove_dups lst =
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
 let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
-let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> fst y = x) l2) (List.map (fun x -> fst x) l1);;
+let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> y.id = x) l2) (List.map (fun x -> x.id) l1);;
 let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;
 let first list =
 	let rec f_help result = function
@@ -58,15 +58,15 @@ let print_list list =
 	let rec help = function
 	| [] -> ""
 	| [a] -> sprintf "%s" a
-	| a::rest -> sprintf "%s, %s" a (print_list rest)
+	| a::rest -> sprintf "%s, %s" a (help rest) in
 	sprintf "[%s] " (help list);;
 
 let print_env env =
 	let rec subs_print_help = function
 	| [] -> ""
-	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) el.t
+	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
-	fprintf out "[%a\n]" subs_print_help env.e;;
+	sprintf "[%s\n]" (subs_print_help env.e);;
 
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
@@ -89,7 +89,7 @@ let rec rewrite subs i =
 
 (* substitutieregels toepassen *)
 let rec substitute subs = function
-	| Var i -> rewrite subs (Var i)
+	| Var i -> rewrite subs i
 	| Imp (t1,t2) -> Imp (substitute subs t1, substitute subs t2)
 	| Tup (t1,t2) -> Tup (substitute subs t1, substitute subs t2)
 	| Lis t -> Lis (substitute subs t)
@@ -99,7 +99,8 @@ let substitute_list subs env =
 	let rec sub_list_help subs = function
 		| [] -> ();
 		| el::xs -> el.t <- (substitute subs el.t); sub_list_help subs xs in
-	sub_list_help subs env.e;;
+	sub_list_help subs env.e;
+	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -189,7 +190,7 @@ let env_find x env =
 	let rec help = function
 	| [] -> Error ""
 	| el::rest when (x = el.id) -> Success el
-	| _::rest -> env_find x rest in
+	| _::rest -> help rest in
 	help env.e;;
 
 let rec convert_typetoken = function

@@ -1,4 +1,4 @@
-facR ( n ) :: Int -> Int
+facR ( n ) :: Int Int -> Int
 { if ( n < 2 ) {
 	return 1;
   } else {
