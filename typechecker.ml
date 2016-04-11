@@ -164,7 +164,7 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec m_spl env var = function
+let rec m_spl (env : environment) var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
@@ -175,7 +175,7 @@ let rec m_spl env var = function
 				(match gettype pretyped with
 				| Error e -> Error e
 				| Success r -> m_exp (substitute_list r env) (substitute r el.t) exp)))
-	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
+	| Fundecl (id,fargs,pretyped,vardecls,stmts) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 			| Success el ->
@@ -281,20 +281,4 @@ let rec toString = function
 let m env exp = 
   match make_graph exp with
   | Error e -> Error e
-  | Success graph -> print_endline (toString (tarjan graph)); m_sccs env (Var "0") (tarjan graph);;
-
-(* fargs shouldn't be in environment *)
-(* fargs should be placed in environment with fresh types *)
-
-(* match m [] ([Vardecl (None,"a",Exp_int 3);                              *)
-(* Fundecl ("c",["arg1"],None,[(None,"d",Exp_int 3)],[Stmt_return None]);  *)
-(* Vardecl (None,"b",Exp_function_call ("a",[]))]) (Var "b") with          *)
-(* | Success x -> print_subs stdout x                                      *)
-(* | Error e -> print_string e;;                                           *)
-
-(*
-#directory "C:/Users/tom_e/workspace/CC/_build/";;
-#load "typechecker_lib.cmo";;
-open Typechecker_lib;;
-#use "typechecker.ml";;
-*)
+  | Success graph -> m_sccs env (Var "0") (tarjan graph);;
