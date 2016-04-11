@@ -177,30 +177,21 @@ let rec m_spl env var = function
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) -> (* fargs nog checken *)
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-<<<<<<< HEAD
-			| Success (_,(_,t)) -> (* forall = altijd leeg hier *)
-				(let add_to_env arg newenv = function
-				| None -> fresh(); (arg, ([], Var !v))::newenv
-				| Some pretype -> (arg, ([], t))::newenv in
-				(let rec gettype fargs newenv = function (* pakt pretype en fargs en berekent omschrijving *)
-				|	None ->
-					(match fargs with
-					| [] -> newenv
-					| arg::rest -> (
-					
-				(* alle t in env omschrijven naar uiteindelijke type van functie *)
-				
-					
-				
-=======
 			| Success el -> (* el = {id; bound; id type} *)
 				(let gettype args = function
 					| None ->
 						(match args with
-						| [] -> ()
-						| a::rest -> fresh(); el.t <- (rewrite [el.t, Imp (Var !v, el.t)] el.t); gettype rest None) (*substitute overal*)
-					| Some (ttlist, rettype) ->
-						el.t <- (rewrite [el.t, convert_rettype rettype] el.t);
+						| [] -> Success []
+						| a::rest ->
+							(match env_find a env with
+							| Success _ -> Error (sprintf "Identifier '%s' already declared." a)
+							| Error _ ->
+								fresh();
+								env.e <- {id = a; forall = []; t = Var !v};
+								el.t <- (rewrite [el.t, Imp (Var !v, el.t)] el.t);
+								gettype rest None)) (*substitute overal*)
+					| Some (ttlist, rettype) as pretyped ->
+						el.t <- (rewrite [el.t, make_type pretyped] el.t); 
 						(let rec type_args list = function
 							| [] ->
 								(match list with
@@ -218,8 +209,26 @@ let rec m_spl env var = function
 									| Success _ -> Error (sprintf "Identifier '%s' already declared." a))) in
 						(match type_args ttlist fargs with
 						| Error e -> Error e
-						| Success _ -> (* bij None ook een fail *)
->>>>>>> graphs
+						| Success _ ->
+							(let rec m_vardecls env' var' = function
+								| [] -> Success []
+								| (None,varid,exp)::rest ->
+      						(match env_find varid env' with
+      						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
+      						| Error _ ->
+      							fresh();
+      							env'.e <- (varid,([], Var !v))::env'.e
+      							(let env' =  in
+      							(match m_exp env' a exp with
+      							| Error e -> Error e
+      							| Success x -> m_vardecls env' var rest)))) in
+      				match m_vardecls env var vardecls with
+      				| Error e -> Error e
+      				| Success (x, env) ->
+      					(match m_stmts (substitute x env) (substitute x var) stmts with
+      					| Error e -> Error e
+      					| Success res -> 
+
 				
 							
 							
