@@ -127,7 +127,7 @@ and m_stmt env var = function
 	| Stmt_return None -> u Void var
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
-		fresh();
+		fresh(); (* HIER: moet afhangen van return type van id? *)
 		m_exp env (Var !v) (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
@@ -164,6 +164,24 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
+let rec type_fargs env original_type pretype (*fargs*) = function
+	| [] ->
+		(match pretype with
+		| None -> Success []
+		| Some ([],rettype) -> u original_type (convert_rettype rettype)
+		| Some (_,_) -> Error "Too few arguments.")
+	| farg::fargs ->
+		(match pretype with
+		| None ->
+			fresh();
+			env.e <- {id = farg; forall = []; t = Var !v}::env.e;
+			type_fargs env original_type pretype fargs
+		| Some ([],rettype) -> Error "Too many arguments."
+		| Some (type1::types,rettype) ->
+			env.e <- {id = farg; forall = []; t = convert_typetoken type1}::env.e;
+			type_fargs env original_type (Some (types,rettype)) fargs);;
+
+
 let rec m_spl (env : environment) var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
@@ -198,7 +216,7 @@ let rec m_spl (env : environment) var = function
   						(let rec type_args list = function
   							| [] ->
   								(match list with
-  								| [] -> Success []
+  								| [] -> Success [elt,convert_rettype rettype]
   								| _ -> Error "Too many arguments given to match type.")
   							| tt::tts ->
   								(match list with
@@ -215,7 +233,7 @@ let rec m_spl (env : environment) var = function
   						| Success _ -> Success [])) in
   				(match gettype fargs pretyped with
   				| Error e -> Error e
-  				| Success _ ->
+  				| Success x1 ->
   					(let rec m_vardecls env' var' = function
   						| [] -> Success []
   						| (None,varid,exp)::rest ->
@@ -229,12 +247,14 @@ let rec m_spl (env : environment) var = function
     							| Success x -> m_vardecls env' var rest))
 							| (Some tt,varid,exp)::rest -> Error "unsupported" in
   					(let env' = {e = env.e} in
-    				(match m_vardecls env' var vardecls with
+    				(match m_vardecls (substitute_list x1 env') (substitute x1 var) vardecls with
     				| Error e -> Error e
     				| Success x ->
     					(match m_stmts (substitute_list x env') (substitute x var) stmts with
     					| Error e -> Error e
-    					| Success res -> Success (o res x)))))))
+    					| Success res ->
+								(match substitute_list res env with
+								| _ -> Success (o res x))))))))
 				| _ -> Error "Weird-ass type."));;
 
 let rec m_scc env var = function
