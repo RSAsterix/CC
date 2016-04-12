@@ -6,8 +6,9 @@ let rec fv_exp free bound = function
 	| Exp_field (Nofield id) when not (List.mem id bound || List.mem id free) -> id::free
 	| Exp_field (Field (x,_)) -> fv_exp free bound (Exp_field x)
 	| Exp_prefix (_,exp) -> fv_exp free bound exp
-	| Exp_function_call (id, explist) -> 
-		fv_exp_list (List.append (if (List.mem id bound || List.mem id free) then [] else [id]) free) bound explist
+	| Exp_infix (exp1,_,exp2) -> Typechecker_lib.add_nodups (fv_exp free bound exp1) (fv_exp free bound exp2)
+	| Exp_function_call (id, explist) when (List.mem id bound || List.mem id free) -> fv_exp_list free bound explist
+	| Exp_function_call (id, explist) -> fv_exp_list (id::free) bound explist
 	| Exp_tuple (e1,e2) -> fv_exp (fv_exp free bound e1) bound e2
 	| _ -> free
 and fv_exp_list free bound = function
@@ -23,8 +24,7 @@ let rec fv_stmt free bound = function
 		fv_stmt_list (fv_exp free bound exp) bound stmtlist
 	| Stmt_define (fieldexp, exp) ->
 		fv_exp (fv_exp free bound (Exp_field fieldexp)) bound exp
-	| Stmt_function_call (id, explist) ->
-		fv_exp_list (List.append (if (List.mem id bound || List.mem id free) then [] else [id]) free) bound explist
+	| Stmt_function_call (id, explist) -> fv_exp free bound (Exp_function_call (id, explist))
 	| Stmt_return (Some exp) -> fv_exp free bound exp
 	| _ -> free
 and fv_stmt_list free bound = function
