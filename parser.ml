@@ -224,6 +224,6 @@ let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);;
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
 	match decl_parser tokenlist with
-  | Success decls, [] -> Success (List.rev (decls::decllist))
+  | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
   | Success decls, list -> spl_parser (decls::decllist) list
   | Error e, list -> Error e;;
