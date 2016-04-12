@@ -86,13 +86,10 @@ let rec m_exp env var = function
 			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
 	| Exp_field fieldexp -> m_fieldexp env var fieldexp
 	| Exp_function_call (id, args) ->
-		fresh();
-		(let a = Var !v in
-		(match m_id env a id with
-		| Success function_subs ->
-			(match substitute function_subs a with
-			| t ->
-				(let rec match_type list = function
+		(match env_find id env with
+		| Error _ -> Error (sprintf "Identifier '%s' not found." id)
+		| Success el ->
+			(let rec match_type list = function
 				| Imp (argtype1,resttype) ->
 					(match list with
 					| [] -> Error "Too few arguments."
@@ -107,8 +104,7 @@ let rec m_exp env var = function
 					(match list with
 					| [] -> u rettype var
 					| _ -> Error "Too many arguments.") in
-				match_type args t))
-		| Error e -> Error ("Function ill-typed:\n" ^ e)));;
+			match_type args el.t));;
 
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
@@ -127,8 +123,15 @@ and m_stmt env var = function
 	| Stmt_return None -> u Void var
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
-		fresh(); (* HIER: moet afhangen van return type van id? *)
-		m_exp env (Var !v) (Exp_function_call (id,args))
+		(match env_find id env with
+		| Error _ -> Error (sprintf "Identifier '%s' not found." id)
+		| Success el ->
+			(let rec get_rettype = function
+				| Imp (_,rest) -> get_rettype rest
+				| rettype -> rettype in
+			m_exp env (get_rettype el.t) (Exp_function_call (id,args))
+			)
+		)
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Success x ->
@@ -164,7 +167,7 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec type_fargs env original_type pretype (*fargs*) = function
+let rec type_fargs (env : environment) original_type pretype (*fargs*) = function
 	| [] ->
 		(match pretype with
 		| None -> Success []
@@ -173,68 +176,70 @@ let rec type_fargs env original_type pretype (*fargs*) = function
 	| farg::fargs ->
 		(match pretype with
 		| None ->
-			fresh();
-			env.e <- {id = farg; forall = []; t = Var !v}::env.e;
+			env.e <- {id = farg; forall = []; t = Var farg}::env.e;
 			type_fargs env original_type pretype fargs
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
 			env.e <- {id = farg; forall = []; t = convert_typetoken type1}::env.e;
 			type_fargs env original_type (Some (types,rettype)) fargs);;
 
+let rec m_spl_type (env : environment) var = function
+	| Vardecl (pretyped,id,_) ->
+		(match env_find id env with
+			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+			| Success el ->
+				(match pretyped with
+      	| None -> Success []
+      	| Some typetoken -> u el.t (convert_typetoken typetoken)))
+	| Fundecl (id,fargs,pretyped,_,_) ->
+		(match env_find id env with
+		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
+		| Success el ->
+			el.forall <- fargs;
+			(let rec changetype t allargs =
+				let rec helper = function
+				| [] -> t
+				| arg1::args -> changetype (Imp (Var arg1, helper args)) [] in
+				helper allargs in
+			(let original_type = el.t in
+			el.t <- changetype el.t fargs;
+			(match type_fargs env original_type pretyped fargs with
+			| Error e -> Error (sprintf "Error while typing arguments for function '%s':\n%s" id e)
+			| Success x -> Success x))));;
+
 let rec m_spl (env : environment) var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success el ->
-				(let gettype = function
-      	| None -> Success []
-      	| Some typetoken -> u el.t (convert_typetoken typetoken) in
-				(match gettype pretyped with
-				| Error e -> Error e
-				| Success r -> m_exp (substitute_list r env) (substitute r el.t) exp)))
+			| Success el -> m_exp env el.t exp)
 	| Fundecl (id,fargs,pretyped,vardecls,stmts) ->
 		(match env_find id env with
 		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 		| Success el ->
-			(match el.t with
-			| Var elt ->
-				(match type_fargs env elt pretyped fargs with
-				| Error e -> Error (sprintf "Error while typing arguments for function '%s':\n'%s'" id e)
-				| Success x ->
-				(let rec m_vardecls env' var' (*vardecls*) = function
-					| [] -> Success []
-					| (tt,varid,exp)::vdecls ->
-						(match env_find varid env' with
-						| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
-						| Error _ ->
-							(let vartype = 
-								(match tt with
-  							| None -> fresh(); Var !v
-  							| Some typetoken -> convert_typetoken typetoken
-								) in
-							env'.e <- {id = varid; forall = []; t = vartype}::env'.e;
-							(match m_exp env' vartype exp with
+			(let rec m_vardecls env' var' = function
+				| [] -> Success []
+				| (tt,varid,exp)::vdecls ->
+					(match env_find varid env' with
+					| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
+					| Error _ ->
+						(let vartype = 
+							(match tt with
+							| None -> Var varid
+							| Some typetoken -> convert_typetoken typetoken) in
+						env'.e <- {id = varid; forall = []; t = vartype}::env'.e;
+						(match m_exp env' vartype exp with
+						| Error e -> Error e
+						| Success x ->
+							(match m_vardecls (substitute_list x env') (substitute x var) vdecls with
 							| Error e -> Error e
-							| Success x -> m_vardecls (substitute_list x env') (substitute x var) rest
-							)
-							)
-						)
-					in
-				(let env' = {e = env.e} in
-				(match m_vardecls (substitute_list x env') (substitute x var) vardecls with
+							| Success res -> Success (o res x)))))	in
+			(let env' = {e = env.e} in
+			(match m_vardecls env' var vardecls with
+			| Error e -> Error e
+			| Success x ->
+				(match m_stmts (substitute_list x env') (substitute x var) stmts with
 				| Error e -> Error e
-				| Success x2 ->
-					(match m_stmts (substitute_list x2 env') (substitute x2 var) stmts with
-					| Error e -> Error e
-					| Success res -> Success (o res (o x x2))
-					)
-				)
-				)
-				)
-				)
-				)
-			| _ -> Error "Weird-ass type."
-			);;
+				| Success res -> Success (o res x))))));;
 
 let rec m_scc env var = function
 	| [] -> Success []
@@ -242,12 +247,16 @@ let rec m_scc env var = function
 		match vertex.spl_decl with
 		| None -> Error (sprintf "Unknown identifier '%s'." vertex.id)
 		| Some decl ->
-			match m_spl env var decl with
+			match m_spl_type env var decl with
 			| Error e -> Error e
 			| Success x ->
 				match m_scc (substitute_list x env) (substitute x var) scc with
 				| Error e -> Error e
-				| Success res1 -> Success (o res1 x);;
+				| Success res1 ->
+					(let x1 = o res1 x in
+					match m_spl (substitute_list x1 env) (substitute x1 var) decl with
+					| Error e -> Error e
+					| Success res2 -> Success (o res2 x1));;
 
 let rec m_sccs (env : environment) var = function
 	| [] -> Success []

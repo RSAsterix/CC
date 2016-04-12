@@ -23,6 +23,10 @@ let rec remove_dups lst =
 	| [] -> []
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
+let rec add_nodups l1 = function 
+	| [] -> l1
+	| el::l2 when (List.mem el l1) -> add_nodups l1 l2
+	| el::l2 -> add_nodups (el::l1) l2;; 
 let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
 let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> y.id = x) l2) (List.map (fun x -> x.id) l1);;
 let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;
