@@ -176,7 +176,8 @@ let rec type_fargs (env : environment) original_type pretype (*fargs*) = functio
 	| farg::fargs ->
 		(match pretype with
 		| None ->
-			env.e <- {id = farg; forall = []; t = Var farg}::env.e;
+			fresh();
+			env.e <- {id = farg; forall = []; t = Var !v}::env.e;
 			type_fargs env original_type pretype fargs
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
@@ -199,7 +200,7 @@ let rec m_spl_type (env : environment) var = function
 			(let rec changetype t allargs =
 				let rec helper = function
 				| [] -> t
-				| arg1::args -> changetype (Imp (Var arg1, helper args)) [] in
+				| arg1::args -> fresh(); changetype (Imp (Var !v, helper args)) [] in
 				helper allargs in
 			(let original_type = el.t in
 			el.t <- changetype el.t fargs;
@@ -224,7 +225,7 @@ let rec m_spl (env : environment) var = function
 					| Error _ ->
 						(let vartype = 
 							(match tt with
-							| None -> Var varid
+							| None -> fresh(); Var !v
 							| Some typetoken -> convert_typetoken typetoken) in
 						env'.e <- {id = varid; forall = []; t = vartype}::env'.e;
 						(match m_exp env' vartype exp with
