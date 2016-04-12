@@ -11,8 +11,8 @@ open Typechecker_lib
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-(* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
-let filename = "C:/Users/Tom/workspace/CC/input.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/input.txt";;
+(* let filename = "C:/Users/Tom/workspace/CC/input.txt";; *)
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;
@@ -36,8 +36,8 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 match structure with
 | Error e -> print_endline e;
 | Success x ->
-	(match m [] x with
-	| Error e -> print_endline e; 
+	(match m {e = []} x with
+	| Error error -> print_endline error; 
 	| Success x -> print_subs stdout x);;
 (* | Success x -> print_spl (Format.formatter_of_out_channel stdout) x;; *)
 (* close_out oc;; *)

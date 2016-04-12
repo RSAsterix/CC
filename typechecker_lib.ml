@@ -8,12 +8,38 @@ type types =
 	| Lis of types 					(* Lis a = [a] *)
 	| Int | Bool | Char | Void;;
 
+type env_val = {
+	id : string;
+	mutable forall : string list;
+	mutable t : types
+	}
+
+type environment = {
+	mutable e : env_val list;
+	}
+
 let rec remove_dups lst = 
 	match lst with
 	| [] -> []
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
+let rec add_nodups l1 = function 
+	| [] -> l1
+	| el::l2 when (List.mem el l1) -> add_nodups l1 l2
+	| el::l2 -> add_nodups (el::l1) l2;; 
 let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
+let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> y.id = x) l2) (List.map (fun x -> x.id) l1);;
+let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;
+let first list =
+	let rec f_help result = function
+		| [] -> []
+		| [_] -> List.rev result
+		| a::rest -> f_help (a::result) rest in
+	f_help [] list;;
+let rec last = function
+	[] -> ()
+	| [a] -> a
+	| _::rest -> last rest;;
 
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
@@ -32,18 +58,19 @@ let print_subs out subs =
 	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
 	fprintf out "[%a\n]" subs_print_help subs;;
 
-let rec print_list out = function
-	| [] -> ()
-	| [a] -> fprintf out "%s" a
-	| a::rest -> fprintf out "%s %a" a print_list rest;;
+let print_list list =
+	let rec help = function
+	| [] -> ""
+	| [a] -> sprintf "%s" a
+	| a::rest -> sprintf "%s, %s" a (help rest) in
+	sprintf "[%s] " (help list);;
 
-let print_env out env =
-	let rec subs_print_help out = function
-	| [] -> ()
-	| [(x,([],t))] -> fprintf out "%s |-> %s" x (string_of_type t)
-	| [(x,(forall,t))] -> fprintf out "%s |-> forall %a, %s" x print_list forall (string_of_type t)
-	| el::xs -> fprintf out "%a\n %a" subs_print_help [el] subs_print_help xs in
-	fprintf out "[%a\n]" subs_print_help env;;
+let print_env env =
+	let rec subs_print_help = function
+	| [] -> ""
+	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
+	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
+	sprintf "[%s\n]" (subs_print_help env.e);;
 
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
@@ -73,10 +100,11 @@ let rec substitute subs = function
 	| t -> t;;
 
 let substitute_list subs env =
-	let rec sub_list_help subs list = function
-		| [] -> List.rev list
-		| (var,(bound,var_type))::xs -> sub_list_help subs ((var,(bound,(substitute subs var_type)))::list) xs in
-	sub_list_help subs [] env;;
+	let rec sub_list_help subs = function
+		| [] -> ();
+		| el::xs -> el.t <- (substitute subs el.t); sub_list_help subs xs in
+	sub_list_help subs env.e;
+	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -99,10 +127,10 @@ let tv t =
 let tv_list env =
 	let rec tv_help free bound = function
 		| [] -> List.rev free
-		| (id,(idbound,idtype))::rest ->
-			(let newbound = List.append idbound (id::bound) in
-			tv_help (diff (tv idtype) newbound) newbound rest) in
-	tv_help [] [] env;;
+		| el::rest ->
+			(let newbound = List.append el.forall (el.id::bound) in
+			tv_help (diff (tv el.t) newbound) newbound rest) in
+	tv_help [] [] env.e;;
 
 let unexpected expected found = 
 	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
@@ -162,22 +190,12 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let rec env_find x = function
+let env_find x env = 
+	let rec help = function
 	| [] -> Error ""
-	| (var,t)::rest when (x = var) -> Success t
-	| _::rest -> env_find x rest;;
-
-let first list =
-	let rec f_help result = function
-		| [] -> []
-		| [_] -> List.rev result
-		| a::rest -> f_help (a::result) rest in
-	f_help [] list;;
-
-let rec last = function
-	[] -> ()
-	| [a] -> a
-	| _::rest -> last rest;;
+	| el::rest when (x = el.id) -> Success el
+	| _::rest -> help rest in
+	help env.e;;
 
 let rec convert_typetoken = function
 	| Type_int -> Int
