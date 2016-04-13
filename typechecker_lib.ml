@@ -135,27 +135,24 @@ let tv_list env =
 let unexpected expected found = 
 	Error (sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected));;
 
-let u tuple =
-	let rec u_help list = function
-		| (Var a, Var b) when a = b -> Success list
-		| (Var a, t) when not (List.mem a (tv t)) -> Success ((a,t)::list)
-		| (t, Var a) when not (List.mem a (tv t)) -> Success ((a,t)::list)
-		| (Imp (s1,s2), Imp (t1,t2)) ->
-			(match u_help list (s2, t2) with
-			| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
-			| Success x ->
-				(match u_help list (substitute x s1, substitute x t1) with
-				| Error e -> Error ("Could not match first parts of implications:\n" ^ e)
-				| Success res -> Success (List.concat [x;res;list])))
-		| (Tup (s1,s2), Tup (t1,t2)) -> u_help list (Imp (s1,s2), Imp (t1,t2))
-		| (Lis s, Lis t) -> u_help list (s,t)
-		| (Int, Int) -> Success list
-		| (Bool, Bool) -> Success list
-		| (Char, Char) -> Success list
-		| (Void, Void) -> Success list
-		| (x,y) -> unexpected x y
-		in
-	u_help [] tuple;;
+let rec u = function
+	| (Var a, Var b) when a = b -> Success []
+	| (Var a, t) when not (List.mem a (tv t)) -> Success [a,t]
+	| (t, Var a) when not (List.mem a (tv t)) -> Success [a,t]
+	| (Imp (s1,s2), Imp (t1,t2)) ->
+		(match u (s2, t2) with
+		| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
+		| Success x ->
+			(match u (substitute x s1, substitute x t1) with
+			| Error e -> Error ("Could not match first parts of implications:\n" ^ e)
+			| Success res -> Success (o res x)))
+	| (Tup (s1,s2), Tup (t1,t2)) -> u (Imp (s1,s2), Imp (t1,t2))
+	| (Lis s, Lis t) -> u (s,t)
+	| (Int, Int) -> Success []
+	| (Bool, Bool) -> Success []
+	| (Char, Char) -> Success []
+	| (Void, Void) -> Success []
+	| (x,y) -> unexpected x y;;
 
 (* Converts operator of an expression (x op y) like this: *)
 (* (type x),(type y),(type (x op y)) *) 

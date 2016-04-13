@@ -8,18 +8,18 @@ open Type_graph
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
-	| Hd -> fresh(); u (Imp (Lis (Var !v), (Var !v))) var
-	| Tl -> fresh(); u (Imp (Lis (Var !v), Lis (Var !v))) var
+	| Hd -> fresh(); u ((Imp (Lis (Var !v), (Var !v))), var)
+	| Tl -> fresh(); u ((Imp (Lis (Var !v), Lis (Var !v))), var)
 	| Fst -> 
 		fresh();
 		(let a1 = Var !v in
 		fresh();
-		u (Imp (Tup (a1, (Var !v)), a1)) var)
+		u ((Imp (Tup (a1, (Var !v)), a1)), var))
 	| Snd ->
 		fresh();
 		(let a1 = Var !v in
 		fresh();
-		u (Imp (Tup (a1, (Var !v)), (Var !v))) var);;
+		u ((Imp (Tup (a1, (Var !v)), (Var !v))), var));;
 
 let m_id env var s =
 	(match env_find s env with
@@ -27,7 +27,7 @@ let m_id env var s =
 		(let rec r = function
 			| [] -> []
 			| x::xs -> fresh(); (x, Var !v)::(r xs) in
-		u (substitute (r record.forall) record.t) var)
+		u ((substitute (r record.forall) record.t), var))
 	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
@@ -43,12 +43,12 @@ let rec m_fieldexp env var = function
 		| Error e -> Error ("Field ill-typed because of:\n" ^ e)));;
 
 let rec m_exp env var = function
-	| Exp_int _ -> u Int var
-	| Exp_bool _ -> u Bool var
-	| Exp_char _ -> u Char var
+	| Exp_int _ -> u (Int, var)
+	| Exp_bool _ -> u (Bool, var)
+	| Exp_char _ -> u (Char, var)
 	| Exp_emptylist ->
 		fresh();
-		u (Lis (Var !v)) var
+		u ((Lis (Var !v)), var)
 	| Exp_tuple (e1, e2) ->
 		fresh();
 		(let a1 = (Var !v) in
@@ -59,7 +59,7 @@ let rec m_exp env var = function
 			(match m_exp (substitute_list x1 env) a2 e2 with
 			| Success res1 ->
 				(let x = o res1 x1 in
-				(match u (substitute x (Tup (a1, a2))) (substitute x var) with
+				(match u ((substitute x (Tup (a1, a2))), (substitute x var)) with
 				| Success res2 -> Success (o res2 x)
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)))
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)))
@@ -68,7 +68,7 @@ let rec m_exp env var = function
 		(let typeRES = op1_to_subs op in
 		(match m_exp env typeRES e1 with
 		| Success x ->
-			(match u typeRES (substitute x var) with
+			(match u (typeRES, (substitute x var)) with
 			| Success res1 -> Success (o res1 x)
 			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
 		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
@@ -79,7 +79,7 @@ let rec m_exp env var = function
 				(match m_exp (substitute_list x1 env) (substitute x1 typeR) e2 with
 				| Success res1 ->
 					(let x = o res1 x1 in
-					(match u (substitute x typeRES) (substitute x var) with
+					(match u ((substitute x typeRES), (substitute x var)) with
 					| Success res2 -> Success (o res2 x)
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
 				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
@@ -102,7 +102,7 @@ let rec m_exp env var = function
 						| Error e -> Error ("Argument not matching:\n" ^ e)))
 				| rettype ->
 					(match list with
-					| [] -> u rettype var
+					| [] -> u (rettype, var)
 					| _ -> Error "Too many arguments.") in
 			match_type args el.t));;
 
@@ -120,7 +120,7 @@ let rec m_stmts env var = function
 			| Error e -> Error e)
 		| Error e -> Error e)
 and m_stmt env var = function
-	| Stmt_return None -> u Void var
+	| Stmt_return None -> u (Void, var)
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
 		(match env_find id env with
@@ -171,7 +171,7 @@ let rec type_fargs (env : environment) original_type pretype (*fargs*) = functio
 	| [] ->
 		(match pretype with
 		| None -> Success []
-		| Some ([],rettype) -> u original_type (convert_rettype rettype)
+		| Some ([],rettype) -> u (original_type, (convert_rettype rettype))
 		| Some (_,_) -> Error "Too few arguments.")
 	| farg::fargs ->
 		(match pretype with
@@ -191,7 +191,7 @@ let rec m_spl_type (env : environment) var = function
 			| Success el ->
 				(match pretyped with
       	| None -> Success []
-      	| Some typetoken -> u el.t (convert_typetoken typetoken)))
+      	| Some typetoken -> u (el.t, (convert_typetoken typetoken))))
 	| Fundecl (id,fargs,pretyped,_,_) ->
 		(match env_find id env with
 		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
