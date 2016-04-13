@@ -133,48 +133,29 @@ let tv_list env =
 	tv_help [] [] env.e;;
 
 let unexpected expected found = 
-	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
+	Error (sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected));;
 
-let u t1 t2 =
-	let rec u_help list t = function
-  	| Var a ->
-  		(match t with
-  		| Var a1 when (a = a1) -> Success (List.rev list)
-  		| x when (not (List.mem a (tv x))) -> Success (List.rev ((a,x)::list))
-			| _ -> Error (unexpected (Var a) t))
-  	| Imp (t1,t2) ->
-			(match t with
-			| Imp (s1, s2) ->
-				(match u_help [] s2 t2 with
-				| Success x ->
-					(match u_help [] (substitute x s1) (substitute x t1) with
-					| Success left -> Success (o left x)
-					| Error e -> Error ("Unable to unify arguments, due to:\n" ^ e))
-				| Error e -> Error ("Unable to unify result, due to:\n" ^ e))
-			| Var a when (not (List.mem a (tv (Imp (t1,t2))))) -> Success (List.rev ((a,Imp (t1,t2))::list))
-			| _ -> Error (unexpected (Imp (t1,t2)) t))
-  	| Tup (t1,t2) ->
-			(match t with
-			| Tup (s1, s2) ->
-				(match u_help [] s2 t2 with
-				| Success x ->
-					(match u_help [] (substitute x s1) (substitute x t1) with
-					| Success left -> Success (o left x)
-					| Error e -> Error ("Unable to unify right side of tuples, due to:\n" ^ e))
-				| Error e -> Error ("Unable to unify left side of tuples, due to:\n" ^ e))
-			| Var a when (not (List.mem a (tv (Tup (t1,t2))))) -> Success (List.rev ((a,Tup (t1,t2))::list))
-			| _ -> Error (unexpected (Tup (t1,t2)) t))
-  	| Lis t1 ->
-			(match t with
-			| Lis s1 -> u_help [] s1 t1
-			| Var a when (not (List.mem a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
-			| _ -> Error (unexpected (Lis t1) t))
-  	| t1 ->
-			(match t with
-			| Var a when (not (List.mem a (tv t1))) -> Success (List.rev ((a,t1)::list))
-			| t2 when (t1 = t2) -> Success (List.rev list)
-			| _ -> Error (unexpected t1 t)) in
-	u_help [] t1 t2;;
+let u tuple =
+	let rec u_help list = function
+		| (Var a, Var b) when a = b -> Success list
+		| (Var a, t) when not (List.mem a (tv t)) -> Success ((a,t)::list)
+		| (t, Var a) when not (List.mem a (tv t)) -> Success ((a,t)::list)
+		| (Imp (s1,s2), Imp (t1,t2)) ->
+			(match u_help list (s2, t2) with
+			| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
+			| Success x ->
+				(match u_help list (substitute x s1, substitute x t1) with
+				| Error e -> Error ("Could not match first parts of implications:\n" ^ e)
+				| Success res -> Success (List.concat [x;res;list])))
+		| (Tup (s1,s2), Tup (t1,t2)) -> u_help list (Imp (s1,s2), Imp (t1,t2))
+		| (Lis s, Lis t) -> u_help list (s,t)
+		| (Int, Int) -> Success list
+		| (Bool, Bool) -> Success list
+		| (Char, Char) -> Success list
+		| (Void, Void) -> Success list
+		| (x,y) -> unexpected x y
+		in
+	u_help [] tuple;;
 
 (* Converts operator of an expression (x op y) like this: *)
 (* (type x),(type y),(type (x op y)) *) 
