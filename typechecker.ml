@@ -196,17 +196,20 @@ let rec m_spl_type (env : environment) var = function
 		(match env_find id env with
 		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 		| Success el ->
-			el.forall <- fargs;
-			(let rec changetype t allargs =
-				let rec helper = function
-				| [] -> t
-				| arg1::args -> fresh(); changetype (Imp (Var !v, helper args)) [] in
-				helper allargs in
-			(let original_type = el.t in
-			el.t <- changetype el.t fargs;
-			(match type_fargs env original_type pretyped fargs with
+			(match type_fargs env el.t pretyped fargs with
 			| Error e -> Error (sprintf "Error while typing arguments for function '%s':\n%s" id e)
-			| Success x -> Success x))));;
+			| Success x -> 
+				el.forall <- List.map (fun x ->
+					match env_find x env with 
+					| Error e -> x
+					| Success varel -> match varel.t with Var y -> y | _ -> x) fargs;
+  			(let rec changetype t allargs =
+  				let rec helper = function
+  				| [] -> t
+  				| arg1::args -> fresh(); changetype (Imp (Var !v, helper args)) [] in
+  				helper allargs in
+  			el.t <- changetype el.t fargs;
+				Success x)));;
 
 let rec m_spl (env : environment) var = function
 	| Vardecl (pretyped,id,exp) ->
