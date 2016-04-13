@@ -43,12 +43,4 @@ let tarjan graph =
 			else
 				sccs')
 		in
-	List.rev (outerloop [] graph.v);; 
-
-(* hulpfunctie voor bij het testen *)
-let rec reset = function
-	| [] ->
-		index := 0;
-	| v::verts ->
-		v.i <- -1; v.lowlink <- -1; v.onStack <- false;
-		reset verts;;
+	List.rev (outerloop [] graph.v);;

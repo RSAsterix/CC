@@ -23,8 +23,12 @@ let rec remove_dups lst =
 	| [] -> []
 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));;
 
+let rec add_nodups l1 = function 
+	| [] -> l1
+	| el::l2 when (List.mem el l1) -> add_nodups l1 l2
+	| el::l2 -> add_nodups (el::l1) l2;; 
 let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1
-let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> fst y = x) l2) (List.map (fun x -> fst x) l1);;
+let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> y.id = x) l2) (List.map (fun x -> x.id) l1);;
 let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;
 let first list =
 	let rec f_help result = function
@@ -58,15 +62,15 @@ let print_list list =
 	let rec help = function
 	| [] -> ""
 	| [a] -> sprintf "%s" a
-	| a::rest -> sprintf "%s, %s" a (print_list rest)
+	| a::rest -> sprintf "%s, %s" a (help rest) in
 	sprintf "[%s] " (help list);;
 
 let print_env env =
 	let rec subs_print_help = function
 	| [] -> ""
-	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) el.t
+	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
-	fprintf out "[%a\n]" subs_print_help env.e;;
+	sprintf "[%s\n]" (subs_print_help env.e);;
 
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
@@ -89,7 +93,7 @@ let rec rewrite subs i =
 
 (* substitutieregels toepassen *)
 let rec substitute subs = function
-	| Var i -> rewrite subs (Var i)
+	| Var i -> rewrite subs i
 	| Imp (t1,t2) -> Imp (substitute subs t1, substitute subs t2)
 	| Tup (t1,t2) -> Tup (substitute subs t1, substitute subs t2)
 	| Lis t -> Lis (substitute subs t)
@@ -99,20 +103,21 @@ let substitute_list subs env =
 	let rec sub_list_help subs = function
 		| [] -> ();
 		| el::xs -> el.t <- (substitute subs el.t); sub_list_help subs xs in
-	sub_list_help subs env.e;;
+	sub_list_help subs env.e;
+	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
 let o s1 s2 =
 	let rec o_help new_subs subs = function
-		| [] -> List.rev (List.append subs new_subs)
+		| [] -> List.append subs new_subs
 		| (x,nx)::xs -> o_help ((x, substitute subs nx)::new_subs) subs xs in
 	o_help [] s1 s2;;
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
 let tv t =
 	let rec tv_help list = function
-		| Var i -> List.rev (i::list)
+		| Var i -> i::list
   	| Imp (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Tup (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Lis t -> tv_help list t
@@ -121,55 +126,33 @@ let tv t =
 
 let tv_list env =
 	let rec tv_help free bound = function
-		| [] -> List.rev free
+		| [] -> free
 		| el::rest ->
 			(let newbound = List.append el.forall (el.id::bound) in
 			tv_help (diff (tv el.t) newbound) newbound rest) in
 	tv_help [] [] env.e;;
 
 let unexpected expected found = 
-	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
+	Error (sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected));;
 
-let u t1 t2 =
-	let rec u_help list t = function
-  	| Var a ->
-  		(match t with
-  		| Var a1 when (a = a1) -> Success (List.rev list)
-  		| x when (not (List.mem a (tv x))) -> Success (List.rev ((a,x)::list))
-			| _ -> Error (unexpected (Var a) t))
-  	| Imp (t1,t2) ->
-			(match t with
-			| Imp (s1, s2) ->
-				(match u_help [] s2 t2 with
-				| Success x ->
-					(match u_help [] (substitute x s1) (substitute x t1) with
-					| Success left -> Success (o left x)
-					| Error e -> Error ("Unable to unify arguments, due to:\n" ^ e))
-				| Error e -> Error ("Unable to unify result, due to:\n" ^ e))
-			| Var a when (not (List.mem a (tv (Imp (t1,t2))))) -> Success (List.rev ((a,Imp (t1,t2))::list))
-			| _ -> Error (unexpected (Imp (t1,t2)) t))
-  	| Tup (t1,t2) ->
-			(match t with
-			| Tup (s1, s2) ->
-				(match u_help [] s2 t2 with
-				| Success x ->
-					(match u_help [] (substitute x s1) (substitute x t1) with
-					| Success left -> Success (o left x)
-					| Error e -> Error ("Unable to unify right side of tuples, due to:\n" ^ e))
-				| Error e -> Error ("Unable to unify left side of tuples, due to:\n" ^ e))
-			| Var a when (not (List.mem a (tv (Tup (t1,t2))))) -> Success (List.rev ((a,Tup (t1,t2))::list))
-			| _ -> Error (unexpected (Tup (t1,t2)) t))
-  	| Lis t1 ->
-			(match t with
-			| Lis s1 -> u_help [] s1 t1
-			| Var a when (not (List.mem a (tv (Lis t1)))) -> Success (List.rev ((a,(Lis t1))::list))
-			| _ -> Error (unexpected (Lis t1) t))
-  	| t1 ->
-			(match t with
-			| Var a when (not (List.mem a (tv t1))) -> Success (List.rev ((a,t1)::list))
-			| t2 when (t1 = t2) -> Success (List.rev list)
-			| _ -> Error (unexpected t1 t)) in
-	u_help [] t1 t2;;
+let rec u = function
+	| (Var a, Var b) when a = b -> Success []
+	| (Var a, t) when not (List.mem a (tv t)) -> Success [a,t]
+	| (t, Var a) when not (List.mem a (tv t)) -> Success [a,t]
+	| (Imp (s1,s2), Imp (t1,t2)) ->
+		(match u (s2, t2) with
+		| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
+		| Success x ->
+			(match u (substitute x s1, substitute x t1) with
+			| Error e -> Error ("Could not match first parts of implications:\n" ^ e)
+			| Success res -> Success (o res x)))
+	| (Tup (s1,s2), Tup (t1,t2)) -> u (Imp (s1,s2), Imp (t1,t2))
+	| (Lis s, Lis t) -> u (s,t)
+	| (Int, Int) -> Success []
+	| (Bool, Bool) -> Success []
+	| (Char, Char) -> Success []
+	| (Void, Void) -> Success []
+	| (x,y) -> unexpected x y;;
 
 (* Converts operator of an expression (x op y) like this: *)
 (* (type x),(type y),(type (x op y)) *) 
@@ -189,7 +172,7 @@ let env_find x env =
 	let rec help = function
 	| [] -> Error ""
 	| el::rest when (x = el.id) -> Success el
-	| _::rest -> env_find x rest in
+	| _::rest -> help rest in
 	help env.e;;
 
 let rec convert_typetoken = function
