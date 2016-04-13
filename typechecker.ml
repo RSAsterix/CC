@@ -27,7 +27,7 @@ let m_id env var s =
 		(let rec r = function
 			| [] -> []
 			| x::xs -> fresh(); (x, Var !v)::(r xs) in
-		u ((substitute (r record.forall) record.t), var))
+		u ((substitute (r (test_list record.bound)) record.t), var))
 	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
@@ -177,11 +177,11 @@ let rec type_fargs env original_type pretype (*fargs*) = function
 		(match pretype with
 		| None ->
 			fresh();
-			env := {id = farg; forall = []; t = Var !v}::!env;
+			env := {id = farg; bound = Some []; t = Var !v}::!env;
 			type_fargs env original_type pretype fargs
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
-			env := {id = farg; forall = []; t = convert_typetoken type1}::!env;
+			env := {id = farg; bound = Some []; t = convert_typetoken type1}::!env;
 			type_fargs env original_type (Some (types,rettype)) fargs);;
 
 let rec m_spl_type env var = function
@@ -199,10 +199,10 @@ let rec m_spl_type env var = function
 			(match type_fargs env el.t pretyped fargs with
 			| Error e -> Error (sprintf "Error while typing arguments for function '%s':\n%s" id e)
 			| Success x -> 
-				el.forall <- List.map (fun x ->
+				el.bound <- Some (List.map (fun x ->
 					match env_find x env with 
 					| Error e -> x
-					| Success varel -> match varel.t with Var y -> y | _ -> x) fargs;
+					| Success varel -> match varel.t with Var y -> y | _ -> x) fargs);
   			(let rec changetype t allargs =
   				let rec helper = function
   				| [] -> t
@@ -230,7 +230,7 @@ let rec m_spl env var = function
 							(match tt with
 							| None -> fresh(); Var !v
 							| Some typetoken -> convert_typetoken typetoken) in
-						env' := {id = varid; forall = []; t = vartype}::!env';
+						env' := {id = varid; bound = Some []; t = vartype}::!env';
 						(match m_exp env' vartype exp with
 						| Error e -> Error e
 						| Success x ->
@@ -265,7 +265,7 @@ let rec m_scc env var = function
 let rec m_sccs env var = function
 	| [] -> Success []
 	| scc::sccs ->
-		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v}) scc in
+		let restenv = List.map (fun y -> fresh(); {id = y.id; bound = (test_decl y.spl_decl); t = Var !v}) scc in
 		match find_dups !env restenv with
 		| [] ->
 			fresh();
@@ -274,7 +274,7 @@ let rec m_sccs env var = function
 			| Success xn ->
 				(let envrest' = List.map (fun (el : env_val) ->
 					(let b = substract (tv (substitute xn el.t)) (tv_list (substitute_list xn env)) in
-					{id = el.id; forall = b; t = substitute xn el.t})) restenv in
+					{id = el.id; bound = Some b; t = substitute xn el.t})) restenv in
 				(match m_sccs (substitute_list xn (ref (List.append !env envrest'))) (substitute xn var) sccs with
 				| Error e -> Error e
 				| Success res1 -> Success (o res1 xn))))
