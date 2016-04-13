@@ -14,9 +14,7 @@ type env_val = {
 	mutable t : types
 	}
 
-type environment = {
-	mutable e : env_val list;
-	}
+let environment : env_val list ref = ref [];;
 
 let rec remove_dups lst = 
 	match lst with
@@ -70,7 +68,7 @@ let print_env env =
 	| [] -> ""
 	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
-	sprintf "[%s\n]" (subs_print_help env.e);;
+	sprintf "[%s\n]" (subs_print_help !env);;
 
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh(); aan*)
@@ -103,7 +101,7 @@ let substitute_list subs env =
 	let rec sub_list_help subs = function
 		| [] -> ();
 		| el::xs -> el.t <- (substitute subs el.t); sub_list_help subs xs in
-	sub_list_help subs env.e;
+	sub_list_help subs !env;
 	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
@@ -130,7 +128,7 @@ let tv_list env =
 		| el::rest ->
 			(let newbound = List.append el.forall (el.id::bound) in
 			tv_help (diff (tv el.t) newbound) newbound rest) in
-	tv_help [] [] env.e;;
+	tv_help [] [] !env;;
 
 let unexpected expected found = 
 	Error (sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected));;
@@ -173,7 +171,7 @@ let env_find x env =
 	| [] -> Error ""
 	| el::rest when (x = el.id) -> Success el
 	| _::rest -> help rest in
-	help env.e;;
+	help !env;;
 
 let rec convert_typetoken = function
 	| Type_int -> Int

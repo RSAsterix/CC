@@ -36,7 +36,7 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 match structure with
 | Error e -> print_endline e;
 | Success x ->
-	(match m {e = []} x with
+	(match m environment x with
 	| Error error -> print_endline error; 
 	| Success x -> print_subs stdout x);;
 (* | Success x -> print_spl (Format.formatter_of_out_channel stdout) x;; *)

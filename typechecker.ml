@@ -167,7 +167,7 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec type_fargs (env : environment) original_type pretype (*fargs*) = function
+let rec type_fargs env original_type pretype (*fargs*) = function
 	| [] ->
 		(match pretype with
 		| None -> Success []
@@ -177,14 +177,14 @@ let rec type_fargs (env : environment) original_type pretype (*fargs*) = functio
 		(match pretype with
 		| None ->
 			fresh();
-			env.e <- {id = farg; forall = []; t = Var !v}::env.e;
+			env := {id = farg; forall = []; t = Var !v}::!env;
 			type_fargs env original_type pretype fargs
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
-			env.e <- {id = farg; forall = []; t = convert_typetoken type1}::env.e;
+			env := {id = farg; forall = []; t = convert_typetoken type1}::!env;
 			type_fargs env original_type (Some (types,rettype)) fargs);;
 
-let rec m_spl_type (env : environment) var = function
+let rec m_spl_type env var = function
 	| Vardecl (pretyped,id,_) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
@@ -211,7 +211,7 @@ let rec m_spl_type (env : environment) var = function
   			el.t <- changetype el.t fargs;
 				Success x)));;
 
-let rec m_spl (env : environment) var = function
+let rec m_spl env var = function
 	| Vardecl (pretyped,id,exp) ->
 		(match env_find id env with
 			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
@@ -230,14 +230,14 @@ let rec m_spl (env : environment) var = function
 							(match tt with
 							| None -> fresh(); Var !v
 							| Some typetoken -> convert_typetoken typetoken) in
-						env'.e <- {id = varid; forall = []; t = vartype}::env'.e;
+						env' := {id = varid; forall = []; t = vartype}::!env';
 						(match m_exp env' vartype exp with
 						| Error e -> Error e
 						| Success x ->
 							(match m_vardecls (substitute_list x env') (substitute x var) vdecls with
 							| Error e -> Error e
 							| Success res -> Success (o res x)))))	in
-			(let env' = {e = env.e} in
+			(let env' = ref !env in
 			(match m_vardecls env' var vardecls with
 			| Error e -> Error e
 			| Success x ->
@@ -262,20 +262,20 @@ let rec m_scc env var = function
 					| Error e -> Error e
 					| Success res2 -> Success (o res2 x1));;
 
-let rec m_sccs (env : environment) var = function
+let rec m_sccs env var = function
 	| [] -> Success []
 	| scc::sccs ->
 		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v}) scc in
-		match find_dups env.e restenv with
+		match find_dups !env restenv with
 		| [] ->
 			fresh();
-			(match m_scc {e = List.append env.e restenv} (Var !v) scc with
+			(match m_scc (ref (List.append !env restenv)) (Var !v) scc with
 			| Error e -> Error e
 			| Success xn ->
 				(let envrest' = List.map (fun (el : env_val) ->
 					(let b = substract (tv (substitute xn el.t)) (tv_list (substitute_list xn env)) in
 					{id = el.id; forall = b; t = substitute xn el.t})) restenv in
-				(match m_sccs (substitute_list xn {e = List.append env.e envrest'}) (substitute xn var) sccs with
+				(match m_sccs (substitute_list xn (ref (List.append !env envrest'))) (substitute xn var) sccs with
 				| Error e -> Error e
 				| Success res1 -> Success (o res1 xn))))
 		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list));; 
