@@ -110,14 +110,14 @@ let substitute_list subs env =
 (* volgens de regels in s1 *)
 let o s1 s2 =
 	let rec o_help new_subs subs = function
-		| [] -> List.rev (List.append subs new_subs)
+		| [] -> List.append subs new_subs
 		| (x,nx)::xs -> o_help ((x, substitute subs nx)::new_subs) subs xs in
 	o_help [] s1 s2;;
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
 let tv t =
 	let rec tv_help list = function
-		| Var i -> List.rev (i::list)
+		| Var i -> i::list
   	| Imp (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Tup (t1,t2) -> List.concat [(tv_help [] t1);(tv_help [] t2);list]
   	| Lis t -> tv_help list t
@@ -126,7 +126,7 @@ let tv t =
 
 let tv_list env =
 	let rec tv_help free bound = function
-		| [] -> List.rev free
+		| [] -> free
 		| el::rest ->
 			(let newbound = List.append el.forall (el.id::bound) in
 			tv_help (diff (tv el.t) newbound) newbound rest) in
