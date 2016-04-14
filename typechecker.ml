@@ -177,11 +177,11 @@ let rec type_fargs env original_type pretype (*fargs*) = function
 		(match pretype with
 		| None ->
 			fresh();
-			env := {id = farg; forall = []; t = Var !v}::!env;
+			env := {id = farg; forall = []; t = Var !v; locals = None}::!env;
 			type_fargs env original_type pretype fargs
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
-			env := {id = farg; forall = []; t = convert_typetoken type1}::!env;
+			env := {id = farg; forall = []; t = convert_typetoken type1; locals = None}::!env;
 			type_fargs env original_type (Some (types,rettype)) fargs);;
 
 let rec m_spl_type env var = function
@@ -230,13 +230,15 @@ let rec m_spl env var = function
 							(match tt with
 							| None -> fresh(); Var !v
 							| Some typetoken -> convert_typetoken typetoken) in
-						env' := {id = varid; forall = []; t = vartype}::!env';
+						(let localvar = {id = varid; forall = []; t = vartype; locals = None} in
+						env' := localvar::!env';
 						(match m_exp env' vartype exp with
 						| Error e -> Error e
 						| Success x ->
+							el.locals <- Some (localvar::(test el.locals));
 							(match m_vardecls (substitute_list x env') (substitute x var) vdecls with
 							| Error e -> Error e
-							| Success res -> Success (o res x)))))	in
+							| Success res -> Success (o res x))))))	in
 			(let env' = ref !env in
 			(match m_vardecls env' var vardecls with
 			| Error e -> Error e
@@ -249,7 +251,7 @@ let rec m_scc env var = function
 	| [] -> Success []
 	| vertex::scc ->
 		match vertex.spl_decl with
-		| None -> Error (sprintf "Unknown identifier '%s'." vertex.id)
+		| None -> Error (sprintf "There is never a declaration for '%s'." vertex.id)
 		| Some decl ->
 			match m_spl_type env var decl with
 			| Error e -> Error e
@@ -263,9 +265,9 @@ let rec m_scc env var = function
 					| Success res2 -> Success (o res2 x1));;
 
 let rec m_sccs env var = function
-	| [] -> Success []
+	| [] -> Success (ref [])
 	| scc::sccs ->
-		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v}) scc in
+		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v; locals = (test_decl y.spl_decl)}) scc in
 		match find_dups !env restenv with
 		| [] ->
 			fresh();
@@ -274,21 +276,12 @@ let rec m_sccs env var = function
 			| Success xn ->
 				(let envrest' = List.map (fun (el : env_val) ->
 					(let b = substract (tv (substitute xn el.t)) (tv_list (substitute_list xn env)) in
-					{id = el.id; forall = b; t = substitute xn el.t})) restenv in
-				(match m_sccs (substitute_list xn (ref (List.append !env envrest'))) (substitute xn var) sccs with
+					{id = el.id; forall = b; t = substitute xn el.t; locals = el.locals})) restenv in
+				env := List.append !env envrest';
+				(match m_sccs (substitute_list xn env) (substitute xn var) sccs with
 				| Error e -> Error e
-				| Success res1 -> Success (o res1 xn))))
+				| Success res1 -> Success env)))
 		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list));; 
-
-let rec toString = function
-	| [] -> ""
-	| [scc] ->
-		(let rec helper = function
-			| [] -> ""
-			| [x] -> x.id
-			| x::xs -> sprintf "%s, %s" (x.id) (helper xs) in
-		sprintf "[%s]" (helper scc))
-	| scc::rest -> sprintf "%s,\n%s" (toString [scc]) (toString rest);;
 
 let m env exp = 
   match make_graph exp with

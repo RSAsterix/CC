@@ -11,8 +11,17 @@ type types =
 type env_val = {
 	id : string;
 	mutable forall : string list;
-	mutable t : types
+	mutable t : types;
+	mutable locals : env_val list option;
 	}
+
+let test = function
+	| None -> []
+	| Some l -> l;;
+
+let test_decl = function
+	| Some (Fundecl _) -> Some []
+	| _ -> None;;
 
 let environment : env_val list ref = ref [];;
 

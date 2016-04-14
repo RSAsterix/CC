@@ -61,6 +61,6 @@ match structure with
 | Success x ->
 	(match m environment x with
 	| Error error -> print_endline error; 
-	| Success x -> print_subs stdout x);;
+	| Success x -> print_endline (print_env x));;
 (* | Success x -> print_spl (Format.formatter_of_out_channel stdout) x;; *)
 (* close_out oc;; *)
