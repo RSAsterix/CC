@@ -10,22 +10,9 @@ type types =
 
 type env_val = {
 	id : string;
-	mutable bound : string list option;
+	mutable forall : string list;
 	mutable t : types
 	}
-
-let test_list = function
-	| None -> []
-	| Some b -> b;;
-
-let test_decl = function
-	| None -> None
-	| Some (Vardecl _) -> None
-	| Some (Fundecl _) -> Some [];;
-
-let declsort = function
-	| Vardecl _ -> None
-	| Fundecl _ -> Some [];;
 
 let environment : env_val list ref = ref [];;
 
@@ -79,7 +66,7 @@ let print_list list =
 let print_env env =
 	let rec subs_print_help = function
 	| [] -> ""
-	| [el] -> sprintf "%s |-> %s%s" el.id (print_list (test_list el.bound)) (string_of_type el.t)
+	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
 	sprintf "[%s\n]" (subs_print_help !env);;
 
@@ -139,7 +126,7 @@ let tv_list env =
 	let rec tv_help free bound = function
 		| [] -> free
 		| el::rest ->
-			(let newbound = List.append (test_list el.bound) (el.id::bound) in
+			(let newbound = List.append el.forall (el.id::bound) in
 			tv_help (diff (tv el.t) newbound) newbound rest) in
 	tv_help [] [] !env;;
 
