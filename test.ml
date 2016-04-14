@@ -11,30 +11,33 @@ open Typechecker_lib
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-(* open Printf;;                 *)
-(* #load "char_func.cmo";;       *)
-(* open Char_func;;              *)
-(* #load "types.cmo";;           *)
-(* open Types;;                  *)
-(* #load "typechecker_lib.cmo";; *)
-(* open Typechecker_lib;;        *)
-(* #load "type_graph.cmo";;      *)
-(* open Type_graph;;             *)
-(* #load "spl_to_graph.cmo";;    *)
-(* open Spl_to_graph;;           *)
-(* #load "cycledetection.cmo";;  *)
-(* open Cycledetection;;         *)
-(* #load "tokenizer.cmo";;       *)
-(* open Tokenizer;;              *)
-(* #load "exp_parser.cmo";;      *)
-(* open Exp_parser;;             *)
-(* #load "parser.cmo";;          *)
-(* open Parser;;                 *)
-(* #load "typechecker.cmo";;     *)
-(* open Typechecker;;            *)
-(* #use "test.ml";;              *)
+(* open Printf;;                      *)
+(* #load "char_func.cmo";;            *)
+(* open Char_func;;                   *)
+(* #load "types.cmo";;                *)
+(* open Types;;                       *)
+(* #load "typechecker_lib.cmo";;      *)
+(* open Typechecker_lib;;             *)
+(* #load "type_graph.cmo";;           *)
+(* open Type_graph;;                  *)
+(* #load "spl_to_graph.cmo";;         *)
+(* open Spl_to_graph;;                *)
+(* #load "cycledetection.cmo";;       *)
+(* open Cycledetection;;              *)
+(* #load "tokenizer.cmo";;            *)
+(* open Tokenizer;;                   *)
+(* #load "exp_parser.cmo";;           *)
+(* open Exp_parser;;                  *)
+(* #load "parser.cmo";;               *)
+(* open Parser;;                      *)
+(* #load "typechecker.cmo";;          *)
+(* open Typechecker;;                 *)
+(* #load "pretty_printer_files.cmo";; *)
+(* open Pretty_printer_files;;        *)
+(* #use "test.ml";;                   *)
 
-let filename = "C:/Users/tom_e/workspace/CC/input.txt";;
+
+let filename = "C:/Users/tom_e/workspace/CC/input2.txt";;
 (* let filename = "C:/Users/Tom/workspace/CC/input.txt";; *)
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
@@ -61,6 +64,7 @@ match structure with
 | Success x ->
 	(match m environment x with
 	| Error error -> print_endline error; 
-	| Success x -> print_endline (print_env x));;
-(* | Success x -> print_spl (Format.formatter_of_out_channel stdout) x;; *)
+	| Success x ->
+		print_endline (prettyprint_env x);)
+ 		(* print_spl (Format.formatter_of_out_channel stdout) x);; *)
 (* close_out oc;; *)

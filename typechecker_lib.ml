@@ -1,5 +1,6 @@
 open Printf
 open Types
+open Format
 
 type types = 
 	| Var of string 				(* Var "a" *)
@@ -70,12 +71,15 @@ let print_list list =
 	| [] -> ""
 	| [a] -> sprintf "%s" a
 	| a::rest -> sprintf "%s, %s" a (help rest) in
-	sprintf "[%s] " (help list);;
+	sprintf "forall (%s)," (help list);;
 
 let print_env env =
 	let rec subs_print_help = function
 	| [] -> ""
-	| [el] -> sprintf "%s |-> %s%s" el.id (print_list el.forall) (string_of_type el.t)
+	| [el] ->
+		(match el.forall with
+		| [] -> sprintf "%s |-> %s" el.id (string_of_type el.t)
+		| x -> sprintf "%s |-> %s %s" el.id (print_list x) (string_of_type el.t))
 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
 	sprintf "[%s\n]" (subs_print_help !env);;
 
@@ -197,3 +201,41 @@ let convert_rettype = function
 let rec make_type = function
 	| ([],rettype) -> convert_rettype rettype
 	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
+
+let prettyprint_env env =
+	(* id :: type *)
+	let print_variable el =
+		sprintf "'%s' :: '%s'" el.id (string_of_type el.t) in
+	
+	let print_forall list =
+		(let rec helper = function
+			| [] -> ""
+			| [f] -> sprintf "%s" f
+			| f::fs -> sprintf "%s, %s" f (helper fs) in
+		match list with
+		| [] -> ""
+		| fs -> sprintf "forall (%s), " (helper fs)) in
+	
+	(* []? -> ""*)
+	(* l?  -> \n var*)
+	(* ls? -> \n var rest *)
+	let print_locals list =
+		(let rec helper = function
+  		| [] -> ""
+  		| [l] -> sprintf "@;<0 2>%s" (print_variable l)
+  		| l::ls -> sprintf "@;<0 2>%s%s" (print_variable l) (helper ls) in
+		match list with
+		| [] -> ""
+		| ls -> sprintf "Locals:%s@," (helper ls)) in
+	
+	let print_function el locals =
+		sprintf "%s :: %s%s@;<0 2>@[<v 0>%s@]" el.id (print_forall el.forall) (string_of_type el.t) (print_locals locals) in
+	
+	let rec helper = function
+  	| [] -> ""
+  	| el::rest ->
+  		(match el.locals with
+  		| None -> sprintf "@[<v 0>%s@]@.%s" (print_variable el) (helper rest)
+			| Some l -> sprintf "@[<v 0>%s@]@.%s" (print_function el l) (helper rest)) in
+	
+	sprintf "%s" (helper !env);;

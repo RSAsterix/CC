@@ -167,7 +167,7 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e))
 		| Error e -> Error e));;
 
-let rec type_fargs env original_type pretype (*fargs*) = function
+let rec type_fargs env original_type el pretype (*fargs*) = function
 	| [] ->
 		(match pretype with
 		| None -> Success []
@@ -177,12 +177,17 @@ let rec type_fargs env original_type pretype (*fargs*) = function
 		(match pretype with
 		| None ->
 			fresh();
-			env := {id = farg; forall = []; t = Var !v; locals = None}::!env;
-			type_fargs env original_type pretype fargs
+			(let newvar = {id = farg; forall = []; t = Var !v; locals = None} in
+			env := newvar::!env;
+			el.forall <- !v::el.forall;
+			el.locals <- Some (newvar::(test el.locals));
+			type_fargs env original_type el pretype fargs)
 		| Some ([],rettype) -> Error "Too many arguments."
 		| Some (type1::types,rettype) ->
-			env := {id = farg; forall = []; t = convert_typetoken type1; locals = None}::!env;
-			type_fargs env original_type (Some (types,rettype)) fargs);;
+			(let newvar = {id = farg; forall = []; t = convert_typetoken type1; locals = None} in
+			env := newvar::!env;
+			el.locals <- Some (newvar::(test el.locals));
+			type_fargs env original_type el (Some (types,rettype)) fargs));;
 
 let rec m_spl_type env var = function
 	| Vardecl (pretyped,id,_) ->
@@ -196,13 +201,9 @@ let rec m_spl_type env var = function
 		(match env_find id env with
 		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
 		| Success el ->
-			(match type_fargs env el.t pretyped fargs with
+			(match type_fargs env el.t el pretyped fargs with
 			| Error e -> Error (sprintf "Error while typing arguments for function '%s':\n%s" id e)
 			| Success x -> 
-				el.forall <- List.map (fun x ->
-					match env_find x env with 
-					| Error e -> x
-					| Success varel -> match varel.t with Var y -> y | _ -> x) fargs;
   			(let rec changetype t allargs =
   				let rec helper = function
   				| [] -> t
