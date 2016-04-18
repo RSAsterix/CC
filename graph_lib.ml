@@ -5,7 +5,7 @@ type vertex = {
 	mutable i : int;
 	mutable lowlink : int;
 	mutable onStack : bool;
-	mutable spl_decl : decl option}
+	mutable spl_decl : decl}
 
 type edge = {
 	f : vertex;
@@ -30,9 +30,10 @@ let add_v s d graph =
 
 let add_e src dest graph =
 	match get_v src graph with
+	| None -> raise (Invalid_argument src)
 	| Some v_f ->
-		(match get_v dest graph with
+		match get_v dest graph with
 		| Some v_t -> graph.e <- {f = v_f; t = v_t}::graph.e
-		| None -> raise (Invalid_argument dest))
-	| None -> raise (Invalid_argument src);;
+		| None -> raise (Invalid_argument dest);;
+	
 	
