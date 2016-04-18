@@ -5,6 +5,10 @@ open Char_func
 open Types
 open Pretty_printer_files
 
+open Graph_make
+open Graph_lib
+open Graph_cycles
+
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
