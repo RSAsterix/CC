@@ -2,21 +2,20 @@ open Graph_lib
 open Types
 open Printf
 
-let rec fv_exp free bound = function
-	| Exp_field (Nofield id) when not (List.mem id bound || List.mem id free) -> id::free
+module SS = Set.Make(String);;
+
+let rec fv_exp (free : SS.t) (bound : SS.t) = function
+	| Exp_field (Nofield id) when not (SS.mem id bound) -> SS.add id free
 	| Exp_field (Field (x,_)) -> fv_exp free bound (Exp_field x)
 	| Exp_prefix (_,exp) -> fv_exp free bound exp
-	| Exp_infix (exp1,_,exp2) -> Typechecker_lib.add_nodups (fv_exp free bound exp1) (fv_exp free bound exp2)
-	| Exp_function_call (id, explist) when (List.mem id bound || List.mem id free) -> fv_exp_list free bound explist
-	| Exp_function_call (id, explist) -> fv_exp_list (id::free) bound explist
-	| Exp_tuple (e1,e2) -> fv_exp (fv_exp free bound e1) bound e2
+	| Exp_infix (exp1,_,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2)
+	| Exp_function_call (id, explist) -> fv_exp_list (SS.add id free) bound explist
+	| Exp_tuple (exp1,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2)
 	| _ -> free
-and fv_exp_list free bound = function
-	| [] -> free
-	| exp::exps -> fv_exp_list (fv_exp free bound exp) bound exps;;
+and fv_exp_list free bound explist = List.fold_left (fun beginfree exp -> fv_exp beginfree bound exp) free explist;;
 
 let rec fv_stmt free bound = function
-	| Stmt_if (exp, stmtlist) ->
+	| Stmt_if (exp, stmtlist) -> 
 		fv_stmt_list (fv_exp free bound exp) bound stmtlist
 	| Stmt_if_else (exp, stmtlist1, stmtlist2) ->
 		fv_stmt_list (fv_stmt_list (fv_exp free bound exp) bound stmtlist1) bound stmtlist2
