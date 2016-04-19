@@ -51,15 +51,24 @@ let fv_decl = function
 	| Vardecl vardecl -> fst (fv_vardecl SS.empty SS.empty vardecl)
 	| Fundecl fundecl -> fv_fundecl SS.empty SS.empty fundecl;;
 
-let rec fv_spl graph = function
-	| [] -> Success graph
-	| decl::decllist ->
-		(match fv_decl decl with
-		| Error e -> Error e
-		| Success (id, needed) ->
-			(let rec make_edges graph = function
-				| [] -> graph
-				| n::ns -> make_edges (add_e id n graph) ns in
-			fv_spl (add_v id (Some decl) (make_edges graph needed)) decllist));;
+let get_id = function
+	| Vardecl (_,id,_) -> id
+	| Fundecl (id,_,_,_,_) -> id;;
+
+let fv_spl graph spl =
+	let rec add_nodes = function
+	| [] -> ()
+	| decl::decls -> 
+		add_v (get_id decl) decl graph;
+		add_nodes decls in
+	add_nodes spl;
+	let rec add_edges = function
+		| [] -> ()
+		| decl::decls ->
+			(let rec helper from = function
+				| [] -> ()
+				| free::frees -> add_e from free graph in
+			helper (get_id decl) (SS.elements (fv_decl decl))) in
+	add_edges spl;;
 
 let make_graph spl = fv_spl {v = []; e = []} spl;;
