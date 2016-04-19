@@ -44,7 +44,8 @@ let fv_vardecl_list free bound vardecls =
 	(free,bound) vardecls;; 
 
 let fv_fundecl free bound (id, fargs, _, vardecllist, stmtlist) =
-	let (newfree, newbound) = fv_vardecl_list free (SS.add id bound) vardecllist in
+	let newbound = SS.union (SS.of_list fargs) (SS.add id bound) in
+	let (newfree, newbound) = fv_vardecl_list free newbound vardecllist in
 	fv_stmt_list newfree newbound stmtlist;;
 
 let fv_decl = function
