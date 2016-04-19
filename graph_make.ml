@@ -3,6 +3,7 @@ open Types
 open Printf
 
 module SS = Set.Make(String);;
+let print_set s = SS.iter print_endline s;;
 
 let rec fv_exp (free : SS.t) (bound : SS.t) = function
 	| Exp_field (Nofield id) when not (SS.mem id bound) -> SS.add id free
