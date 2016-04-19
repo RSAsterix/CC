@@ -9,12 +9,34 @@ open Graph_make
 open Graph_lib
 open Graph_cycles
 
+(* #directory "C:/Users/tom_e/workspace/CC/_build" *)
+(* open Printf;;                                   *)
+(* #load "char_func.cmo";;                         *)
+(* open Char_func;;                                *)
+(* #load "types.cmo";;                             *)
+(* open Types;;                                    *)
+(* #load "graph_lib.cmo";;                         *)
+(* open Graph_lib;;                                *)
+(* #load "graph_make.cmo";;                        *)
+(* open Graph_make;;                               *)
+(* #load "graph_cycles.cmo";;                      *)
+(* open Graph_cycles;;                             *)
+(* #load "tokenizer.cmo";;                         *)
+(* open Tokenizer;;                                *)
+(* #load "exp_parser.cmo";;                        *)
+(* open Exp_parser;;                               *)
+(* #load "parser.cmo";;                            *)
+(* open Parser;;                                   *)
+(* #load "pretty_printer_files.cmo";;              *)
+(* open Pretty_printer_files;;                     *)
+(* #use "test.ml";;                                *)
+
 (* === code die file reading regelt. === *)
 (* Hierna kun je een regel uit het bestand krijgen door *)
 (* (Stream.next lines) aan te roepen *)
 
-(* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
-let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/input.txt";;
+(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
