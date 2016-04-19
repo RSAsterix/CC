@@ -57,12 +57,14 @@ let get_id = function
 	| Fundecl (id,_,_,_,_) -> id;;
 
 let fv_spl graph spl =
+	(* Eerst alle nodes toevoegen: *)
 	let rec add_nodes = function
 	| [] -> ()
 	| decl::decls -> 
 		add_v (get_id decl) decl graph;
 		add_nodes decls in
 	add_nodes spl;
+	(* Daarna alle edges ertussen leggen *)
 	let rec add_edges = function
 		| [] -> ()
 		| decl::decls ->
@@ -72,4 +74,7 @@ let fv_spl graph spl =
 			helper (get_id decl) (SS.elements (fv_decl decl))) in
 	add_edges spl;;
 
-let make_graph spl = fv_spl {v = []; e = []} spl;;
+let make_graph spl = 
+	let g = {v = []; e = []} in
+	fv_spl g spl;
+	g;;
