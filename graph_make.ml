@@ -13,9 +13,9 @@ let rec fv_exp (free : SS.t) (bound : SS.t) = function
 	| Exp_function_call (id, explist) -> fv_exp_list (SS.add id free) bound explist
 	| Exp_tuple (exp1,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2)
 	| _ -> free
-and fv_exp_list free bound explist = List.fold_left (fun beginfree exp -> fv_exp beginfree bound exp) free explist;;
+and fv_exp_list (free : SS.t) (bound : SS.t) explist = List.fold_left (fun beginfree exp -> fv_exp beginfree bound exp) free explist;;
 
-let rec fv_stmt free bound = function
+let rec fv_stmt (free : SS.t) (bound : SS.t) = function
 	| Stmt_if (exp, stmtlist) -> 
 		fv_stmt_list (fv_exp free bound exp) bound stmtlist
 	| Stmt_if_else (exp, stmtlist1, stmtlist2) ->
@@ -27,37 +27,29 @@ let rec fv_stmt free bound = function
 	| Stmt_function_call (id, explist) -> fv_exp free bound (Exp_function_call (id, explist))
 	| Stmt_return (Some exp) -> fv_exp free bound exp
 	| _ -> free
-and fv_stmt_list free bound = function
-	| [] -> free
-	| stmt::stmts -> fv_stmt_list (fv_stmt free bound stmt) bound stmts;;
+and fv_stmt_list (free : SS.t) (bound : SS.t) stmtlist = List.fold_left (fun beginfree stmt -> fv_stmt beginfree bound stmt) free stmtlist;;
 
-let fv_vardecl free bound = function
-	| (_,id,_) when (List.mem id bound || List.mem id free) -> Error (sprintf "Identifier '%s' already known." id)
-	| (_,id,exp) -> Success (fv_exp free (id::bound) exp, id);;
+let fv_vardecl (free : SS.t) (bound : SS.t) = function
+	| (_,id,_) when (SS.mem id bound) -> 
+		raise (Invalid_argument (sprintf "Identifier '%s' will shadow another locally declared variable." id))
+		(* Als id in "free" zit, dan overschrijf je een globale variabele met een locale. Dat is ok. *)
+	| (_,id,exp) ->
+		let newbound = SS.add id bound in 
+		fv_exp free newbound exp, newbound;;
 
-let rec fv_vardecl_list free bound = function
-	| [] -> Success (free, bound)
-	| v::vs ->
-		match fv_vardecl free bound v with
-		| Error e -> Error e
-		| Success (free', id) -> fv_vardecl_list free' (id::bound) vs;;
+let fv_vardecl_list free bound vardecls = 
+	List.fold_left
+		(fun (beginfree,beginbound) vardecl -> 
+		fv_vardecl beginfree beginbound vardecl)
+	(free,bound) vardecls;; 
 
-let fv_fundecl free bound = function
-	| (id, _, _, _, _) when (List.mem id bound || List.mem id free) -> Error (sprintf "Identifier '%s' already known." id)
-	| (id, fargs, _, vardecllist, stmtlist) ->
-		match fv_vardecl_list free (List.append fargs (id::bound)) vardecllist with
-		| Error e -> Error e
-		| Success (free', bound') -> Success (fv_stmt_list free' bound' stmtlist, id);;
+let fv_fundecl free bound (id, fargs, _, vardecllist, stmtlist) =
+	let (newfree, newbound) = fv_vardecl_list free (SS.add id bound) vardecllist in
+	fv_stmt_list newfree newbound stmtlist;;
 
 let fv_decl = function
-	| Vardecl vardecl ->
-		(match fv_vardecl [] [] vardecl with
-		| Error e -> Error e
-		| Success (free, id) -> Success (id,free))
-	| Fundecl fundecl ->
-		(match fv_fundecl [] [] fundecl with
-		| Error e -> Error e
-		| Success (free, id) -> Success (id,free));;
+	| Vardecl vardecl -> fst (fv_vardecl SS.empty SS.empty vardecl)
+	| Fundecl fundecl -> fv_fundecl SS.empty SS.empty fundecl;;
 
 let rec fv_spl graph = function
 	| [] -> Success graph
