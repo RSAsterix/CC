@@ -5,7 +5,7 @@ type vertex = {
 	mutable i : int;
 	mutable lowlink : int;
 	mutable onStack : bool;
-	mutable spl_decl : decl}
+	spl_decl : decl;}
 
 type edge = {
 	f : vertex;
