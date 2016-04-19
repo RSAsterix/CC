@@ -9,6 +9,9 @@ open Graph_make
 open Graph_lib
 open Graph_cycles
 
+open Typechecker
+open Typechecker_lib
+
 (* #directory "C:/Users/tom_e/workspace/CC/_build";; *)
 (* open Printf;;                                     *)
 (* #load "char_func.cmo";;                           *)
