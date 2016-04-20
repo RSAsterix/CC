@@ -1,39 +1,39 @@
 open Typechecker_lib
+open Typechecker_types
 open Types
 open Char_func
 open Printf
-open Spl_to_graph
-open Cycledetection
+open Graph_make
+open Graph_cycles
 open Type_graph
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
-	| Hd -> fresh(); u ((Imp (Lis (Var !v), (Var !v))), var)
-	| Tl -> fresh(); u ((Imp (Lis (Var !v), Lis (Var !v))), var)
+	| Hd -> fresh; u ((Imp (Lis (Var !v), (Var !v))), var)
+	| Tl -> fresh; u ((Imp (Lis (Var !v), Lis (Var !v))), var)
 	| Fst -> 
-		fresh();
+		fresh;
 		(let a1 = Var !v in
-		fresh();
+		fresh;
 		u ((Imp (Tup (a1, (Var !v)), a1)), var))
 	| Snd ->
-		fresh();
+		fresh;
 		(let a1 = Var !v in
-		fresh();
+		fresh;
 		u ((Imp (Tup (a1, (Var !v)), (Var !v))), var));;
 
 let m_id env var s =
-	(match env_find s env with
 	| Success record ->
 		(let rec r = function
 			| [] -> []
-			| x::xs -> fresh(); (x, Var !v)::(r xs) in
+			| x::xs -> fresh; (x, Var !v)::(r xs) in
 		u ((substitute (r record.forall) record.t), var))
 	| Error _ -> Error (sprintf "Variable '%s' not found in environment." s));;
 
 let rec m_fieldexp env var = function
 	| Nofield id -> m_id env var id
 	| Field (fieldexp, field) ->
-		fresh();
+		fresh;
 		(let a = Var !v in
 		(match m_field env (Imp (a, var)) field with
 		| Success x ->
@@ -47,14 +47,14 @@ let rec m_exp env var = function
 	| Exp_bool _ -> u (Bool, var)
 	| Exp_char _ -> u (Char, var)
 	| Exp_emptylist ->
-		fresh();
+		fresh;
 		u ((Lis (Var !v)), var)
 	| Exp_tuple (e1, e2) ->
-		fresh();
+		fresh;
 		(let a1 = (Var !v) in
 		(match m_exp env a1 e1 with
 		| Success x1 ->
-			fresh();
+			fresh;
 			(let a2 = (Var !v) in
 			(match m_exp (substitute_list x1 env) a2 e2 with
 			| Success res1 ->
@@ -158,7 +158,7 @@ and m_stmt env var = function
 			| Error e -> Error ("Body of 'else' ill-typed:\n" ^ e))
 		| Error e -> Error ("Body of 'then' ill-typed:\n" ^ e))
 	| Stmt_define (fieldexp,exp) ->
-		fresh();
+		fresh;
 		(let a = Var !v in
 		(match m_fieldexp env a fieldexp with
 		| Success x ->
@@ -176,7 +176,7 @@ let rec type_fargs env original_type el pretype (*fargs*) = function
 	| farg::fargs ->
 		(match pretype with
 		| None ->
-			fresh();
+			fresh;
 			(let newvar = {id = farg; forall = []; t = Var !v; locals = None} in
 			env := newvar::!env;
 			el.forall <- !v::el.forall;
@@ -207,7 +207,7 @@ let rec m_spl_type env var = function
   			(let rec changetype t allargs =
   				let rec helper = function
   				| [] -> t
-  				| arg1::args -> fresh(); changetype (Imp (Var !v, helper args)) [] in
+  				| arg1::args -> fresh; changetype (Imp (Var !v, helper args)) [] in
   				helper allargs in
   			el.t <- changetype el.t fargs;
 				Success x)));;
@@ -229,7 +229,7 @@ let rec m_spl env var = function
 					| Error _ ->
 						(let vartype = 
 							(match tt with
-							| None -> fresh(); Var !v
+							| None -> fresh; Var !v
 							| Some typetoken -> convert_typetoken typetoken) in
 						(let localvar = {id = varid; forall = []; t = vartype; locals = None} in
 						env' := localvar::!env';
@@ -268,10 +268,10 @@ let rec m_scc env var = function
 let rec m_sccs env var = function
 	| [] -> Success (ref [])
 	| scc::sccs ->
-		let restenv = List.map (fun y -> fresh(); {id = y.id; forall = []; t = Var !v; locals = (test_decl y.spl_decl)}) scc in
+		let restenv = List.map (fun y -> fresh; {id = y.id; forall = []; t = Var !v; locals = (test_decl y.spl_decl)}) scc in
 		match find_dups !env restenv with
 		| [] ->
-			fresh();
+			fresh;
 			(match m_scc (ref (List.append !env restenv)) (Var !v) scc with
 			| Error e -> Error e
 			| Success xn ->

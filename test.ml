@@ -11,6 +11,7 @@ open Graph_cycles
 
 open Typechecker
 open Typechecker_lib
+open Typechecker_print
 
 (* #directory "C:/Users/tom_e/workspace/CC/_build";; *)
 (* open Printf;;                                     *)
