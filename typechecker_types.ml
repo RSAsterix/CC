@@ -5,33 +5,29 @@ type types =
 	| Lis of types 					(* Lis a = [a] *)
 	| Int | Bool | Char | Void;;
 
-module TV = Set.Make(String);;
+module SS = Set.Make(String);;
 
 type env_var = {
 	id : string;
 	mutable t : types;}
 
+module Env_var = Set.Make(
+	struct
+		type t = env_var
+		let compare x y = compare x.id y.id
+	end
+	)
+
 type env_fun = {
 	id : string;
-	mutable bound : string list;
+	mutable bound : SS.t;
 	mutable t : types;
-	mutable locals : env_var list;}
+	mutable locals : Env_var.t;}
 
-type env_val = 
-	| Variable of env_var
-	| Function of env_fun;;
-
-module Env = Set.Make(
+module Env_fun = Set.Make(
   struct
-    type t = env_val
-    let compare x y =
-      match x with
-      | Variable var1 ->
-      	(match y with
-      	| Variable var2 -> if var1.id = var2.id then 0 else if var1.id < var2.id then -1 else 1
-      	| Function _ -> -1)
-      | Function fun1 ->
-      	(match y with
-      	| Function fun2 -> if fun1.id = fun2.id then 0 else if fun1.id < fun2.id then -1 else 1
-      	| Variable _ -> 1)
+    type t = env_fun
+    let compare x y = compare x.id y.id
   end);;
+
+type environment = Env_var.t * Env_fun.t;;

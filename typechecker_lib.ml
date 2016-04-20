@@ -3,40 +3,6 @@ open Format
 open Typechecker_types
 open Typechecker_print
 
-(* let test = function *)
-(* 	| None -> []      *)
-(* 	| Some l -> l;;   *)
-
-(* let test_decl = function        *)
-(* 	| Some (Fundecl _) -> Some [] *)
-(* 	| _ -> None;;                 *)
-
-(* let environment : env_val list ref = ref [];; *)
-
-(* let rec remove_dups lst =                                      *)
-(* 	match lst with                                               *)
-(* 	| [] -> []                                                   *)
-(* 	| h::t -> h::(remove_dups (List.filter (fun x -> x<>h) t));; *)
-
-(* let rec add_nodups l1 = function                                                                                    *)
-(* 	| [] -> l1                                                                                                        *)
-(* 	| el::l2 when (List.mem el l1) -> add_nodups l1 l2                                                                *)
-(* 	| el::l2 -> add_nodups (el::l1) l2;;                                                                              *)
-(* let diff l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1                                                      *)
-(* let rec find_dups l1 l2 = List.filter (fun x -> List.exists (fun y -> y.id = x) l2) (List.map (fun x -> x.id) l1);; *)
-(* let rec substract l1 l2 = List.filter (fun x -> not (List.mem x l2)) l1;;                                           *)
-(* let first list =                                                                                                    *)
-(* 	let rec f_help result = function                                                                                  *)
-(* 		| [] -> []                                                                                                      *)
-(* 		| [_] -> List.rev result                                                                                        *)
-(* 		| a::rest -> f_help (a::result) rest in                                                                         *)
-(* 	f_help [] list;;                                                                                                  *)
-(* let rec last = function                                                                                             *)
-(* 	[] -> ()                                                                                                          *)
-(* 	| [a] -> a                                                                                                        *)
-(* 	| _::rest -> last rest;;                                                                                          *)
-
-
 (* nieuwe variabele genereren:*)
 (* roep eerst fresh; aan*)
 (* gebruik vervolgens "Var !v" voor een verse variabele*)
@@ -63,10 +29,10 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
-let substitute_list subs (env : Env.t) =
-	Env.iter (fun x -> match x with
-	| Variable xv -> xv.t <- substitute subs xv.t
-	| Function xf -> xf.t <- substitute subs xf.t) env;;
+let substitute_env subs (env : environment) =
+	let f x = x.t <- substitute subs x.t in
+	Env_var.iter f (fst env);
+	Env_fun.iter f (snd env);;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -78,7 +44,7 @@ let o s1 s2 =
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
 let tv t =
-	let rec tv_help (free : TV.t) = function
+	let rec tv_help (free : SS.t) = function
 		| Var i -> TV.add i free
   	| Imp (t1,t2) -> TV.union (tv_help free t1) (tv_help free t2)
   	| Tup (t1,t2) -> TV.union (tv_help free t1) (tv_help free t2)
@@ -86,15 +52,22 @@ let tv t =
   	| t -> free in
 	tv_help TV.empty t;;
 
-let tv_list (env : Env.t) =
-  	Env.fold (fun x beginfree -> match x with
-  	| Variable xv -> TV.union beginfree (tv xv.t)  
-  	| Function xf -> TV.diff (TV.union beginfree (tv xf.t)) (TV.of_list xf.bound)) env;;
+let tv_env_var (env_var : Env_var.t) =
+	Env_var.fold (fun x beginfree -> SS.union beginfree (tv x.t)) env_var (SS.empty);;
+
+let tv_env_fun (env_fun : Env_fun.t) =
+	Env_fun.fold (fun x beginfree ->
+		let part1 = SS.diff (SS.union beginfree (tv x.t)) x.bound in
+		let part2 = SS.diff (tv_env_var x.locals) x.bound in
+		SS.union part1 part2) env_fun (SS.empty);;
+
+let tv_env (env : environment) = 
+	SS.union (tv_env_var (fst env)) (tv_env_fun (snd env));;
 
 let rec u = function
 	| (Var a, Var b) when a = b -> Success []
-	| (Var a, t) when not (TV.mem a (tv t)) -> Success [a,t]
-	| (t, Var a) when not (TV.mem a (tv t)) -> Success [a,t]
+	| (Var a, t) when not (SS.mem a (tv t)) -> Success [a,t]
+	| (t, Var a) when not (SS.mem a (tv t)) -> Success [a,t]
 	| (Imp (s1,s2), Imp (t1,t2)) ->
 		(match u (s2, t2) with
 		| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
@@ -124,8 +97,11 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let env_find x (env : Env.t) = 
-	Env.find x env;;
+let env_var_find x (env : Env_var.t) = 
+	Env_var.find {id = x; t = Void} env;;
+
+let env_fun_find x (env : Env_fun.t) =
+	Env_fun.find {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} env;;
 
 let rec convert_typetoken = function
 	| Type_int -> Int
