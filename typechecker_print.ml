@@ -25,15 +25,15 @@ let print_list list =
 	| a::rest -> sprintf "%s, %s" a (help rest) in
 	sprintf "forall (%s)," (help list);;
 
-let print_env env =
-	let rec subs_print_help = function
-	| [] -> ""
-	| [el] ->
-		(match el.bound with
-		| [] -> sprintf "%s |-> %s" el.id (string_of_type el.t)
-		| x -> sprintf "%s |-> %s %s" el.id (print_list x) (string_of_type el.t))
-	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in
-	sprintf "[%s\n]" (subs_print_help !env);;
+(* let print_env env =                                                            *)
+(* 	let rec subs_print_help = function                                           *)
+(* 	| [] -> ""                                                                   *)
+(* 	| [el] ->                                                                    *)
+(* 		(match el.bound with                                                       *)
+(* 		| [] -> sprintf "%s |-> %s" el.id (string_of_type el.t)                    *)
+(* 		| x -> sprintf "%s |-> %s %s" el.id (print_list x) (string_of_type el.t))  *)
+(* 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in *)
+(* 	sprintf "[%s\n]" (subs_print_help !env);;                                    *)
 
 (* let prettyprint_env env =                                                                                               *)
 (* 	(* id :: type *)                                                                                                      *)
