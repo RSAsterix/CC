@@ -15,11 +15,11 @@ let fresh =
 
 (* herschrijfregel uit subs gebruiken   *)
 (* subs = [x1 |-> nx1; x2 |-> nx2; ...] *) 
-let rec rewrite subs i = 
-	match subs with
-	| [] -> Var i
-	| (x,nx)::xs when (x = i) -> nx
-	| (x,nx)::xs -> rewrite xs i;;
+let rec rewrite (subs : RW.t) i =
+	try
+		snd (RW.find (i,Void) subs)
+	with
+	| _ -> Var i;;
 
 (* substitutieregels toepassen *)
 let rec substitute subs = function
@@ -30,27 +30,25 @@ let rec substitute subs = function
 	| t -> t;;
 
 let substitute_env subs (env : environment) =
-	let f x = x.t <- substitute subs x.t in
-	Env_var.iter f (fst env);
-	Env_fun.iter f (snd env);;
+	Env_var.iter (fun x -> x.t <- substitute subs x.t) (fst env);
+	Env_fun.iter (fun x -> x.t <- substitute subs x.t) (snd env);
+	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
-let o s1 s2 =
-	let rec o_help new_subs subs = function
-		| [] -> List.append subs new_subs
-		| (x,nx)::xs -> o_help ((x, substitute subs nx)::new_subs) subs xs in
-	o_help [] s1 s2;;
+let o rw1 rw2 =
+	let new_rw1 = RW.fold (fun x rw -> RW.add (fst x, substitute rw2 (snd x)) rw) rw1 RW.empty in
+	RW.union new_rw1 rw2;;
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
 let tv t =
 	let rec tv_help (free : SS.t) = function
-		| Var i -> TV.add i free
-  	| Imp (t1,t2) -> TV.union (tv_help free t1) (tv_help free t2)
-  	| Tup (t1,t2) -> TV.union (tv_help free t1) (tv_help free t2)
+		| Var i -> SS.add i free
+  	| Imp (t1,t2) -> SS.union (tv_help free t1) (tv_help free t2)
+  	| Tup (t1,t2) -> SS.union (tv_help free t1) (tv_help free t2)
   	| Lis t -> tv_help free t
   	| t -> free in
-	tv_help TV.empty t;;
+	tv_help SS.empty t;;
 
 let tv_env_var (env_var : Env_var.t) =
 	Env_var.fold (fun x beginfree -> SS.union beginfree (tv x.t)) env_var (SS.empty);;
@@ -65,22 +63,22 @@ let tv_env (env : environment) =
 	SS.union (tv_env_var (fst env)) (tv_env_fun (snd env));;
 
 let rec u = function
-	| (Var a, Var b) when a = b -> Success []
-	| (Var a, t) when not (SS.mem a (tv t)) -> Success [a,t]
-	| (t, Var a) when not (SS.mem a (tv t)) -> Success [a,t]
+	| (Var a, Var b) when a = b -> Success RW.empty
+	| (Var a, t) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))
+	| (t, Var a) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))
 	| (Imp (s1,s2), Imp (t1,t2)) ->
 		(match u (s2, t2) with
 		| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
 		| Success x ->
-			(match u (substitute x s1, substitute x t1) with
+			match u (substitute x s1, substitute x t1) with
 			| Error e -> Error ("Could not match first parts of implications:\n" ^ e)
-			| Success res -> Success (o res x)))
+			| Success res -> Success (o res x))
 	| (Tup (s1,s2), Tup (t1,t2)) -> u (Imp (s1,s2), Imp (t1,t2))
 	| (Lis s, Lis t) -> u (s,t)
-	| (Int, Int) -> Success []
-	| (Bool, Bool) -> Success []
-	| (Char, Char) -> Success []
-	| (Void, Void) -> Success []
+	| (Int, Int) -> Success RW.empty
+	| (Bool, Bool) -> Success RW.empty
+	| (Char, Char) -> Success RW.empty
+	| (Void, Void) -> Success RW.empty
 	| (x,y) -> Error (unexpected x y);;
 
 (* Converts operator of an expression (x op y) like this: *)
@@ -118,3 +116,8 @@ let convert_rettype = function
 let rec make_type = function
 	| ([],rettype) -> convert_rettype rettype
 	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
+
+let rec dups = function
+| [] -> false
+| x::xs when List.mem x xs -> true
+| _::xs -> dups xs;;
