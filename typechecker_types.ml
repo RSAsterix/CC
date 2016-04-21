@@ -7,6 +7,12 @@ type types =
 
 module SS = Set.Make(String);;
 
+module RW = Set.Make(
+	struct
+		type t = string * types
+		let compare x y = compare (fst x) (fst y)
+	end)
+
 type env_var = {
 	id : string;
 	mutable t : types;}
@@ -15,8 +21,7 @@ module Env_var = Set.Make(
 	struct
 		type t = env_var
 		let compare x y = compare x.id y.id
-	end
-	)
+	end)
 
 type env_fun = {
 	id : string;
