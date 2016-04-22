@@ -233,40 +233,38 @@ let rec m_spl_pretype env var = function
 				Success (fst env, Env_fun.add {id = id; bound = !arg_types; t = !fun_type; locals = !arg_vars} (snd env));;
 
 let rec m_spl env var = function
-	| Vardecl (pretyped,id,exp) ->
-		(match env_find id env with
-			| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-			| Success el -> m_exp env el.t exp)
-	| Fundecl (id,fargs,pretyped,vardecls,stmts) ->
-		(match env_find id env with
-		| Error _ -> Error (sprintf "Identifier '%s' not found in environment." id)
-		| Success el ->
-			(let rec m_vardecls env' var' = function
-				| [] -> Success []
-				| (tt,varid,exp)::vdecls ->
-					(match env_find varid env' with
-					| Success _ -> Error (sprintf "Identifier '%s' already declared." varid)
-					| Error _ ->
-						(let vartype = 
-							(match tt with
-							| None -> fresh; Var !v
-							| Some typetoken -> convert_typetoken typetoken) in
-						(let localvar = {id = varid; forall = []; t = vartype; locals = None} in
-						env' := localvar::!env';
-						(match m_exp env' vartype exp with
+	| Vardecl (_,id,exp) ->
+		(match m_id_var env var id with
+		| Error e -> Error e
+		| Success x -> 
+			m_exp (substitute_env x env) (substitute x var) exp)
+	| Fundecl (id,_,_,vardecls,stmts) ->
+		try
+			let el = env_fun_find id (snd env) in
+			let rec local_vardecls env' = function
+				| [] -> Success (Env_var.union (fst env') (fst env), snd env')
+				| (pretype,id,exp)::rest ->
+					(try
+						let _ = env_var_find id el.locals in
+						Error (sprintf "Variable '%s' already declared locally." id)
+					with
+					| _ ->
+						let a = match pretype with
+						| None -> fresh; Var !v
+						| Some t -> convert_typetoken t in
+						match m_exp env' a exp with
 						| Error e -> Error e
 						| Success x ->
-							el.locals <- Some (localvar::(test el.locals));
-							(match m_vardecls (substitute_list x env') (substitute x var) vdecls with
-							| Error e -> Error e
-							| Success res -> Success (o res x))))))	in
-			(let env' = ref !env in
-			(match m_vardecls env' var vardecls with
+							let new_var = {id = id; t = (substitute x a)} in
+							el.locals <- Env_var.union el.locals (Env_var.singleton new_var);
+							let new_env = (Env_var.union el.locals (fst env'), snd env) (* of env'? *) in
+							Success (substitute_env x new_env)) in
+			match local_vardecls env vardecls with
 			| Error e -> Error e
-			| Success x ->
-				(match m_stmts (substitute_list x env') (substitute x var) stmts with
-				| Error e -> Error e
-				| Success res -> Success (o res x))))));;
+			| Success env' ->
+				m_stmts env' var stmts
+  	with
+  	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
 let rec m_scc env var = function
 	| [] -> Success []
