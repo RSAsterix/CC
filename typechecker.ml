@@ -26,7 +26,7 @@ let m_field env var = function
 let m_id_var env var id =
 	try
 		let el = env_var_find id (fst env) in
-		u (el.t, var)
+		u (var, el.t)
 	with
 	| _ -> Error (sprintf "Variable '%s' not found in environment." id);;
 
@@ -34,7 +34,7 @@ let m_id_fun env var id =
 	try
 		let el = env_fun_find id (snd env) in
 		let subs = SS.fold (fun x rw -> fresh; RW.add (x, Var !v) rw) el.bound RW.empty in
-		u (substitute subs el.t, var)
+		u (var, substitute subs el.t)
 	with
 	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
