@@ -6,6 +6,7 @@ open Char_func
 open Printf
 open Graph_make
 open Graph_cycles
+open Graph_lib
 open Type_graph
 
 (* Env: (x,a,t) ? *)
@@ -180,7 +181,7 @@ and m_stmt env var = function
 (* - met het juiste type *)
 (* - met de types die gebonden zijn door variabelen *)
 (* - met de locale variabelen die door de argumenten zijn gedeclareerd *)
-let rec m_spl_pretype env var = function
+let spl_pretype env = function
 	| Vardecl (pretyped,id,_) ->
 		(try
 			let el = env_var_find id (fst env) in
@@ -267,42 +268,35 @@ let rec m_spl env var = function
   	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
 let rec m_scc env var = function
-	| [] -> Success []
-	| vertex::scc ->
-		match vertex.spl_decl with
-		| None -> Error (sprintf "There is never a declaration for '%s'." vertex.id)
-		| Some decl ->
-			match m_spl_type env var decl with
+	| [] -> Success RW.empty
+	| (v : Graph_lib.vertex)::rest ->
+		match m_spl env var v.spl_decl with
+		| Error e -> Error e
+		| Success x ->
+			match m_scc (substitute_env x env) (substitute x var) rest with
 			| Error e -> Error e
-			| Success x ->
-				match m_scc (substitute_list x env) (substitute x var) scc with
-				| Error e -> Error e
-				| Success res1 ->
-					(let x1 = o res1 x in
-					match m_spl (substitute_list x1 env) (substitute x1 var) decl with
-					| Error e -> Error e
-					| Success res2 -> Success (o res2 x1));;
+			| Success res1 -> Success (o res1 x);;
 
 let rec m_sccs env var = function
-	| [] -> Success (ref [])
+	| [] -> Success env
 	| scc::sccs ->
-		let restenv = List.map (fun y -> fresh; {id = y.id; forall = []; t = Var !v; locals = (test_decl y.spl_decl)}) scc in
-		match find_dups !env restenv with
-		| [] ->
-			fresh;
-			(match m_scc (ref (List.append !env restenv)) (Var !v) scc with
-			| Error e -> Error e
-			| Success xn ->
-				(let envrest' = List.map (fun (el : env_val) ->
-					(let b = substract (tv (substitute xn el.t)) (tv_list (substitute_list xn env)) in
-					{id = el.id; forall = b; t = substitute xn el.t; locals = el.locals})) restenv in
-				env := List.append !env envrest';
-				(match m_sccs (substitute_list xn env) (substitute xn var) sccs with
+		let rec type_things env' = function
+			| [] -> Success env'
+			| (v : Graph_lib.vertex)::rest ->
+				match spl_pretype env' v.spl_decl with
 				| Error e -> Error e
-				| Success res1 -> Success env)))
-		| list -> Error (sprintf "The following variables have multiple assignments:\n%s" (print_list list));; 
+				| Success x -> type_things x rest in
+		match type_things env scc with
+		| Error e -> Error e
+		| Success env' ->
+  		match m_scc env' var scc with
+  		| Error e -> Error e
+  		| Success x ->
+  			m_sccs (substitute_env x env') (substitute x var) sccs;; 
 
 let m env exp = 
-  match make_graph exp with
-  | Error e -> Error e
-  | Success graph -> m_sccs env (Var "0") (tarjan graph);;
+  try 
+		let graph = make_graph exp in
+		m_sccs env (Var "0") (tarjan graph)
+	with
+	| Invalid_argument e -> Error e;;
