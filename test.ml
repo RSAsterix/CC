@@ -8,6 +8,7 @@ open Pretty_printer_files
 open Graph_make
 open Graph_lib
 open Graph_cycles
+open Graph_print
 
 open Typechecker
 open Typechecker_types
