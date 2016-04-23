@@ -1,5 +1,6 @@
 open Printf
 open Typechecker_types
+open Format
 
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
