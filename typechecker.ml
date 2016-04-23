@@ -242,6 +242,7 @@ let rec m_spl env var = function
 	| Fundecl (id,_,_,vardecls,stmts) ->
 		try
 			let el = env_fun_find id (snd env) in
+			let env' = (Env_var.union el.locals (fst env), snd env) in
 			let rec local_vardecls env' = function
 				| [] -> 
 					let new_env = (Env_var.union el.locals (fst env'), snd env) (* of env'? *) in
@@ -261,7 +262,7 @@ let rec m_spl env var = function
 							let new_var = {id = id; t = (substitute x a)} in
 							el.locals <- Env_var.union el.locals (Env_var.singleton new_var);
 							local_vardecls (substitute_env x env') rest) in
-			match local_vardecls env vardecls with
+			match local_vardecls env' vardecls with
 			| Error e -> Error (sprintf "Typing error in local variable for function '%s':\n%s" id e)
 			| Success env' ->
 				match m_stmts env' var stmts with
@@ -291,11 +292,11 @@ let rec m_sccs env var = function
 				| Success x -> type_things x rest in
 		match type_things env scc with
 		| Error e -> Error e
-		| Success env' ->
-  		match m_scc env' var scc with
+		| Success env' -> 
+			match m_scc (copy env') var scc with
   		| Error e -> Error e
   		| Success x ->
-  			m_sccs env' var sccs;; 
+  			m_sccs env' var sccs;;
 
 let m env exp = 
   try 

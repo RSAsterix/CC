@@ -36,3 +36,14 @@ module Env_fun = Set.Make(
   end);;
 
 type environment = Env_var.t * Env_fun.t;;
+
+let copy env =
+	let tempvars = Env_var.fold (
+		(fun x ev-> Env_var.add 
+		{id = x.id; t = x.t} ev))
+		(fst env) Env_var.empty in
+	let tempfuns = Env_fun.fold
+		(fun x ef -> Env_fun.add 
+		{id = x.id; bound = x.bound; t = x.t; locals = x.locals} ef) (snd env) Env_fun.empty in
+	(tempvars, tempfuns);; 
+	
