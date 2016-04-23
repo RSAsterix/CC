@@ -10,6 +10,7 @@ open Graph_lib
 open Graph_cycles
 
 open Typechecker
+open Typechecker_types
 open Typechecker_lib
 open Typechecker_print
 
@@ -70,5 +71,8 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
 match structure with
 | Error e -> print_endline e;
-| Success x -> print_spl (Format.formatter_of_out_channel stdout) x;;
+| Success x ->
+	match m (Env_var.empty, Env_fun.empty) x with
+	| Error e -> print_endline e;
+	| Success env -> print_endline (prettyprint_env env);;
 (* close_out oc;; *)
