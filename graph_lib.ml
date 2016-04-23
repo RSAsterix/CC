@@ -16,8 +16,7 @@ type graph = {
 	mutable e : edge list;}
 
 let get_v s graph =
-	try Some (List.find (fun x -> x.id = s) graph.v) with
-	| _ -> None;;
+	List.find (fun x -> x.id = s) graph.v
 
 let get_e_f s graph =
 	List.find_all (fun x -> x.f.id = s) graph.e;;
@@ -29,11 +28,14 @@ let add_v s d graph =
 	graph.v <- {id = s; i = -1; lowlink = -1; onStack = false; spl_decl = d}::graph.v;;
 
 let add_e src dest graph =
-	match get_v src graph with
-	| None -> raise (Invalid_argument src)
-	| Some v_f ->
-		match get_v dest graph with
-		| Some v_t -> graph.e <- {f = v_f; t = v_t}::graph.e
-		| None -> raise (Invalid_argument dest);;
+	try
+		let v_f = get_v src graph in
+		(try
+			let v_t = get_v dest graph in
+			graph.e <- {f = v_f; t = v_t}::graph.e
+		with
+		| Not_found -> raise (Invalid_argument dest))
+	with
+	| Not_found -> raise (Invalid_argument src);;
 	
 	
