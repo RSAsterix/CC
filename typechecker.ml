@@ -11,18 +11,18 @@ open Type_graph
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
-	| Hd -> fresh; u ((Imp (Lis (Var !v), (Var !v))), var)
-	| Tl -> fresh; u ((Imp (Lis (Var !v), Lis (Var !v))), var)
+	| Hd -> fresh(); u (var, (Imp (Lis (Var !v), (Var !v))))
+	| Tl -> fresh(); u (var, (Imp (Lis (Var !v), Lis (Var !v))))
 	| Fst -> 
-		fresh;
-		(let a1 = Var !v in
-		fresh;
-		u ((Imp (Tup (a1, (Var !v)), a1)), var))
+		fresh();
+		let a1 = Var !v in
+		fresh();
+		u (var, Imp (Tup (a1, (Var !v)), a1))
 	| Snd ->
-		fresh;
-		(let a1 = Var !v in
-		fresh;
-		u ((Imp (Tup (a1, (Var !v)), (Var !v))), var));;
+		fresh();
+		let a1 = Var !v in
+		fresh();
+		u (var, Imp (Tup (a1, (Var !v)), (Var !v)));;
 
 let m_id_var env var id =
 	try
@@ -34,7 +34,7 @@ let m_id_var env var id =
 let m_id_fun env var id = 
 	try
 		let el = env_fun_find id (snd env) in
-		let subs = SS.fold (fun x rw -> fresh; RW.add (x, Var !v) rw) el.bound RW.empty in
+		let subs = SS.fold (fun x rw -> fresh(); RW.add (x, Var !v) rw) el.bound RW.empty in
 		u (var, substitute subs el.t)
 	with
 	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
@@ -42,7 +42,7 @@ let m_id_fun env var id =
 let rec m_fieldexp env var = function
 	| Nofield id -> m_id_var env var id
 	| Field (fieldexp, field) ->
-		fresh;
+		fresh();
 		let a = Var !v in
 		match m_field env (Imp (a, var)) field with
 		| Error e -> Error ("Field ill-typed because of:\n" ^ e)
@@ -52,28 +52,28 @@ let rec m_fieldexp env var = function
 			| Success res1 -> Success (o res1 x);;
 
 let rec m_exp env var = function
-	| Exp_int _ -> u (Int, var)
-	| Exp_bool _ -> u (Bool, var)
-	| Exp_char _ -> u (Char, var)
-	| Exp_emptylist -> fresh; u (Lis (Var !v), var)
-	| Exp_tuple (e1, e2) -> fresh;
+	| Exp_int _ -> u (var, Int)
+	| Exp_bool _ -> u (var, Bool)
+	| Exp_char _ -> u (var, Char)
+	| Exp_emptylist -> fresh(); u (var, Lis (Var !v))
+	| Exp_tuple (e1, e2) -> fresh();
 		let a1 = Var !v in
 		(match m_exp env a1 e1 with
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)
-		| Success x1 -> fresh;
+		| Success x1 -> fresh();
 			let a2 = Var !v in
 			match m_exp (substitute_env x1 env) a2 e2 with
 			| Error e -> Error ("Right ill-typed because of:\n" ^ e)
 			| Success res1 ->
 				let x = o res1 x1 in
-				match u (substitute x (Tup (a1, a2)), substitute x var) with
+				match u (substitute x var, substitute x (Tup (a1, a2))) with
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)
 				| Success res2 -> Success (o res2 x))
 	| Exp_prefix (op, e1) ->
 		(let typeRES = op1_to_subs op in
 		(match m_exp env typeRES e1 with
 		| Success x ->
-			(match u (typeRES, (substitute x var)) with
+			(match u (substitute x var, typeRES) with
 			| Success res1 -> Success (o res1 x)
 			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
 		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
@@ -84,7 +84,7 @@ let rec m_exp env var = function
 				(match m_exp (substitute_env x1 env) (substitute x1 typeR) e2 with
 				| Success res1 ->
 					(let x = o res1 x1 in
-					(match u ((substitute x typeRES), (substitute x var)) with
+					(match u (substitute x var, substitute x typeRES) with
 					| Success res2 -> Success (o res2 x)
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
 				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
@@ -106,7 +106,7 @@ let rec m_exp env var = function
 							| Success res1 -> Success (o res1 x))
   			| rettype ->
   				match arglist with
-  				| [] -> u (rettype, var)
+  				| [] -> u (var, rettype)
   				| _ -> Error "Too many arguments." in
 			match_type args el.t
 		with
@@ -116,7 +116,7 @@ let rec m_stmts env var = function
 	| [] -> Error "No statement found."
 	| [stmt] ->
 		(match m_stmt env var stmt with
-		| Error e -> Error (sprintf "Second return detected, type of first return ('%s') expected everywhere else:\n%s" (string_of_type var) e)
+		| Error e -> Error (sprintf "Master type '%s' cannot be unified anymore:\n%s" (string_of_type var) e)
 		| res -> res)
 	| stmt::rest ->
 		match m_stmt env var stmt with
@@ -126,7 +126,7 @@ let rec m_stmts env var = function
 			| Error e -> Error e
 			| Success res -> Success (o res x)
 and m_stmt env var = function
-	| Stmt_return None -> u (Void, var)
+	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
 		(try 
@@ -162,7 +162,7 @@ and m_stmt env var = function
 				match m_exp (substitute_env x env) Bool exp with
   			| Error e -> Error ("Condition not a boolean:\n" ^ e)
 				| Success res -> Success (o res x))
-	| Stmt_define (fieldexp,exp) -> fresh;
+	| Stmt_define (fieldexp,exp) -> fresh();
 		let a = Var !v in
 		match m_fieldexp env a fieldexp with
 		| Error e -> Error e
@@ -189,7 +189,7 @@ let spl_pretype env = function
 		with
 		| _ ->
 			match pretyped with
-    	| None -> fresh; Success (Env_var.add {id = id; t = Var !v} (fst env), snd env) 
+    	| None -> fresh(); Success (Env_var.add {id = id; t = Var !v} (fst env), snd env) 
     	| Some typetoken -> Success (Env_var.add {id = id; t = convert_typetoken typetoken} (fst env), snd env))
 	| Fundecl (id,fargs,pretyped,_,_) ->
 		try
@@ -202,7 +202,7 @@ let spl_pretype env = function
 				Error (sprintf "Function '%s' has some double argument." id)
 			else
 				let arg_types = ref SS.empty in
-				fresh;
+				fresh();
 				let fun_type = ref (Var !v) in
 				let arg_vars = ref Env_var.empty in
 				let rec pretyped_args args = function
@@ -219,7 +219,7 @@ let spl_pretype env = function
 				let rec nontyped_args = function
 					| [] -> Env_var.empty
 					| arg::rest -> 
-						fresh; 
+						fresh(); 
 						fun_type := Imp (Var !v, !fun_type);
 						arg_types := SS.add !v !arg_types;
 						Env_var.union (Env_var.singleton {id = arg; t = Var !v}) (nontyped_args rest) in
@@ -230,20 +230,22 @@ let spl_pretype env = function
   					fun_type := (make_type t);
   				| None ->
   					arg_vars := nontyped_args fargs; in
-				do_everything;			
+				do_everything;
 				Success (fst env, Env_fun.add {id = id; bound = !arg_types; t = !fun_type; locals = !arg_vars} (snd env));;
 
 let rec m_spl env var = function
 	| Vardecl (_,id,exp) ->
 		(match m_id_var env var id with
-		| Error e -> Error e
+		| Error e -> Error (sprintf "Typing error in global variable '%s':\n%s" id e)
 		| Success x -> 
 			m_exp (substitute_env x env) (substitute x var) exp)
 	| Fundecl (id,_,_,vardecls,stmts) ->
 		try
 			let el = env_fun_find id (snd env) in
 			let rec local_vardecls env' = function
-				| [] -> Success (Env_var.union (fst env') (fst env), snd env')
+				| [] -> 
+					let new_env = (Env_var.union el.locals (fst env'), snd env) (* of env'? *) in
+					Success new_env
 				| (pretype,id,exp)::rest ->
 					(try
 						let _ = env_var_find id el.locals in
@@ -251,19 +253,20 @@ let rec m_spl env var = function
 					with
 					| _ ->
 						let a = match pretype with
-						| None -> fresh; Var !v
+						| None -> fresh(); Var !v
 						| Some t -> convert_typetoken t in
 						match m_exp env' a exp with
 						| Error e -> Error e
 						| Success x ->
 							let new_var = {id = id; t = (substitute x a)} in
 							el.locals <- Env_var.union el.locals (Env_var.singleton new_var);
-							let new_env = (Env_var.union el.locals (fst env'), snd env) (* of env'? *) in
-							Success (substitute_env x new_env)) in
+							local_vardecls (substitute_env x env') rest) in
 			match local_vardecls env vardecls with
-			| Error e -> Error e
+			| Error e -> Error (sprintf "Typing error in local variable for function '%s':\n%s" id e)
 			| Success env' ->
-				m_stmts env' var stmts
+				match m_stmts env' var stmts with
+				| Error e -> Error (sprintf "Typing error in statements for function '%s':\n%s" id e)
+				| Success x -> Success x
   	with
   	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
