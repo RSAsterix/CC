@@ -35,43 +35,45 @@ let print_list list =
 (* 	| el::xs -> sprintf "%s\n %s" (subs_print_help [el]) (subs_print_help xs) in *)
 (* 	sprintf "[%s\n]" (subs_print_help !env);;                                    *)
 
-(* let prettyprint_env env =                                                                                               *)
-(* 	(* id :: type *)                                                                                                      *)
-(* 	let print_variable el =                                                                                               *)
-(* 		sprintf "'%s' :: '%s'" el.id (string_of_type el.t) in                                                               *)
+let prettyprint_env env =
+	(* id :: type *)
+	let print_variable (el : Env_var.elt) =
+		sprintf "'%s' :: '%s'" el.id (string_of_type el.t) in
 	
-(* 	let print_forall list =                                                                                               *)
-(* 		(let rec helper = function                                                                                          *)
-(* 			| [] -> ""                                                                                                        *)
-(* 			| [f] -> sprintf "%s" f                                                                                           *)
-(* 			| f::fs -> sprintf "%s, %s" f (helper fs) in                                                                      *)
-(* 		match list with                                                                                                     *)
-(* 		| [] -> ""                                                                                                          *)
-(* 		| fs -> sprintf "forall (%s), " (helper fs)) in                                                                     *)
+	let print_forall (list : SS.elt list) =
+		(let rec helper = function
+			| [] -> ""
+			| [f] -> sprintf "%s" f
+			| f::fs -> sprintf "%s, %s" f (helper fs) in
+		match list with
+		| [] -> ""
+		| fs -> sprintf "forall (%s), " (helper fs)) in
 	
-(* 	(* []? -> ""*)                                                                                                        *)
-(* 	(* l?  -> \n var*)                                                                                                    *)
-(* 	(* ls? -> \n var rest *)                                                                                              *)
-(* 	let print_locals list =                                                                                               *)
-(* 		(let rec helper = function                                                                                          *)
-(*   		| [] -> ""                                                                                                        *)
-(*   		| [l] -> sprintf "@;<0 2>%s" (print_variable l)                                                                   *)
-(*   		| l::ls -> sprintf "@;<0 2>%s%s" (print_variable l) (helper ls) in                                                *)
-(* 		match list with                                                                                                     *)
-(* 		| [] -> ""                                                                                                          *)
-(* 		| ls -> sprintf "Locals:%s@," (helper ls)) in                                                                       *)
+	(* []? -> ""*)
+	(* l?  -> \n var*)
+	(* ls? -> \n var rest *)
+	let print_locals (list : Env_var.elt list) =
+		(let rec helper = function
+  		| [] -> ""
+  		| [l] -> sprintf "@;<0 2>%s" (print_variable l)
+  		| l::ls -> sprintf "@;<0 2>%s%s" (print_variable l) (helper ls) in
+		match list with
+		| [] -> ""
+		| ls -> sprintf "Locals:%s@," (helper ls)) in
 	
-(* 	let print_function el locals =                                                                                        *)
-(* 		sprintf "%s :: %s%s@;<0 2>@[<v 0>%s@]" el.id (print_forall el.bound) (string_of_type el.t) (print_locals locals) in *)
+	let print_function el =
+		sprintf "%s :: %s%s@;<0 2>@[<v 0>%s@]" el.id (print_forall (SS.elements el.bound)) (string_of_type el.t) (print_locals (Env_var.elements el.locals)) in
 	
-(* 	let rec helper = function                                                                                             *)
-(*   	| [] -> ""                                                                                                          *)
-(*   	| el::rest ->                                                                                                       *)
-(*   		(match el.bound with                                                                                              *)
-(*   		| None -> sprintf "@[<v 0>%s@]@.%s" (print_variable el) (helper rest)                                             *)
-(* 			| Some l -> sprintf "@[<v 0>%s@]@.%s" (print_function el l) (helper rest)) in                                     *)
+	let varstring = ref "" in
+	let vars v = Env_var.iter (fun el -> varstring := (sprintf "@[<v 0>%s@]@." (print_variable el)) ^ !varstring) v in
 	
-(* 	sprintf "%s" (helper !env);;                                                                                          *)
+	let funstring = ref "" in
+	let funs f = Env_fun.iter (fun el -> funstring := (sprintf "@[<v 0>%s@]@." (print_function el)) ^ !funstring) f in
+	
+	vars (fst env);
+	funs (snd env);
+	
+	sprintf "%s\n%s" !varstring !funstring;;
 
 let unexpected expected found = 
 	sprintf "Found type '%s' where type '%s' was expected." (string_of_type found) (string_of_type expected);;
