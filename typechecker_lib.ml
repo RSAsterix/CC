@@ -31,8 +31,15 @@ let rec substitute subs = function
 	| t -> t;;
 
 let substitute_env subs (env : environment) =
-	Env_var.iter (fun x -> x.t <- substitute subs x.t) (fst env);
-	Env_fun.iter (fun x -> x.t <- substitute subs x.t) (snd env);
+	Env_var.iter (fun x -> 
+		x.t <- substitute subs x.t)
+		(fst env);
+	Env_fun.iter (fun x -> 
+		x.t <- substitute subs x.t;
+		Env_var.iter (fun y ->
+			y.t <- substitute subs y.t)
+			x.locals)
+		(snd env);
 	env;;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
