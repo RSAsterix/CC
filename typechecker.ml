@@ -295,7 +295,7 @@ let rec m_sccs env var = function
   		match m_scc env' var scc with
   		| Error e -> Error e
   		| Success x ->
-  			m_sccs (substitute_env x env') (substitute x var) sccs;; 
+  			m_sccs env' var sccs;; 
 
 let m env exp = 
   try 
