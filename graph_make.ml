@@ -65,15 +65,18 @@ let fv_spl graph spl =
 		add_nodes decls in
 	add_nodes spl;
 	(* Daarna alle edges ertussen leggen *)
+	let rec add_edges = function
+		| [] -> ()
+		| decl::decls ->
+			(let rec helper from = function
+				| [] -> ()
+				| free::frees -> 
+					add_e from free graph;
+					helper from frees in
+			helper (get_id decl) (SS.elements (fv_decl decl)));
+			add_edges decls in
 	try
-  	let rec add_edges = function
-  		| [] -> ()
-  		| decl::decls ->
-  			(let rec helper from = function
-  				| [] -> ()
-  				| free::frees -> add_e from free graph in
-  			helper (get_id decl) (SS.elements (fv_decl decl))) in
-  	add_edges spl
+  	add_edges spl;
 	with
 	| Invalid_argument e -> raise (Invalid_argument (sprintf "Node '%s' wasn't found." e));; 
 
