@@ -4,12 +4,13 @@ open Typechecker_types
 open Typechecker_print
 
 (* nieuwe variabele genereren:*)
-(* roep eerst fresh; aan*)
+(* roep eerst fresh(); aan*)
 (* gebruik vervolgens "Var !v" voor een verse variabele*)
 (* dit gaat goed, omdat een normale Var nooit met een cijfer kan beginnen*)
 let c = ref 0;;
 let v = ref "";;
-let fresh =
+let fresh = function
+	| _ ->
 		c := !c + 1;
 		v := (string_of_int !c) ^ "f";;
 
@@ -84,9 +85,9 @@ let rec u = function
 (* Converts operator of an expression (x op y) like this: *)
 (* (type x),(type y),(type (x op y)) *) 
 let op2_to_subs = function
-	| Listop -> fresh; (Var !v), (Lis (Var !v)), (Lis (Var !v))
+	| Listop -> fresh(); (Var !v), (Lis (Var !v)), (Lis (Var !v))
 	| Logop _ -> Bool, Bool, Bool
-	| Eqop _ -> fresh; (Var !v), (Var !v), Bool
+	| Eqop _ -> fresh(); (Var !v), (Var !v), Bool
 	| Compop _ -> Int, Int, Bool
 	| Weakop _ -> Int, Int, Int
 	| Strongop _ -> Int, Int, Int;;
