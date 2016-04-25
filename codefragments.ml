@@ -2,6 +2,11 @@ open Printf
 open Types
 open String
 
+let reserve_emptylistcode = 
+"ldc 0 \n"^
+"sth \n"^
+"str R5 \n"
+
 let pointlabel l = l^": " 
 let brf l = "brf "^l^" \n"
 let endiflabel fid i = sprintf "endif%s%i" fid i

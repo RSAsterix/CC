@@ -22,35 +22,49 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 (* lists zijn single linkedlists, oftewel tuples van (waarde, pointer naar volgende plek) *)
 (* Er is een ongebruikte plek in de heap. Als een list hier naar point, is hij empty *)
 
-(* global basic type: *)
-(* 		in stack: pointer naar ergens begin heap *)
-(* 		in heap: int *)
-(* local basic type: *)
-(*  	in stack: int value *)
-(* 		in heap: - *)
-(* global list: *)
-(* 		in stack: pointer naar ergens begin heap *)
-(* 		in heap: 10 plekken, *)
-(* 				8 zijn listvalues behorend bij de index, *)
-(* 				1 is de optionele pointer naar de rest van de list *)
-(* 				1 is de lengte van de list, deze komt niet meer voor in de rest van de list *)
-(* local list: *)
-(* 		in stack: pointer naar heap *)
-(* 		in heap: hetzelfde als global list *)
-(* global tuple: *)
-(* 		in stack: pointer naar ergens begin heap *)
-(* 		in heap: 2x twee plekken met het volgende *)
-(* 			boolean of de eerste value basic is, *)
-(* 			als basic: int value, als nonbasic: pointer *)
-(* local tuple: *)
-(* 		in stack: pointer naar heap *)
-(* 		in heap: hetzelfde als global tuple *)
-(* id type: *)
-(* 		ik weet niet precies wat deze type moet doen, *)
-(* 		dus we doen wel alsof het een willekeurige andere type is. *)
+(* open Set  *)
 
 
+(* module Id =                 *)
+(*   struct                 *)
+(*    type t = int * string         *)
+(*    let compare (x0,y0) (x1,y1) =     *)
+(*     match Pervasives.compare y0 y1 with *)
+(*      | 0 -> Pervasives.compare x0 x1  *)
+(*      | c -> c             *)
+(*   end                   *)
 
+(* module Ids = Set.Make(Id)          *)
+
+(* definities: *)
+(* A needs B: decl bevat het id die in B gedefinieerd wordt *)
+(* B owns A: als A needs B *)
+
+(* needless decls moeten bovenaan *)
+(* ownless decls moeten onderaan *)
+
+(* var en functie declaraties moeten in volgorde zodat als A needs B, dan staat A onder B. *)
+
+(* een functie heeft fargs, vardecls en stmts *)
+(* alle fargs zijn lokaal *)
+(* alle nieuwe vardecls zijn ook lokaal *)
+(* alle stmts zijn needs *)
+
+(* Hoe handelen we global vars? *)
+(* Wij hebben een lijst van vars, zowel basic als groter *)
+(* Het grootste probleem is zorgen dat we de volgende waarde in een lijst vinden *)
+
+(* Ga over de vardeclarations. *)
+(* Als een basicvar gedeclareerd wordt, reserveer 1 plek *)
+(* //Als een lijst of tuple gedeclareerd wordt, reserveer 2 plekken *)
+(* Het is vele malen handiger om een pointer hiervoor neer te zetten *)
+(* Skip idtypes voor nu *)
+
+(* exp_infix voorbeeld *)
+(* 2 + 3 *)
+(*LDC	2
+	LDC	3
+	ADD *)
 
 let get_idstruct id vars = 
 	try find (fun x -> x.id=id) vars with
@@ -81,6 +95,20 @@ let rec exp_gen vars exp =
 	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id (length explist))
 	| Exp_emptylist -> get_emptylistcode
 	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode
+	
+(* sta: *)
+(* Store via Address. *)
+(* Pops 2 values from the stack and *)
+(* stores the second popped value in the location pointed to by the first. *)
+(* The pointer value is offset by a constant offset. *)
+
+
+(* Wat moet er gebeuren met een vardecl (met een nieuw id)? *)
+(* Zoek de var in de vars list en onthoud index i *)
+(* '(var met index i) = x': *)
+(* ldc x \n *)
+(* ldr r5 \n *)
+(* sta i \n *)
 
 let branchindex = ref 0;;
 
@@ -262,7 +290,7 @@ let rec print_vars = function
 (* parse the local vars *)
 (* parse de stmts. This includes return *)
 let rec functions_gen (gvars:'a list) = function
-	| (fid,fargs,types,vardecllist,stmtlist)::decllist -> 
+	| (fid,fargs,_,vardecllist,stmtlist)::decllist -> 
 		let fargs = fargs_to_idstructs (-1-(length fargs)) fargs in
 		let lvars = get_vars false 1 vardecllist in
 		let localknown = localknown fargs lvars gvars in
@@ -272,19 +300,6 @@ let rec functions_gen (gvars:'a list) = function
   		topstmtlist_gen localknown fid None stmtlist^
   		functions_gen gvars decllist
 	| [] -> ""
-
-let rec unpoly_typetokenlist = function
-	| typetoken::list ->
-		match typetoken with
-		| Type_id "poly" ->
-			let typetokenlistlist = unpoly_typetokenlist list in
-			map (fun x -> Typ)
-
-let rec unpoly_fundecllist = function
-	| fundecl::list -> 
-		match fundecl with
-		| (id,fargs,Some (typetokenlist,rettype), vardecllist, stmtlist) -> 
-			unpoly_typetokenlist
 
 let rec get_vardecls = function
 	| (Vardecl vardecl)::spl -> vardecl::(get_vardecls spl)
@@ -309,8 +324,9 @@ let code_gen (spl:decl list) =
 	let gvars = get_vars true 1 (get_vardecls spl) in
 	let mainlabel = "main" in
 		bra mainlabel^
-		functions_gen gvars (unpoly_fundecllist (get_fundecls spl))^ 
+		functions_gen gvars (get_fundecls spl)^ 
 		pointlabel mainlabel^ 
+		reserve_emptylistcode^  
 		reservecode (length gvars)^ 
 		vardecl_gen gvars (get_vardecls spl)
 
