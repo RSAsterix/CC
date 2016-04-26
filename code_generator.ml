@@ -16,6 +16,7 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 (* load return register staat voor de branch *)
 (* emptylistplek is niet nodig. Een willekeurige waarde in r5 is genoeg. *)
 (* + en - zijn ook defined voor char. ga er even van uit dat het niet defined moet worden voor andere types. Tom moet dit nog regelen *)
+(* als r5 constant is, kan hij ook gwn in dit document geladen worden *)
 
 
 (* besluiten *)
@@ -69,7 +70,16 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 	LDC	3
 	ADD *)
 
-let get_idstruct id vars = 
+let get_vartype id vars = 
+	let vt = (try find (fun x -> fst x =id) vars with
+	| Not_found -> ("henkst",Int))
+	in snd vt
+	
+let get_funtype (id:id) funs = 
+	try find (fun (x:functiontype) -> x.fid=id) funs with
+	| Not_found -> empty_functiontype
+
+let get_idstruct id vars =
 	try find (fun x -> x.id=id) vars with
 	| Not_found -> empty_idstruct
 
@@ -92,11 +102,14 @@ let rec exp_gen vars exp =
 	| Exp_bool true -> ldc 1
 	| Exp_bool false -> ldc 0
 	| Exp_field (Nofield id) -> let idstruct = get_idstruct id vars in code_get idstruct
-	| Exp_field _ -> "exp_gen henk"
+	| Exp_field (Field (exp,Hd))
+	| Exp_field (Field (exp,Fst)) -> (exp_gen vars (Exp_field exp)) ^ lda 0
+	| Exp_field (Field (exp,Tl))
+	| Exp_field (Field (exp,Snd)) -> (exp_gen vars (Exp_field exp)) ^ lda 1
 	| Exp_infix (exp1,op,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ (op2code op)
 	| Exp_prefix (op,exp) -> (exp_gen vars exp) ^ (op1code op)
 	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id (length explist))
-	| Exp_emptylist -> get_emptylistcode
+	| Exp_emptylist -> ldc 0
 	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode
 	
 (* sta: *)
@@ -254,12 +267,12 @@ let topstmtlist_gen vars fid startlabel stmtlist =
 		| Some startlabel -> pointlabel startlabel ^ stmtlistcode
 		| None -> stmtlistcode
 		
-let rec fargs_to_idstructs i = function
-	| id::fargs -> {global=false;basic=true; id=id; index=i}::(fargs_to_idstructs (i+1) fargs) 
+let rec fargs_to_idstructs  i fargtypes = function
+	| id::fargs -> {global=false;vartype=hd fargtypes; id=id; index=i}::(fargs_to_idstructs (i-1) (tl fargtypes) fargs) 
 	| [] -> []
 
 let rec vardecl_gen vars = function
-	|(_,id,exp)::vardecllist -> 
+	|(t,id,exp)::vardecllist -> 
 		let id= get_idstruct id vars in
 		(exp_gen vars exp) ^ (code_set id)^(vardecl_gen vars vardecllist)
 	| [] -> ""
@@ -277,31 +290,42 @@ let rec append_unique l1 = function
 (* Als een var in lvars voorkomt en ook in fargs hoeft er geen ruimte voor gereserveerd te worden *)
 let localknown fargs lvars gvars = append_unique lvars (append_unique fargs gvars)
 
-let rec get_vars global i = function
-	| (Some (Basictype _),id,_)::decllist
-	| ((None),id,_)::decllist -> {global=global;basic=true; id=id; index=i}::(get_vars global (i+1) decllist)
-	| [] -> []
-	| _::decllist -> get_vars global i decllist
+let varlength = ref 0;;
+
+let rec get_vars global i vartypes = function
+	| (None,id,_)::decllist -> get_vars global i vartypes decllist
+	| (Some _,id,_)::decllist -> 
+		let idstruct = {global=global;vartype=get_vartype id vartypes; id=id; index=i} in 
+		(match idstruct.vartype with
+		| Lis _ | Tup _ when idstruct.global=true -> idstruct::(get_vars global (i+2) vartypes decllist)
+		| _ -> idstruct::(get_vars global (i+1) vartypes decllist))
+	| [] -> varlength = ref i; []
+	| _::decllist -> get_vars global i vartypes decllist
 
 let rec print_vars = function
 	| var::vars -> var.id ^ " " ^ (print_vars vars)
 	| [] -> " # "
+
+let rec ftype_to_fargtypes=function
+	| Imp (t,ftype) -> t::ftype_to_fargtypes ftype
 
 (* in order: *)
 (* set branchname*)
 (* reserve space for the local vars *)
 (* parse the local vars *)
 (* parse de stmts. This includes return *)
-let rec functions_gen (gvars:'a list) = function
-	| (fid,fargs,_,vardecllist,stmtlist)::decllist -> 
-		let fargs = fargs_to_idstructs (-1-(length fargs)) fargs in
-		let lvars = get_vars false 1 vardecllist in
+let rec functions_gen (gvars:'a list) funtypes vartypes = function
+	| (fid,fargs,_,vardecllist,stmtlist)::decllist ->
+		let funtype = get_funtype fid funtypes in
+		let fargtypes = ftype_to_fargtypes funtype.ftype in
+		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs  in
+		let lvars = get_vars false 1 vartypes vardecllist in
 		let localknown = localknown fargs lvars gvars in
 			pointlabel fid^
   		reservelocalcode (length lvars)^
   		vardecl_gen localknown vardecllist^
   		topstmtlist_gen localknown fid None stmtlist^
-  		functions_gen gvars decllist
+  		functions_gen gvars funtypes vartypes decllist
 	| [] -> ""
 
 let rec get_vardecls = function
@@ -323,13 +347,14 @@ let rec print_vardecls = function
 (* reserve space for all global vars *)
 (* define all functions *)
 (* generate main: only look at vardecls *)
-let code_gen (spl:decl list) = 
-	let gvars = get_vars true 0 (get_vardecls spl) in
+let code_gen vartypes funtypes (spl:decl list) = 
 	let mainlabel = "main" in
+	let gvars = get_vars true 0 vartypes (get_vardecls spl) in
+	let gvarlength = !varlength in  
 		bra mainlabel^
-		functions_gen gvars (get_fundecls spl)^ 
+		functions_gen gvars funtypes vartypes (get_fundecls spl)^ 
 		pointlabel mainlabel^ 
-		reservecode (length gvars)^ 
+		reservecode (!varlength)^ 
 		vardecl_gen gvars (get_vardecls spl)
 
 

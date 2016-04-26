@@ -10,8 +10,13 @@ type types =
 	| Int | Bool | Char | Void;;
 
 type variabletype = id * types;;
-type functiontype = id * types * variabletype list;;
+type functiontype = {
+	fid:id;
+	ftype:types;
+	locals:variabletype list;
+	}
 
+let empty_functiontype = {fid="henkst";ftype=Void;locals=[]}
 
 let reserve_emptylistcode = 
 "ldc 0 \n"^
@@ -40,12 +45,12 @@ let rec reservecode i =
 
 type idstruct = {
 	global: bool;
-	basic: bool;
+	vartype: types;
 	id: string;
 	index: int;
 	}
 	
-let empty_idstruct = {global=false;basic=true;id="henkst";index=20}
+let empty_idstruct = {global=false;vartype=Int;id="henkst";index=20}
 
 let code_set id = 
 	if id.global then
@@ -60,7 +65,7 @@ let code_get id =
 		(sprintf "lda %i \n" id.index)
 	else
 		sprintf "ldl %i \n" id.index
-		
+						
 let return_some_code = 
   "str RR \n"^
 	"unlink \n"^
@@ -82,7 +87,7 @@ let create_tuplecode ="stmh 2 \n"
 
 let ldc x = sprintf "ldc %i \n" x
 
-let get_emptylistcode ="ldr r5 \n"
+let lda x = sprintf "lda %i \n" x
 
 let op1code  = function
 	| Not -> "not \n"
