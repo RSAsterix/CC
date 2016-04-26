@@ -15,12 +15,15 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 (* adding something to a list creates a whole new list *)
 (* load return register staat voor de branch *)
 (* emptylistplek is niet nodig. Een willekeurige waarde in r5 is genoeg. *)
+(* + en - zijn ook defined voor char. ga er even van uit dat het niet defined moet worden voor andere types. Tom moet dit nog regelen *)
 
 
 (* besluiten *)
 (* "var id = exp" betekent niks anders dan dat je geen zin had om de type van id te specificeren *) 
 (* lists zijn single linkedlists, oftewel tuples van (waarde, pointer naar volgende plek) *)
-(* Er is een ongebruikte plek in de heap. Als een list hier naar point, is hij empty *)
+(* //Er is een ongebruikte plek in de heap. Als een list hier naar point, is hij empty *)
+(* Als een pointer is 0, dan wijst hij naar een lege lijst *)
+(* R5 bevat het begin van de heap *)
 
 (* open Set  *)
 
@@ -321,12 +324,11 @@ let rec print_vardecls = function
 (* define all functions *)
 (* generate main: only look at vardecls *)
 let code_gen (spl:decl list) = 
-	let gvars = get_vars true 1 (get_vardecls spl) in
+	let gvars = get_vars true 0 (get_vardecls spl) in
 	let mainlabel = "main" in
 		bra mainlabel^
 		functions_gen gvars (get_fundecls spl)^ 
 		pointlabel mainlabel^ 
-		reserve_emptylistcode^  
 		reservecode (length gvars)^ 
 		vardecl_gen gvars (get_vardecls spl)
 

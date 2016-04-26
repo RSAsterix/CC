@@ -2,6 +2,17 @@ open Printf
 open Types
 open String
 
+type types = 
+	| Var of string
+	| Imp of types * types
+	| Tup of types *types
+	| Lis of types
+	| Int | Bool | Char | Void;;
+
+type variabletype = id * types;;
+type functiontype = id * types * variabletype list;;
+
+
 let reserve_emptylistcode = 
 "ldc 0 \n"^
 "sth \n"^
@@ -20,6 +31,8 @@ let endwhilelabel fid i = (sprintf "endwhile%s%i" fid i)
 let reservelocalcode i = sprintf "link %i \n" i
 
 let rec reservecode i = 
+"ldr HP \n"^
+"str R5 \n"^
 "ldr HP \n"^
 (sprintf "ldc %i \n" i)^ 
 "add \n"^
