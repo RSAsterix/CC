@@ -209,6 +209,26 @@ let rec m_spl env var = function
   	with
   	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
+let rec pretype fargs = function
+	| None ->
+		let rec funtype locals = function
+  		| [] -> fresh(); Var !v, locals
+  		| arg::rest -> fresh();
+				let a = Var !v in
+				if Env_var.mem {id = arg; t = Void} locals
+				then raise (Invalid_argument arg)
+				else 
+					(let locals' = Env_var.add {id = arg; t = a} locals in
+					let (t', l') = funtype locals' rest in
+					Imp(a, t'), l') in
+		funtype Env_var.empty fargs
+	| Some (argtypes,rettype) ->
+		if dups fargs
+		then raise Not_found
+		else 
+			let localList = List.map2 (fun x y -> {id = x; t = convert_typetoken y}) fargs argtypes in
+			make_type (argtypes,rettype), Env_var.of_list localList;;	
+
 (* Wat doet deze nou precies? *)
 (* In het geval van een vardecl *)
 (* levert deze een nieuwe environment: *)
@@ -220,7 +240,7 @@ let rec m_spl env var = function
 (* - met de types die gebonden zijn door variabelen *)
 (* - met de locale variabelen die door de argumenten zijn gedeclareerd *)
 let spl_pretype env = function
-	| Vardecl (pretyped,id,exp) as vardecl ->
+	| Vardecl (pretyped,id,exp) ->
 		(try
 			let el = env_var_find id (fst env) in
 			Error (sprintf "Variable '%s' already in environment, with type '%s'." id (string_of_type el.t))
@@ -229,52 +249,21 @@ let spl_pretype env = function
 			let t = match pretyped with
     	| None -> fresh(); Var !v
 			| Some typetoken -> convert_typetoken typetoken in
-			let env' = (Env_var.add {id = id; t = t} (fst env), snd env) in
-			match m_spl env' t vardecl with
-			| Error e -> Success env'
-			| Success x -> Success (substitute_env x env'))
+			Success (Env_var.add {id = id; t = t} (fst env), snd env))
 	| Fundecl (id,fargs,pretyped,_,_) ->
 		try
 			let el = env_fun_find id (snd env) in
 			Error (sprintf "Function '%s' already in environment, with type '%s'." id (string_of_type el.t))
 		with
 		| _ ->
-			if dups fargs
-			then 
-				Error (sprintf "Function '%s' has some double argument." id)
-			else
-				let arg_types = ref SS.empty in
-				fresh();
-				let fun_type = ref (Var !v) in
-				let arg_vars = ref Env_var.empty in
-				let rec pretyped_args args = function
-					| Imp (t, tr) ->
-						(match args with
-						| [] -> raise (Invalid_argument (sprintf "Too few arguments for function '%s'." id))
-						| arg::rest ->
-							(match t with Var x -> arg_types := SS.add x !arg_types | _ -> ());
-							arg_vars := Env_var.add {id = arg; t = t} !arg_vars; pretyped_args rest tr)
-					| t ->
-						(match args with
-						| [] -> ()
-						| _ -> raise (Invalid_argument (sprintf "Too many arguments for function '%s'." id))) in
-				let rec nontyped_args = function
-					| [] -> Env_var.empty
-					| arg::rest -> 
-						fresh(); 
-						fun_type := Imp (Var !v, !fun_type);
-						arg_types := SS.add !v !arg_types;
-						Env_var.union (Env_var.singleton {id = arg; t = Var !v}) (nontyped_args rest) in
-				let do_everything = 
-					match pretyped with
-  				| Some t ->
-  					pretyped_args fargs (make_type t);
-  					fun_type := (make_type t);
-  				| None ->
-  					arg_vars := nontyped_args fargs; in
-				do_everything;
-				let env' = (fst env, Env_fun.add {id = id; bound = !arg_types; t = !fun_type; locals = !arg_vars} (snd env)) in
-				Success env';;
+			try
+				let (t, locals) = pretype fargs pretyped in
+				let bound = tv t in
+				Success (fst env, Env_fun.add {id = id; bound = bound; t = t; locals = locals} (snd env))
+			with
+			| Not_found -> Error (sprintf "Function '%s' has some double argument." id)
+			| Invalid_argument "List.map2" -> Error (sprintf "Function '%s' has a wrong number of arguments." id)
+			| Invalid_argument x -> Error (sprintf "Function '%s' has some double argument: '%s'." id x);;
 
 let rec m_scc env var = function
 	| [] -> Success RW.empty
