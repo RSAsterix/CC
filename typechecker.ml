@@ -209,26 +209,131 @@ let rec m_spl env var = function
   	with
   	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
-let rec pretype fargs = function
+let rec pretype_fun fargs = function
+	| Some (argtypes,rettype as t) -> make_type t
 	| None ->
-		let rec funtype locals = function
-  		| [] -> fresh(); Var !v, locals
-  		| arg::rest -> fresh();
-				let a = Var !v in
-				if Env_var.mem {id = arg; t = Void} locals
-				then raise (Invalid_argument arg)
-				else 
-					(let locals' = Env_var.add {id = arg; t = a} locals in
-					let (t', l') = funtype locals' rest in
-					Imp(a, t'), l') in
-		funtype Env_var.empty fargs
-	| Some (argtypes,rettype) ->
-		if dups fargs
-		then raise Not_found
-		else 
-			let localList = List.map2 (fun x y -> {id = x; t = convert_typetoken y}) fargs argtypes in
-			make_type (argtypes,rettype), Env_var.of_list localList;;	
+		match fargs with
+		| [] -> fresh(); Var !v
+		| arg::rest -> fresh(); Imp (Var !v, pretype_fun rest None);;
 
+let rec pretype_var = function
+	| Some t -> convert_typetoken t
+	| None -> fresh(); Var !v;; 
+
+let rec type_fargs t = function
+	| [] -> 
+		match t with
+		| Imp (_,_) -> Error "Too few arguments."
+		| t -> Success Env_var.empty
+	| arg::rest ->
+		match t with
+		| Imp (targ,trest) ->
+			(match type_fargs trest rest with
+			| Error e -> Error e
+			| Success resttype -> Success (Env_var.add {id = arg; t = targ} resttype)) 
+		| t -> Error "Too many arguments.";;				
+
+let rec new_env env = function
+	| [] -> env
+	| (Fundecl (id,fargs,pretype,_,_))::scc ->
+		let t = pretype_fun fargs pretype in
+		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
+		(try
+			let _ = Env_fun.find xa (snd env) in
+			raise (Invalid_argument id)
+		with
+		| _ ->
+			new_env (fst env, Env_fun.add xa (snd env)) scc)
+	| (Vardecl (pretype,id,_))::scc ->
+		let t = pretype_var pretype in
+		let xa = {id = id; t = t} in
+		try
+			let _ = Env_var.find xa (fst env) in
+			raise (Invalid_argument id)
+		with
+		| _ ->
+			new_env (Env_var.add xa (fst env), snd env) scc;; 
+
+let m_vardecl env var = function
+	| _,id,exp ->
+		try
+			let el = env_var_find id env in
+			m_exp env el.t exp
+		with
+		| _ -> Error (sprintf "Variable '%s' not found." id);;
+
+let m_fundecl env var = function
+	| id,fargs,_,vardecls,stmts ->
+		let do_everything el =
+  		(* alle fargs typed in een Env_var zetten *)
+  		match type_fargs el.t fargs with
+			| Error e -> Error (sprintf "Problem with args for '%s':\n%s" id e)
+			| Success locals ->
+				(* die env_var, samen met de originele env, gebruiken voor m_vardecls *)
+				let env' = (Env_var.union locals (fst env), snd env) in
+				let rec m_vardecls localenv var = function
+  				| [] -> Success RW.empty
+  				| (_,vid,_ as vardecl)::rest ->
+						try
+							let _ = env_var_find vid localenv in
+							Error (sprintf "Variable '%s' already local in '%s'." vid id)
+						with
+						| _ ->
+							fresh();
+							let var = Env_var.singleton {id = vid; t = Var !v} in
+							let localenv' = Env_var.union var localenv in
+    					match m_vardecl localenv' var vardecl with
+    					| Error e -> Error e
+    					| Success x ->
+    						match m_vardecls (substitute_env x localenv') (substitute x var) rest with
+    						| Error e -> Error e
+    						| Success res -> Success (o res x) in
+  			(* m_vardecls maakt nog meer locale troep *)
+				
+  		(* locale troep en returntype gebruiken voor statements *)
+  		(* rewriteregels uitspuwen *)
+		
+		
+		if dups fargs
+		then Error (sprintf "Function '%s' has some duplicate argument" id)
+		else
+			try
+				let el = env_fun_find id env in
+				do_everything el
+			with
+			| _ -> Error (sprintf "Function '%s' not found." id);; 
+			
+			
+			
+			
+			
+  		try
+  			let el = env_fun_find id env in
+				(try
+					let locals = type_fargs el.t fargs in
+					
+  			
+  			match m_vardecls env el.t vardecls with
+  			| Error e -> Error e
+  			| Success x ->
+  				match m_stmts env var stmts with
+  				| 	
+
+
+let rec m_scc env env' var = function
+	| [] -> Success RW.empty
+	| (Vardecl vardecl)::rest ->
+		
+	| (Fundecl fundecl)::rest ->
+		
+		
+		
+		
+		
+		
+		let all_vars = Env_var.union (fst env) (fst env') in
+		let all_funs = Env_fun.union (snd env) (snd env') in
+		Success (all_vars, all_funs)
 (* Wat doet deze nou precies? *)
 (* In het geval van een vardecl *)
 (* levert deze een nieuwe environment: *)
