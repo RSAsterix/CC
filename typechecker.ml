@@ -179,13 +179,15 @@ let rec m_spl env var = function
 			m_exp (substitute_env x env) (substitute x var) exp)
 	| Fundecl (id,_,_,vardecls,stmts) ->
 		try
-			let el = env_fun_find id (snd env) in
-			let env' = (Env_var.union el.locals (fst env), snd env) in
+			let el = env_fun_find id env in
+			let env' = Env.add_locals el.locals env in
 			let rec local_vardecls env' = function
 				| [] -> 
-					let new_env = (Env_var.union el.locals (fst env'), snd env) (* of env'? *) in
-					Success new_env
+					let el = env_fun_find id env' in
+					let env' = Env.add_locals el.locals env' in
+					Success env'
 				| (pretype,id,exp)::rest ->
+					let el = env_fun_find id env' in
 					(try
 						let _ = env_var_find id el.locals in
 						Error (sprintf "Variable '%s' already declared locally." id)
