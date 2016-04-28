@@ -292,15 +292,15 @@ let localknown fargs lvars gvars = append_unique lvars (append_unique fargs gvar
 
 let varlength = ref 0;;
 
-let rec get_vars global i vartypes = function
-	| (None,id,_)::decllist -> get_vars global i vartypes decllist
-	| (Some _,id,_)::decllist -> 
-		let idstruct = {global=global;vartype=get_vartype id vartypes; id=id; index=i} in 
-		(match idstruct.vartype with
-		| Lis _ | Tup _ when idstruct.global=true -> idstruct::(get_vars global (i+2) vartypes decllist)
-		| _ -> idstruct::(get_vars global (i+1) vartypes decllist))
-	| [] -> varlength = ref i; []
-	| _::decllist -> get_vars global i vartypes decllist
+let rec global_vartypes_to_idstructs index = function
+	| (id,Lis t )::vartypes -> {id=id;vartype=Lis t;global=true;index=index}::global_vartypes_to_idstructs (index+2) vartypes
+	| (id,Tup (t1,t2) )::vartypes -> {id=id;vartype=Tup (t1,t2);global=true;index=index}::global_vartypes_to_idstructs (index+2) vartypes
+	| (id, t )::vartypes -> {id=id;vartype=t;global=true;index=index}::global_vartypes_to_idstructs (index+1) vartypes
+	| [] -> varlength := index; []
+
+let rec local_vartypes_to_idstructs index = function
+	| (id, t )::vartypes -> {id=id;vartype=t;global=true;index=index}::local_vartypes_to_idstructs (index+1) vartypes
+	| [] -> []
 
 let rec print_vars = function
 	| var::vars -> var.id ^ " " ^ (print_vars vars)
@@ -308,6 +308,7 @@ let rec print_vars = function
 
 let rec ftype_to_fargtypes=function
 	| Imp (t,ftype) -> t::ftype_to_fargtypes ftype
+	| _ -> []
 
 (* in order: *)
 (* set branchname*)
@@ -319,7 +320,7 @@ let rec functions_gen (gvars:'a list) funtypes vartypes = function
 		let funtype = get_funtype fid funtypes in
 		let fargtypes = ftype_to_fargtypes funtype.ftype in
 		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs  in
-		let lvars = get_vars false 1 vartypes vardecllist in
+		let lvars = local_vartypes_to_idstructs 1 funtype.locals in
 		let localknown = localknown fargs lvars gvars in
 			pointlabel fid^
   		reservelocalcode (length lvars)^
@@ -349,8 +350,7 @@ let rec print_vardecls = function
 (* generate main: only look at vardecls *)
 let code_gen vartypes funtypes (spl:decl list) = 
 	let mainlabel = "main" in
-	let gvars = get_vars true 0 vartypes (get_vardecls spl) in
-	let gvarlength = !varlength in  
+	let gvars = global_vartypes_to_idstructs 0 vartypes in
 		bra mainlabel^
 		functions_gen gvars funtypes vartypes (get_fundecls spl)^ 
 		pointlabel mainlabel^ 
