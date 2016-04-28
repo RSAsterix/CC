@@ -7,12 +7,6 @@ type types =
 
 module SS = Set.Make(String);;
 
-module RW = Set.Make(
-	struct
-		type t = string * types
-		let compare x y = compare (fst x) (fst y)
-	end)
-
 type env_var = {
 	id : string;
 	t : types;}
@@ -59,3 +53,8 @@ module Env =
 			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
 	end;;
 	
+module RW = Set.Make(
+	struct
+		type t = string * types
+		let compare x y = compare (fst x) (fst y)
+	end)
