@@ -126,11 +126,19 @@ let convert_rettype = function
 	| Type_void -> Void
 	| Rettype t -> convert_typetoken t;;
 
-let rec make_type = function
+let make_type functiontype = 
+	let rec help = function
 	| ([],rettype) -> convert_rettype rettype
-	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
+	| (a::rest,rettype) -> Imp (convert_typetoken a, help (rest,rettype)) in
+	let functiontype = help functiontype in
+	let rewrites = SS.fold (fun x beginr -> fresh(); RW.add (x, Var !v) beginr) (tv functiontype) (RW.empty) in
+	substitute rewrites functiontype;; 
 
 let rec dups = function
-| [] -> false
-| x::xs when List.mem x xs -> true
-| _::xs -> dups xs;;
+  | [] -> false
+  | x::xs when List.mem x xs -> true
+  | _::xs -> dups xs;;
+
+let rec returntype = function
+	| Imp (_,t) -> returntype t
+	| t -> t;;

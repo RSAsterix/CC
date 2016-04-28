@@ -43,8 +43,16 @@ module Env =
 			fst env, Env_fun.add x (snd env)
 		let add_locals x env =
 			Env_var.union x (fst env), snd env
+		let update_fun x env =
+			fst env, Env_fun.union (Env_fun.singleton x) (snd env)
+		let update_var x env =
+			Env_var.union (Env_var.singleton x) (fst env), snd env
+		let empty =
+			Env_var.empty, Env_fun.empty
+		let diff x y =
+			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
 	end;;
-
+	
 module RW = Set.Make(
 	struct
 		type t = string * types

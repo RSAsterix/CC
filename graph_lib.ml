@@ -1,4 +1,5 @@
 open Types
+open Printf
 
 type vertex = {
 	id : string;
@@ -34,8 +35,8 @@ let add_e src dest graph =
 			let v_t = get_v dest graph in
 			graph.e <- {f = v_f; t = v_t}::graph.e
 		with
-		| Not_found -> raise (Invalid_argument dest))
+		| Not_found -> raise (Invalid_argument (sprintf "In '%s':\nNode '%s' wasn't found." src dest)))
 	with
-	| Not_found -> raise (Invalid_argument src);;
+	| Not_found -> raise (Invalid_argument (sprintf "Function '%s' does not exist." src));;
 	
 	
