@@ -15,7 +15,7 @@ module RW = Set.Make(
 
 type env_var = {
 	id : string;
-	mutable t : types;}
+	t : types;}
 
 module Env_var = Set.Make(
 	struct
@@ -25,9 +25,9 @@ module Env_var = Set.Make(
 
 type env_fun = {
 	id : string;
-	mutable bound : SS.t;
-	mutable t : types;
-	mutable locals : Env_var.t;}
+	bound : SS.t;
+	t : types;
+	locals : Env_var.t;}
 
 module Env_fun = Set.Make(
   struct
@@ -37,13 +37,25 @@ module Env_fun = Set.Make(
 
 type environment = Env_var.t * Env_fun.t;;
 
-let copy env =
-	let tempvars = Env_var.fold (
-		(fun x ev-> Env_var.add 
-		{id = x.id; t = x.t} ev))
-		(fst env) Env_var.empty in
-	let tempfuns = Env_fun.fold
-		(fun x ef -> Env_fun.add 
-		{id = x.id; bound = x.bound; t = x.t; locals = x.locals} ef) (snd env) Env_fun.empty in
-	(tempvars, tempfuns);; 
+module Env =
+	struct 
+		type t = environment
+		let union x y =
+			Env_var.union (fst x) (fst y),
+			Env_fun.union (snd x) (snd y)
+		let add_var x env =
+			Env_var.add x (fst env), snd env
+		let add_fun x env =
+			fst env, Env_fun.add x (snd env)
+		let add_locals x env =
+			Env_var.union x (fst env), snd env
+		let update_fun x env =
+			fst env, Env_fun.union (Env_fun.singleton x) (snd env)
+		let update_var x env =
+			Env_var.union (Env_var.singleton x) (fst env), snd env
+		let empty =
+			Env_var.empty, Env_fun.empty
+		let diff x y =
+			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
+	end;;
 	
