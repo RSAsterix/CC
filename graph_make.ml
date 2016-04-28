@@ -75,10 +75,7 @@ let fv_spl graph spl =
 					helper from frees in
 			helper (get_id decl) (SS.elements (fv_decl decl)));
 			add_edges decls in
-	try
-  	add_edges spl;
-	with
-	| Invalid_argument e -> raise (Invalid_argument (sprintf "Node '%s' wasn't found." e));; 
+	add_edges spl;;
 
 let make_graph spl = 
 	let g = {v = []; e = []} in
