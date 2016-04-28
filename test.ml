@@ -5,11 +5,6 @@ open Char_func
 open Types
 open Pretty_printer_files
 
-open Graph_make
-open Graph_lib
-open Graph_cycles
-open Graph_print
-
 open Typechecker
 open Typechecker_types
 open Typechecker_lib
@@ -77,7 +72,7 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 match structure with
 | Error e -> print_endline e;
 | Success x ->
-	match m (Env_var.empty, Env_fun.empty) x with
+	match m x with
 	| Error e -> print_endline e;
 	| Success env -> print_endline (prettyprint_env env);;
 (* close_out oc;; *)

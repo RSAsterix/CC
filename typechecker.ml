@@ -4,9 +4,6 @@ open Typechecker_print
 open Types
 open Char_func
 open Printf
-open Graph_make
-open Graph_cycles
-open Graph_lib
 
 (* Env: (x,a,t) ? *)
 let m_field env var = function
@@ -196,26 +193,24 @@ let rec type_fargs t = function
 
 let rec new_env env = function
 	| [] -> env
-	| vert::scc ->
-		match vert.spl_decl with
-  	| Fundecl (id,fargs,pretype,_,_) ->
-  		let t = pretype_fun fargs pretype in
-  		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
-  		(try
-  			let _ = Env_fun.find xa (snd env) in
-  			raise (Invalid_argument id)
-  		with
-  		| _ ->
-  			new_env (fst env, Env_fun.add xa (snd env)) scc)
-  	| Vardecl (pretype,id,_) ->
-  		let t = pretype_var pretype in
-  		let xa = {id = id; t = t} in
-  		try
-  			let _ = Env_var.find xa (fst env) in
-  			raise (Invalid_argument id)
-  		with
-  		| _ ->
-  			new_env (Env_var.add xa (fst env), snd env) scc;; 
+	| (Fundecl (id,fargs,pretype,_,_))::scc ->
+		let t = pretype_fun fargs pretype in
+		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
+		(try
+			let _ = Env_fun.find xa (snd env) in
+			raise (Invalid_argument id)
+		with
+		| _ ->
+			new_env (fst env, Env_fun.add xa (snd env)) scc)
+	| (Vardecl (pretype,id,_))::scc ->
+		let t = pretype_var pretype in
+		let xa = {id = id; t = t} in
+		try
+			let _ = Env_var.find xa (fst env) in
+			raise (Invalid_argument id)
+		with
+		| _ ->
+			new_env (Env_var.add xa (fst env), snd env) scc;; 
 
 let m_vardecl env var = function
 	| _,id,exp ->
@@ -268,62 +263,28 @@ let m_fundecl env var = function
   						| Error e -> Error (sprintf "In '%s':\n%s" id e)
   						| Success res -> Success (o res x));;
 		
-let rec m_scc env var = function
+let rec m_spl env var = function
 	| [] -> Success RW.empty
-	| vert::rest ->
-		match vert.spl_decl with
-		| Vardecl vardecl ->
-  		(match m_vardecl env var vardecl with
-  		| Error e -> Error e
-  		| Success x1 ->
-  			match m_scc (substitute_env x1 env) (substitute x1 var) rest with
-  			| Error e -> Error e
-  			| Success res -> Success (o res x1))
-		| Fundecl fundecl ->
-			match m_fundecl env var fundecl with
-  		| Error e -> Error e
-  		| Success x1 ->
-  			match m_scc (substitute_env x1 env) (substitute x1 var) rest with
-  			| Error e -> Error e
-  			| Success res -> Success (o res x1);;
-
-let rec argify env ads xn = function
-	| [] -> Env.union ads env
-	| vert::scc ->
-		match vert.spl_decl with
-		| Vardecl (_,id,_) -> 
-			let el = env_var_find id ads in
-			let aixn = substitute xn el.t in
-			let newel = {el with t = aixn} in
-			argify env (Env.update_var newel ads) xn scc
-		| Fundecl (id,fargs,_,_,_) ->
-			let el = env_fun_find id ads in
-			let aixn = substitute xn el.t in
-			let bi = SS.diff (tv aixn) (tv_env env) in
-			match type_fargs aixn fargs with
-			| Error e -> raise (Invalid_argument e)
-			| Success locals ->
-				let newel = {el with bound = bi; t = aixn; locals = locals} in
-				argify env (Env.update_fun newel ads) xn scc;;  
-
-let rec m_sccs env var = function
-	| [] -> Success env
-	| scc::rest ->
-		let env' = new_env env scc in
-		match m_scc env' var scc with
+	| (Vardecl vardecl)::rest ->
+		(match m_vardecl env var vardecl with
 		| Error e -> Error e
-		| Success xn ->
-			let envxn = substitute_env xn env in
-			let varxn = substitute xn var in
-			let ads = Env.diff env' envxn in
-			let envxn_ads = argify envxn ads xn scc in
-			match m_sccs envxn_ads varxn rest with
+		| Success x1 ->
+			match m_spl (substitute_env x1 env) (substitute x1 var) rest with
 			| Error e -> Error e
-			| Success res -> Success (Env.union envxn_ads res);; 
+			| Success res -> Success (o res x1))
+	| (Fundecl fundecl)::rest ->
+		match m_fundecl env var fundecl with
+		| Error e -> Error e
+		| Success x1 ->
+			match m_spl (substitute_env x1 env) (substitute x1 var) rest with
+			| Error e -> Error e
+			| Success res -> Success (o res x1);;
 
-let m env exp = 
+let m exp = 
   try 
-		let graph = make_graph exp in
-		m_sccs env (Var "0") (tarjan graph)
+		let env = (new_env Env.empty exp) in
+		match m_spl env (Var "0") exp with
+		| Error e -> Error e
+		| Success r -> Success (substitute_env r env)
 	with
 	| Invalid_argument e -> Error e;;
