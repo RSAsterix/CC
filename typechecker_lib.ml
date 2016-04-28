@@ -30,17 +30,22 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
-let substitute_env subs (env : environment) =
-	Env_var.iter (fun x -> 
-		x.t <- substitute subs x.t)
-		(fst env);
-	Env_fun.iter (fun x -> 
-		x.t <- substitute subs x.t;
-		Env_var.iter (fun y ->
-			y.t <- substitute subs y.t)
-			x.locals)
-		(snd env);
-	env;;
+let substitute_vars subs varenv =
+	Env_var.fold (
+		(fun x ev -> Env_var.add 
+		{x with t = substitute subs x.t} ev))
+		varenv Env_var.empty;;
+
+let substitute_funs subs funenv =
+	Env_fun.fold
+		(fun x ef -> Env_fun.add 
+		{x with t = substitute subs x.t; locals = substitute_vars subs x.locals} ef)
+		funenv Env_fun.empty;; 
+
+let substitute_env subs env =
+	let newvars = substitute_vars subs (fst env) in
+	let newfuns = substitute_funs subs (snd env) in
+	(newvars, newfuns);;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -103,11 +108,11 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let env_var_find x (env : Env_var.t) = 
-	Env_var.find {id = x; t = Void} env;;
+let env_var_find x env = 
+	Env_var.find {id = x; t = Void} (fst env);;
 
-let env_fun_find x (env : Env_fun.t) =
-	Env_fun.find {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} env;;
+let env_fun_find x env =
+	Env_fun.find {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} (snd env);;
 
 let rec convert_typetoken = function
 	| Type_int -> Int
@@ -121,11 +126,19 @@ let convert_rettype = function
 	| Type_void -> Void
 	| Rettype t -> convert_typetoken t;;
 
-let rec make_type = function
+let make_type functiontype = 
+	let rec help = function
 	| ([],rettype) -> convert_rettype rettype
-	| (a::rest,rettype) -> Imp (convert_typetoken a, make_type (rest,rettype));;
+	| (a::rest,rettype) -> Imp (convert_typetoken a, help (rest,rettype)) in
+	let functiontype = help functiontype in
+	let rewrites = SS.fold (fun x beginr -> fresh(); RW.add (x, Var !v) beginr) (tv functiontype) (RW.empty) in
+	substitute rewrites functiontype;; 
 
 let rec dups = function
-| [] -> false
-| x::xs when List.mem x xs -> true
-| _::xs -> dups xs;;
+  | [] -> false
+  | x::xs when List.mem x xs -> true
+  | _::xs -> dups xs;;
+
+let rec returntype = function
+	| Imp (_,t) -> returntype t
+	| t -> t;;
