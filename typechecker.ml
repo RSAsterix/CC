@@ -223,7 +223,7 @@ let rec m_spl env var = function
 					| Error e -> Error e
 					| Success x ->
 						try
-							let locals = Env_var.add {id = l_id; t = l_t} locals in
+							let locals = fst (Env.add_var {id = l_id; t = l_t} (locals,Env_fun.empty)) in
 							match m_vardecls locals var rest with
 							| Error e -> Error e
 							| Success (res, locals) -> Success (o res x, locals)

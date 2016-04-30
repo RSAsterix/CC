@@ -39,17 +39,17 @@ module Env =
 			Env_fun.union (snd x) (snd y)
 		let add_var x env =
 			try
-				let _ = Env_var.find x (fst env) in
-				raise (Invalid_argument "Variable '%s' already in environment.")
+				let y = Env_var.find x (fst env) in
+				raise (Invalid_argument ("Variable " ^ y.id ^ " already in environment."))
 			with
-			| _ ->
+			| Not_found ->
 				Env_var.add x (fst env), snd env
 		let add_fun x env =
 			try
-				let _ = Env_fun.find x (snd env) in
-				raise (Invalid_argument "Function '%s' already in environment.")
+				let y = Env_fun.find x (snd env) in
+				raise (Invalid_argument ("Function " ^ y.id ^ " already in environment."))
 			with
-			| _ ->
+			| Not_found ->
 				fst env, Env_fun.add x (snd env)
 		let add_locals x env =
 			Env_var.union x (fst env), snd env
