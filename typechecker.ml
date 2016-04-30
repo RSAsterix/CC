@@ -30,7 +30,7 @@ let m_id_var env var id =
 let m_id_fun env var id = 
 	try
 		let el = env_fun_find id env in
-		let subs = SS.fold (fun x rw -> fresh(); RW.add (x, (Var !v, Env_var.empty)) rw) el.bound RW.empty in
+		let subs = SS.fold (fun x rw -> fresh(); RW.add (x, Var !v) rw) el.bound RW.empty in
 		u (var, substitute subs el.t)
 	with
 	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
@@ -104,7 +104,7 @@ let rec m_exp env var = function
   						match match_type rest (substitute x resttype) with
   						| Error e -> Error e
 							| Success res1 -> 
-								let new_res = RW.fold (fun y rw -> RW.add (fst y, (substitute x (fst (snd y)), substitute_vars x (snd (snd y)))) rw) res1 RW.empty in
+								let new_res = RW.fold (fun y rw -> RW.add (fst y, substitute x (snd y)) rw) res1 RW.empty in
 								Success new_res)
   			| rettype ->
   				match arglist with
@@ -195,84 +195,61 @@ let rec type_fargs t = function
 				| _ -> Error (sprintf "Argument '%s' already in environment." arg))
 		| t -> Error "Too many arguments.";;		
 
-let rec new_env = function
-	| [] -> Env.empty
-	| (Fundecl (id,fargs,pretype,_,_))::scc ->
-		let t = pretype_fun fargs pretype in
-		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
-		Env.add_fun xa (new_env scc)
-	| (Vardecl (pretype,id,_))::scc ->
-		let t = pretype_var pretype in
-		let xa = {id = id; t = t} in
-		Env.add_var xa (new_env scc);;
-
-let m_vardecl env var (pretype,id,exp) =
-	fresh();
-	let a = Var !v in
-	match m_id_var env a id with
-	| Error e -> Error (sprintf "Variable '%s' not found." id)
-	| Success x ->
-		match m_exp (substitute_env x env) (substitute x a) exp with
-		| Error e -> Error (sprintf "In '%s':\n%s" id e)
-		| Success res -> Success (o res x);;
-
-let rec m_vardecls (funid, funt) localenv var = function
-	| [] -> Success (RW.singleton (funid, (funt, (fst localenv))))
-	| vardecl::rest ->
-		fresh();
-		let newvar = {id = get_id vardecl; t = Var !v} in
-		try
-			let localenv = Env.add_var newvar localenv in
-			match m_vardecl localenv var vardecl with
-			| Error e -> Error e
-			| Success x ->
-				match m_vardecls (funid, funt) (substitute_env x localenv) (substitute x var) rest with
-				| Error e -> Error e
-				| Success res -> Success (o res x)
-		with
-		| _ -> Error (sprintf "Local variable '%s' already local." funid)
-
-let m_fundecl env var (id,fargs,pretype,vardecls,stmts) = 
-	fresh();
-	let a = Var !v in
-	match m_id_fun env a id with
-	| Error e -> Error (sprintf "Function '%s' not found." id)
-	| Success xa ->
-		let elt = (substitute xa a) in
-		match type_fargs elt fargs with
-		| Error e -> Error (sprintf "Error in '%s':\n%s" id e)
-		| Success arg_vars ->
-			let newenv = Env.add_locals arg_vars env in
-			match m_vardecls (id, elt) newenv var vardecls with
-			| Error e -> Error (sprintf "In '%s':\n%s" id e)
-			| Success x ->
-				let newenv = Env.add_locals (env_fun_find id (substitute_env x newenv)).locals newenv in
-				match m_stmts (substitute_env x newenv) (returntype elt) stmts with
-				| Error e -> Error (sprintf "In '%s':\n%s" id e)
-				| Success res -> Success (o x res);;
-		
 let rec m_spl env var = function
-	| [] -> Success RW.empty
-	| (Vardecl vardecl)::rest ->
-		(match m_vardecl env var vardecl with
-		| Error e -> Error e
-		| Success x1 ->
-			match m_spl (substitute_env x1 env) (substitute x1 var) rest with
-			| Error e -> Error e
-			| Success res -> Success (o res x1))
-	| (Fundecl fundecl)::rest ->
-		match m_fundecl env var fundecl with
-		| Error e -> Error e
-		| Success x1 ->
-			match m_spl (substitute_env x1 env) (substitute x1 var) rest with
-			| Error e -> Error e
-			| Success res -> Success (o res x1);;
+	| [] -> Success (RW.empty, env)
+	| (Vardecl (pretype, id, exp))::rest ->
+		let t = pretype_var pretype in
+		(match m_exp env t exp with
+		| Error e -> Error (sprintf "In vardecl '%s':\n%s" id e)
+		| Success x ->
+			try
+				let env' = Env.add_var {id = id; t = t} env in
+				match m_spl (substitute_env x env') (substitute x var) rest with
+				| Error e -> Error e
+				| Success (res, env) -> Success (o res x, env)
+			with
+			| Invalid_argument e -> Error e)
+	| (Fundecl (id, fargs, pretype, vardecls, stmts))::rest ->
+		let t = pretype_fun fargs pretype in
+		match type_fargs t fargs with
+		| Error e -> Error (sprintf "In fundecl '%s':\n%s" id e)
+		| Success arg_vars ->
+			let rec m_vardecls locals var = function
+				| [] -> Success (RW.empty, locals)
+				| (l_pretype, l_id, l_exp)::rest ->
+					let l_t = pretype_var l_pretype in
+      		let env' = Env.add_locals locals env in
+					match m_exp env' l_t l_exp with
+					| Error e -> Error e
+					| Success x ->
+						try
+							let locals = Env_var.add {id = l_id; t = l_t} locals in
+							match m_vardecls locals var rest with
+							| Error e -> Error e
+							| Success (res, locals) -> Success (o res x, locals)
+						with
+						| Invalid_argument e -> Error e in
+			match m_vardecls arg_vars var vardecls with
+			| Error e -> Error (sprintf "In fundecl '%s':\n%s" id e)
+			| Success (x1, locals) ->
+				let env = substitute_env x1 env in
+				let env = Env.add_fun {
+						id = id;
+						bound = SS.diff (tv t) (tv_env env);
+						t = t;
+						locals = locals;} env in
+				let localenv = Env.add_locals locals env in
+				let t' = returntype t in
+				match m_stmts (substitute_env x1 localenv) (substitute x1 t') stmts with
+				| Error e -> Error (sprintf "In fundecl '%s':\n%s" id e)
+				| Success res1 ->
+					let x = o res1 x1 in
+					let env = substitute_env x env in
+					match m_spl (substitute_env x env) (substitute x var) rest with
+					| Error e -> Error e
+					| Success (res2, env') -> Success (o res2 x, env');;
 
 let m exp =
-  try 
-		let env = new_env exp in
-		match m_spl env (Var "0") exp with
-		| Error e -> Error e
-		| Success r -> Success (substitute_env r env)
-	with
-	| Invalid_argument e -> Error e;;
+  match m_spl Env.empty (Var "0") exp with
+	| Error e -> Error e
+	| Success (r,env) -> Success (substitute_env r env);;

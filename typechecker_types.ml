@@ -65,6 +65,6 @@ module Env =
 	
 module RW = Set.Make(
 	struct
-		type t = string * (types * Env_var.t)
+		type t = string * types
 		let compare x y = compare (fst x) (fst y)
 	end)
