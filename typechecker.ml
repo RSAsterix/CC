@@ -228,16 +228,20 @@ let m_fundecl env var (id,fargs,pretype,vardecls,stmts) =
 		| Success arg_vars ->
 			let newenv = Env.add_locals arg_vars env in
 			let rec m_vardecls localenv var = function
-			| [] -> Success (RW.singleton (id, (elt, fst localenv)))
+			| [] -> 
+				let locals = Env_var.diff (fst localenv) (fst env) in
+				Success (RW.singleton (id, (elt, locals)))
 			| vardecl::rest ->
 				fresh();
-				let id = get_id vardecl in
-				let newvar = {id = id; t = Var !v} in
+				let newvar = {id = get_id vardecl; t = Var !v} in
 				try
 					let localenv = Env.add_var newvar localenv in
-					match m_vardecl localenv var vardecl with
+					let locals = Env_var.diff (fst localenv) (fst env) in
+					let x1 = (RW.singleton (id, (elt, locals))) in
+					match m_vardecl (substitute_env x1 localenv) var vardecl with
 					| Error e -> Error e
 					| Success x ->
+						let x = o x1 x in
 						match m_vardecls (substitute_env x localenv) (substitute x var) rest with
 						| Error e -> Error e
 						| Success res -> Success (o res x)
