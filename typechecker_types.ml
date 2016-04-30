@@ -38,9 +38,19 @@ module Env =
 			Env_var.union (fst x) (fst y),
 			Env_fun.union (snd x) (snd y)
 		let add_var x env =
-			Env_var.add x (fst env), snd env
+			try
+				let _ = Env_var.find x (fst env) in
+				raise (Invalid_argument "Variable '%s' already in environment.")
+			with
+			| _ ->
+				Env_var.add x (fst env), snd env
 		let add_fun x env =
-			fst env, Env_fun.add x (snd env)
+			try
+				let _ = Env_fun.find x (snd env) in
+				raise (Invalid_argument "Function '%s' already in environment.")
+			with
+			| _ ->
+				fst env, Env_fun.add x (snd env)
 		let add_locals x env =
 			Env_var.union x (fst env), snd env
 		let update_fun x env =
@@ -55,6 +65,6 @@ module Env =
 	
 module RW = Set.Make(
 	struct
-		type t = string * types
+		type t = string * (types * Env_var.t)
 		let compare x y = compare (fst x) (fst y)
 	end)

@@ -18,7 +18,7 @@ let fresh = function
 (* subs = [x1 |-> nx1; x2 |-> nx2; ...] *) 
 let rec rewrite (subs : RW.t) i =
 	try
-		snd (RW.find (i,Void) subs)
+		fst (snd (RW.find (i,(Void,Env_var.empty)) subs))
 	with
 	| _ -> Var i;;
 
@@ -36,11 +36,19 @@ let substitute_vars subs varenv =
 		{x with t = substitute subs x.t} ev))
 		varenv Env_var.empty;;
 
+let substitute_locals subs funel =
+	try
+		let newlocals = snd (snd (RW.find (funel.id,(Void,Env_var.empty)) subs)) in
+		substitute_vars subs (Env_var.union newlocals funel.locals)
+	with
+	| _ -> substitute_vars subs funel.locals;;
+
 let substitute_funs subs funenv =
 	Env_fun.fold
 		(fun x ef -> Env_fun.add 
-		{x with t = substitute subs x.t; locals = substitute_vars subs x.locals} ef)
+		{x with t = substitute subs x.t; locals = substitute_locals subs x} ef)
 		funenv Env_fun.empty;; 
+		
 
 let substitute_env subs env =
 	let newvars = substitute_vars subs (fst env) in
@@ -50,7 +58,7 @@ let substitute_env subs env =
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
 let o rw1 rw2 =
-	let new_rw1 = RW.fold (fun x rw -> RW.add (fst x, substitute rw2 (snd x)) rw) rw1 RW.empty in
+	let new_rw1 = RW.fold (fun x rw -> RW.add (fst x, (substitute rw2 (fst (snd x)), substitute_vars rw2 (snd (snd x)))) rw) rw1 RW.empty in
 	RW.union new_rw1 rw2;;
 
 (* Vindt alle vrije variabelen in een gegeven type t *)
@@ -77,8 +85,8 @@ let tv_env (env : environment) =
 
 let rec u = function
 	| (Var a, Var b) when a = b -> Success RW.empty
-	| (Var a, t) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))
-	| (t, Var a) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))
+	| (Var a, t) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,(t,Env_var.empty)))
+	| (t, Var a) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,(t,Env_var.empty)))
 	| (Imp (s1,s2), Imp (t1,t2)) ->
 		(match u (s2, t2) with
 		| Error e -> Error ("Could not match second parts of implications:\n" ^ e)
@@ -131,7 +139,7 @@ let make_type functiontype =
 	| ([],rettype) -> convert_rettype rettype
 	| (a::rest,rettype) -> Imp (convert_typetoken a, help (rest,rettype)) in
 	let functiontype = help functiontype in
-	let rewrites = SS.fold (fun x beginr -> fresh(); RW.add (x, Var !v) beginr) (tv functiontype) (RW.empty) in
+	let rewrites = SS.fold (fun x beginr -> fresh(); RW.add (x,(Var !v, Env_var.empty)) beginr) (tv functiontype) (RW.empty) in
 	substitute rewrites functiontype;; 
 
 let rec dups = function
@@ -142,3 +150,5 @@ let rec dups = function
 let rec returntype = function
 	| Imp (_,t) -> returntype t
 	| t -> t;;
+
+let get_id (_,id,_) = id;;
