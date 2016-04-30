@@ -216,6 +216,22 @@ let m_vardecl env var (pretype,id,exp) =
 		| Error e -> Error (sprintf "In '%s':\n%s" id e)
 		| Success res -> Success (o res x);;
 
+let rec m_vardecls (funid, funt) localenv var = function
+	| [] -> Success (RW.singleton (funid, (funt, (fst localenv))))
+	| vardecl::rest ->
+		fresh();
+		let newvar = {id = get_id vardecl; t = Var !v} in
+		try
+			let localenv = Env.add_var newvar localenv in
+			match m_vardecl localenv var vardecl with
+			| Error e -> Error e
+			| Success x ->
+				match m_vardecls (funid, funt) (substitute_env x localenv) (substitute x var) rest with
+				| Error e -> Error e
+				| Success res -> Success (o res x)
+		with
+		| _ -> Error (sprintf "Local variable '%s' already local." funid)
+
 let m_fundecl env var (id,fargs,pretype,vardecls,stmts) = 
 	fresh();
 	let a = Var !v in
@@ -227,32 +243,13 @@ let m_fundecl env var (id,fargs,pretype,vardecls,stmts) =
 		| Error e -> Error (sprintf "Error in '%s':\n%s" id e)
 		| Success arg_vars ->
 			let newenv = Env.add_locals arg_vars env in
-			let rec m_vardecls localenv var = function
-			| [] -> 
-				let locals = Env_var.diff (fst localenv) (fst env) in
-				Success (RW.singleton (id, (elt, locals)))
-			| vardecl::rest ->
-				fresh();
-				let newvar = {id = get_id vardecl; t = Var !v} in
-				try
-					let localenv = Env.add_var newvar localenv in
-					let locals = Env_var.diff (fst localenv) (fst env) in
-					let x1 = (RW.singleton (id, (elt, locals))) in
-					match m_vardecl (substitute_env x1 localenv) var vardecl with
-					| Error e -> Error e
-					| Success x ->
-						let x = o x1 x in
-						match m_vardecls (substitute_env x localenv) (substitute x var) rest with
-						| Error e -> Error e
-						| Success res -> Success (o res x)
-				with
-				| _ -> Error (sprintf "Local variable '%s' already local." id) in 
-			match m_vardecls newenv var vardecls with
+			match m_vardecls (id, elt) newenv var vardecls with
 			| Error e -> Error (sprintf "In '%s':\n%s" id e)
 			| Success x ->
+				let newenv = Env.add_locals (env_fun_find id (substitute_env x newenv)).locals newenv in
 				match m_stmts (substitute_env x newenv) (returntype elt) stmts with
 				| Error e -> Error (sprintf "In '%s':\n%s" id e)
-				| Success res -> Success (o res x);;
+				| Success res -> Success (o x res);;
 		
 let rec m_spl env var = function
 	| [] -> Success RW.empty
