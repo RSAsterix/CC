@@ -21,7 +21,7 @@ type env_fun = {
 	id : string;
 	bound : SS.t;
 	t : types;
-	locals : Env_var.t;}
+	mutable locals : Env_var.t;}
 
 module Env_fun = Set.Make(
   struct
@@ -41,8 +41,6 @@ module Env =
 			Env_var.add x (fst env), snd env
 		let add_fun x env =
 			fst env, Env_fun.add x (snd env)
-		let add_locals x env =
-			Env_var.union x (fst env), snd env
 		let update_fun f env =
 			fst env,
 			if Env_fun.mem f (snd env)
@@ -68,6 +66,8 @@ module Env =
 			Env_var.empty, Env_fun.empty
 		let diff x y =
 			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
+		let add_locals x env =
+			Env_var.fold (fun el beginenv -> update_var el beginenv) x env
 	end;;
 	
 module RW = Set.Make(
