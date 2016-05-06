@@ -33,8 +33,10 @@ let m_id_var env var id =
 let m_id_fun env var id = 
 	try
 		let el = env_fun_find id env in
-		let subs = SS.fold (fun x rw -> fresh(); RW.add (x, Var !v) rw) el.bound RW.empty in
-		u (var, substitute subs el.t)
+		let x = SS.fold (fun x rw -> fresh(); RW.add (x, Var !v) rw) el.bound RW.empty in
+		match u (var, substitute x el.t) with
+		| Error e -> Error e
+		| Success res -> Success (o res x)
 	with
 	| _ -> Error (sprintf "Function '%s' not found in environment." id);;
 
@@ -106,14 +108,17 @@ let rec m_exp env var = function
 						| Success x ->
   						match match_type rest (substitute x resttype) with
   						| Error e -> Error e
-							| Success res1 -> 
-								let new_res = RW.fold (fun y rw -> RW.add (fst y, substitute x (snd y)) rw) res1 RW.empty in
+							| Success res ->
+								let new_res = o res x in
+								(* let new_res = RW.fold (fun y rw -> RW.add (fst y, substitute x (snd y)) rw) res RW.empty in *)
 								Success new_res)
   			| rettype ->
   				match arglist with
   				| [] -> u (var, rettype)
   				| _ -> Error "Too many arguments." in
-			match_type args elt;;
+			match match_type args elt with
+			| Error e -> Error e
+			| Success x -> Success (o x xa);;
 
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
@@ -132,8 +137,7 @@ and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
-		fresh();
-		m_exp env (Var !v) (Exp_function_call (id,args))
+		m_exp env var (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -304,7 +308,7 @@ let rec argify env ads xn = function
 			| Error e -> raise (Invalid_argument e)
 			| Success locals ->
 				let newel = {el with bound = bi; t = aixn; locals = locals} in
-				argify env (Env.update_fun newel ads) xn scc;;  
+				argify env (Env.update_fun newel ads) xn scc;;
 
 let rec m_sccs env var = function
 	| [] -> Success env
@@ -313,7 +317,7 @@ let rec m_sccs env var = function
 		match m_scc env' var scc with
 		| Error e -> Error e
 		| Success xn ->
-			let envxn = substitute_env xn env in
+			let envxn = (*substitute_env xn*) env in
 			let varxn = substitute xn var in
 			let ads = Env.diff env' envxn in
 			let envxn_ads = argify envxn ads xn scc in
