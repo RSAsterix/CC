@@ -285,11 +285,8 @@ let rec argify env ads xn = function
 	| [] -> Env.union ads env
 	| vert::scc ->
 		match vert.spl_decl with
-		| Vardecl (_,id,_) -> 
-			let el = env_var_find id ads in
-			let aixn = substitute xn el.t in
-			let newel = {el with t = aixn} in
-			argify env (Env.update_var newel ads) xn scc
+		| Vardecl _ -> 
+			argify env ads xn scc
 		| Fundecl (id,fargs,_,_,_) ->
 			let el = env_fun_find id ads in
 			let aixn = substitute xn el.t in

@@ -34,8 +34,8 @@ let fv_vardecl (free : SS.t) (bound : SS.t) = function
 		raise (Invalid_argument (sprintf "Identifier '%s' will shadow another locally declared variable." id))
 		(* Als id in "free" zit, dan overschrijf je een globale variabele met een locale. Dat is ok. *)
 	| (_,id,exp) ->
-		let newbound = SS.add id bound in 
-		fv_exp free newbound exp, newbound;;
+		let newbound = SS.add id bound in
+		fv_exp free bound exp, newbound;;
 
 let fv_vardecl_list free bound vardecls = 
 	List.fold_left
