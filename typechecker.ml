@@ -311,23 +311,31 @@ let rec argify env ads xn = function
 				let newel = {el with bound = bi; t = aixn; locals = fst (Env.add_locals locals (el.locals, Env_fun.empty))} in
 				argify env (Env.update_fun newel ads) xn scc;;
 
+let rec check_scc = function
+	| [] -> false
+	| [_] -> false
+	| scc -> List.exists (fun x -> match x.spl_decl with Vardecl _ -> true | _ -> false) scc;;
+
 let rec m_sccs env var = function
 	| [] -> Success env
 	| scc::rest ->
-		try
-  		let env' = new_env env scc in
-  		(match m_scc env' var scc with
-  		| Error e -> Error e
-  		| Success xn ->
-  			let envxn = (*substitute_env xn*) env in
-  			let varxn = substitute xn var in
-  			let ads = Env.diff env' envxn in
-  			let envxn_ads = argify envxn ads xn scc in
-  			match m_sccs envxn_ads varxn rest with
-  			| Error e -> Error e
-  			| Success res -> Success (Env.union envxn_ads res))
-		with
-		| Invalid_argument a -> Error (sprintf "Duplicate declaration: '%s'" a)
+		if check_scc scc
+		then Error "Interdependent global variable declarations."
+		else (
+  		try
+    		let env' = new_env env scc in
+    		(match m_scc env' var scc with
+    		| Error e -> Error e
+    		| Success xn ->
+    			let envxn = env in
+    			let varxn = substitute xn var in
+    			let ads = Env.diff (substitute_env xn env') envxn in
+    			let envxn_ads = argify envxn ads xn scc in
+    			match m_sccs envxn_ads varxn rest with
+    			| Error e -> Error e
+    			| Success res -> Success (Env.union envxn_ads res))
+  		with
+  		| Invalid_argument a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
 let m env exp = 
   try 
