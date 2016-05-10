@@ -248,16 +248,16 @@ let m_fundecl env var = function
   				| Success locals ->
   					let rec m_vardecls localenv var = function
     				| [] -> Success (RW.empty, localenv)
-    				| (_,vid,_ as vardecl)::rest ->
+    				| (vpretype,vid,_ as vardecl)::rest ->
   						try
   							let _ = env_var_find vid localenv in
   							Error (sprintf "Variable '%s' already local in '%s'." vid id)
   						with
   						| _ ->
-  							fresh();
-  							let newvar = {id = vid; t = Var !v} in
+								let a = pretype_var vpretype in
+  							let newvar = {id = vid; t = a} in
   							let localenv' = Env.update_var newvar localenv in
-      					match m_vardecl (Env.add_locals (fst localenv') env) var vardecl with
+      					match m_vardecl (Env.add_locals (fst localenv') env) a vardecl with
       					| Error e -> Error e
       					| Success x ->
       						match m_vardecls (substitute_env x localenv') (substitute x var) rest with
