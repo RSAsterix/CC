@@ -211,26 +211,14 @@ let rec new_env env = function
   		with
   		| Not_found ->
   			new_env (fst env, Env_fun.add xa (snd env)) scc)
-  	| Vardecl (pretype,id,_) ->
-  		let t = pretype_var pretype in
-  		let xa = {id = id; t = t} in
-  		try
-  			let _ = Env_var.find xa (fst env) in
-  			raise (Invalid_argument id)
-  		with
-  		| Not_found ->
-  			new_env (Env_var.add xa (fst env), snd env) scc;; 
+  	| Vardecl _ -> new_env env scc;;
 
 let m_vardecl env var = function
-	| _,id,exp ->
-		fresh();
-		let a = Var !v in
-		match m_id_var env a id with
-		| Error e -> Error (sprintf "Variable '%s' not found." id)
-		| Success x ->
-			match m_exp (substitute_env x env) (substitute x a) exp with
-			| Error e -> Error (sprintf "In '%s':\n%s" id e)
-			| Success res -> Success (o res x);;
+	| pretype,id,exp ->
+		let a = pretype_var pretype in
+		match m_exp env a exp with
+		| Error e -> Error (sprintf "In '%s':\n%s" id e)
+		| Success x -> Success x;;
 
 let m_fundecl env var = function
 	| id,fargs,_,vardecls,stmts ->
@@ -248,18 +236,19 @@ let m_fundecl env var = function
   				| Success locals ->
   					let rec m_vardecls localenv var = function
     				| [] -> Success (RW.empty, localenv)
-    				| (vpretype,vid,_ as vardecl)::rest ->
+    				| (_,vid,_ as vardecl)::rest ->
   						try
   							let _ = env_var_find vid localenv in
   							Error (sprintf "Variable '%s' already local in '%s'." vid id)
   						with
   						| _ ->
-								let a = pretype_var vpretype in
-  							let newvar = {id = vid; t = a} in
-  							let localenv' = Env.update_var newvar localenv in
-      					match m_vardecl (Env.add_locals (fst localenv') env) a vardecl with
+								fresh();
+								let a = Var !v in
+      					match m_vardecl (Env.add_locals (fst localenv) env) a vardecl with
       					| Error e -> Error e
       					| Success x ->
+									let newvar = {id = vid; t = a} in
+  								let localenv' = Env.update_var newvar localenv in
       						match m_vardecls (substitute_env x localenv') (substitute x var) rest with
       						| Error e -> Error e
       						| Success (res, localenv') -> 
