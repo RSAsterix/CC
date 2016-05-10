@@ -68,6 +68,8 @@ module Env =
 			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
 		let add_locals x env =
 			Env_var.fold (fun el beginenv -> update_var el beginenv) x env
+		let remove x env =
+			Env_var.remove {id = x; t = Void} (fst env), snd env
 	end;;
 	
 module RW = Set.Make(
