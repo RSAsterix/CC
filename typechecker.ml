@@ -133,7 +133,9 @@ and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
 	| Stmt_function_call (id,args) ->
-		m_exp env var (Exp_function_call (id,args))
+		fresh();
+		let a = Var !v in
+		m_exp env a (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -159,7 +161,8 @@ and m_stmt env var = function
 				match m_exp (substitute_env x env) Bool exp with
   			| Error e -> Error ("Condition not a boolean:\n" ^ e)
 				| Success res -> Success (o res x))
-	| Stmt_define (fieldexp,exp) -> fresh();
+	| Stmt_define (fieldexp,exp) -> 
+		fresh();
 		let a = Var !v in
 		match m_fieldexp env a fieldexp with
 		| Error e -> Error e
