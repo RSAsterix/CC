@@ -339,9 +339,9 @@ let rec m_sccs env var = function
   		with
   		| Invalid_argument a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
-let m env exp = 
+let m exp = 
   try 
 		let graph = make_graph exp in
-		m_sccs env (Var "0") (tarjan graph)
+		m_sccs Env.empty (Var "0") (tarjan graph)
 	with
 	| Invalid_argument e -> Error e;;
