@@ -50,7 +50,5 @@ let get_lines_spl allvarwls = function
 				if varwl.lines = [] then
 					(* kan niet aangezien id al eerder gedefinieerd moet zijn *)
 				else (* id is al eerder gedefinieerd *)
-					if snd (hd varwl.lines) = (-1) then
-						Vwls.add {id=id;lines=(line,-1)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
-					else
-						Vwls.add {id=id;lines=(line,-1)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
+					Vwls.add {id=id;lines=((fst (hd varwl.lines)),line)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
+					(* id is minstens life tot nu *)
