@@ -215,9 +215,6 @@ let decl_parser = function
 		| Success vardecl, list -> Success (Vardecl vardecl), list
 		| Error e, faillist -> Error e, faillist);;
 
-(* Predefined functions *)
-let isEmpty = Fundecl ("isEmpty", ["l"], None, [], 
-[Stmt_return (Some (Exp_infix (Exp_field (Nofield "l"), Eqop Eq, Exp_emptylist)))]);;
 (* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
 (* read *)
 
@@ -244,6 +241,6 @@ let rec spl_parser decllist tokenlist =
 	| Error e -> Error e
 	| Success list ->
   	match decl_parser list with
-    | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
+    | Success decls, [] -> Success (List.rev (decls::decllist))
     | Success decls, list -> spl_parser (decls::decllist) list
     | Error e, list -> Error e;;
