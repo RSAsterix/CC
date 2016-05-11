@@ -72,4 +72,6 @@ type token =
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
-	| Chartok of char;;
+	| Chartok of char
+	| Startcomment
+	| Endcomment;;

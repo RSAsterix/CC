@@ -221,9 +221,29 @@ let isEmpty = Fundecl ("isEmpty", ["l"], None, [],
 (* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
 (* read *)
 
+
+
+let rec remove_comments = function
+	| Success ((l,Startcomment)::list) -> remove_comments' (Success list)
+	| Success ((l,token)::list) -> 
+		(match remove_comments (Success list) with
+		| Success list -> Success ((l,token)::list)
+		| Error e -> Error e)
+	| Success [] -> Success []
+	| Error e -> Error e
+and
+remove_comments' = function
+	| Success ((l,Endcomment)::list) -> remove_comments (Success list)
+	| Success ((l,token)::list) -> remove_comments' (Success list)
+	| Success [] -> Error "comment eindigt niet"
+	| Error e -> Error e
+
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
-	match decl_parser tokenlist with
-  | Success decls, [] -> Success (isEmpty::(List.rev (decls::decllist)))
-  | Success decls, list -> spl_parser (decls::decllist) list
-  | Error e, list -> Error e;;
+	match remove_comments (Success tokenlist) with
+	| Error e -> Error e
+	| Success list ->
+  	match decl_parser list with
+    | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
+    | Success decls, list -> spl_parser (decls::decllist) list
+    | Error e, list -> Error e;;

@@ -41,6 +41,9 @@ let rec scan_line l = function
 	| ':'::':'::line -> (l, DDPOINT)::(scan_line l line)
 	| '-'::'>'::line -> (l, ARROW)::(scan_line l line)
 	| '['::']'::line -> (l, EMPTYLIST)::(scan_line l line)
+	| '/'::'/'::line -> []
+	| '/'::'*'::line -> (l, Startcomment)::(scan_line l line)
+	| '*'::'/'::line -> (l, Endcomment)::(scan_line l line)
 	| '.'::line -> (l, PERIOD)::(scan_line l line)
 	| '+'::line -> (l, Optok "+")::(scan_line l line)
 	| '-'::line -> (l, Optok "-")::(scan_line l line)
@@ -106,7 +109,9 @@ let token_to_string t = match t with
 	| Optok a -> a
 	| Inttok a -> string_of_int a
 	| IDtok a -> a
-	| Chartok a -> implode ['\'';a;'\''] ;;
+	| Chartok a -> implode ['\'';a;'\''] 
+	| Startcomment -> "/* "
+	| Endcomment -> " */" ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
