@@ -244,6 +244,6 @@ let rec spl_parser decllist tokenlist =
 	| Error e -> Error e
 	| Success list ->
   	match decl_parser list with
-    | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
+    | Success decls, [] -> Success (isEmpty::(List.rev (decls::decllist)))
     | Success decls, list -> spl_parser (decls::decllist) list
     | Error e, list -> Error e;;
