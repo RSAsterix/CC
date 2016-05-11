@@ -53,7 +53,7 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "C:/Users/tom_e/workspace/CC/input2.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/inputT.txt";;
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;

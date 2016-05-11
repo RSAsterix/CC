@@ -21,7 +21,7 @@ type env_fun = {
 	id : string;
 	bound : SS.t;
 	t : types;
-	locals : Env_var.t;}
+	mutable locals : Env_var.t;}
 
 module Env_fun = Set.Make(
   struct
@@ -41,16 +41,39 @@ module Env =
 			Env_var.add x (fst env), snd env
 		let add_fun x env =
 			fst env, Env_fun.add x (snd env)
-		let add_locals x env =
-			Env_var.union x (fst env), snd env
-		let update_fun x env =
-			fst env, Env_fun.union (Env_fun.singleton x) (snd env)
-		let update_var x env =
-			Env_var.union (Env_var.singleton x) (fst env), snd env
+		let update_fun f env =
+			fst env,
+			if Env_fun.mem f (snd env)
+			then
+    		(Env_fun.fold (fun x beginset ->
+    			if (f.id = x.id)
+    			then Env_fun.add f beginset
+    			else Env_fun.add x beginset)
+    		(snd env) Env_fun.empty)
+			else
+				Env_fun.add f (snd env)
+		let update_var (v : env_var) env =
+			if Env_var.mem v (fst env)
+			then
+  			(Env_var.fold (fun x beginset ->
+  				if (v.id = x.id)
+  				then Env_var.add v beginset
+  				else Env_var.add x beginset)
+  			(fst env) Env_var.empty), snd env
+			else
+				Env_var.add v (fst env), snd env
 		let empty =
 			Env_var.empty, Env_fun.empty
 		let diff x y =
 			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
+		let add_locals x env =
+			Env_var.fold (fun el beginenv -> update_var el beginenv) x env
+		let list_vars env =
+			(Env_var.fold (fun x list -> List.append list [x]) (fst env) [])
+		let list_funs env =
+			(Env_fun.fold (fun x list -> List.append list [x]) (snd env) [])
+		let elements env =
+			list_vars env, list_funs env			
 	end;;
 	
 module RW = Set.Make(
