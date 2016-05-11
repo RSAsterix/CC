@@ -12,14 +12,19 @@ module SS = Set.Make(String);;
 
 type varwithlines = {
 	id : string;
+	func : string;
 	lines: int*int list
 	}
+	
+let empty_varwl id func = {id=id;func=func;lines=[]}
 	
 module Vwlforsets =
   struct
    type t = varwithlines
    let compare x y =
-    Pervasives.compare x.id y.id
+    match Pervasives.compare x.id y.id with
+		 | 0 -> Pervasives.compare x.func y.func
+     | c -> c
   end
 
 module Vwls = Set.Make(Vwlforsets)
@@ -41,14 +46,52 @@ let vars_in_exp = function
 	| Exp_emptylist -> SS.empty
 	| Exp_function_call (_,explist) -> fold_left union SS.empty (map vars_in_exp explist);;
 
-let get_lines_spl allvarwls = function
-	| Vardecl (_,id,exp) -> line := !line + 1; (* id wordt gedefinieerd *)
+let live_till_now allvarwls varwl id func =
+	Vwls.add {id=id;func=func;lines=((fst (hd varwl.lines)),line)::(tl varwl.lines)} (Vwls.remove (empty_varwl id func) allvarwls)
+
+let newdefs allvarwls varwl id func =
+	Vwls.add (empty_varwl id func) allvarwls
+
+let add_used allvarwls func = function (* zorgt dat de gegeven ids gebruikt worden *)
+	|id::usedvars -> 
+		let varwl = (Vwls.find (empty_varwl id func) allvars) in
+		(live_till_now allvarwls varwl id func)::(add_used allvarwls func usedvars)
+		
+let add_newdef allvarwls func = function (* voor een lijst van compleet nieuwe ids *)
+	| id::newdefs ->
+		let varwl = (Vwls.find (empty_varwl id func) allvars) in
+		(newly_defined allvarwls id func)::(add_newdef allvarwls func newdefs)
+
+let get_lines_stmts allvarwls func = function
+	| Stmt_if
+
+let get_lines_spl allvarwls func = function
+	| Vardecl (_,id,exp)::spl -> line := !line + 1; (* id wordt gedefinieerd *)
 		let usedvars = vars_in_exp exp in
-		if mem id usedvars then (* id is nodig voor zijn eigen definitie *)
-			if mem {id=id;lines=[]} allvarwls then
-				let varwl = (Vwls.find (fun x -> x.id ) allvars) in
-				if varwl.lines = [] then
-					(* kan niet aangezien id al eerder gedefinieerd moet zijn *)
-				else (* id is al eerder gedefinieerd *)
-					Vwls.add {id=id;lines=((fst (hd varwl.lines)),line)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
-					(* id is minstens life tot nu *)
+		let allvarwls = 
+  		if mem id usedvars then (* id is nodig voor zijn eigen definitie *)
+  			let varwl = (Vwls.find (empty_varwl id func) allvars) in
+  			live_till_now allvarwls varwl id func
+  			(* de id leeft tot nu *)
+  		else (* id wordt nu life. het kan dat hij al eerder bestond en doodging *)
+  			if mem (empty_varwl id) allvarwls then (*deze id heeft al eerder geleefd *)
+  				let varwl = (Vwls.find (empty_varwl id func) allvars) in
+  				if snd (hd varwl.lines) = (-1) then (* de id is gemaakt, maar niet gebruikt *)
+  					Vwls.add {id=id;func=func;lines=(line,(-1))::(tl varwl.lines)} (Vwls.remove (empty_varwl id func) allvarwls)
+  					(* de laatste keer dat de id is gedefinieerd was niet nuttig en kan worden weggegooid. de id leeft vanaf nu*)
+  				else (* de id al eerder gemaakt en gebruikt *)
+  					Vwls.add {id=id;func=func;lines=(line,(-1))::(varwl.lines)} (Vwls.remove (empty_varwl id func) allvarwls)
+  					(* de laatste keer dat de id heeft geleefd is klaar. We starten een nieuwe levenscyclus *)
+  			else (* deze id heeft nog niet eerder geleefd *)
+  				Vwls.add {id=id;func=func;lines=[(line,(-1))]} in 
+   	get_lines_spl (add_used allvarwls usedvars) func spl
+	| Fundecl (func,fargs,_,vardecls,stmts) -> line := !line + 1;
+		let allvarwls = add_newdef allvarwls func fargs in
+		let allvarwls = add_newdef allvarwls func (map (fun x -> match x with Vardecl _,id,_ -> id) vardecls) in
+		get_lines_stmts allvarwls func smts
+	| [] -> allvarwls;;
+
+
+		
+			
+		
