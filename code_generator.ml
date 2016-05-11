@@ -326,7 +326,10 @@ let rec functions_gen (gvars:'a list) funtypes vartypes = function
 		let func = get_fun fid funtypes in
 		let fargtypes = ftype_to_fargtypes func.t in
 		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs in
-		let locals = Env_var.fold (fun x list -> x::list) func.locals [] in
+		let locals = Env_var.fold (fun x list ->
+			if (List.exists (fun y -> y.id = x.id) fargs)
+			then list
+			else x::list) func.locals [] in
 		let lvars = vartypes_to_idstructs false 1 locals in
 		let localknown = localknown fargs lvars gvars in
 			pointlabel fid^
