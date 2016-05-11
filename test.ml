@@ -59,7 +59,7 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "input4"
+let filename = "input2"
 
 let in_channel =
 	try
@@ -107,7 +107,7 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 match structure with
 | Error e -> print_endline e;
 | Success x ->
-	match m (Env_var.empty, Env_fun.empty) x with
+	match m x with
 	| Error e -> print_endline e;
 	| Success env -> print_string (code_gen (Env.elements env) x);;
 (* close_out oc;; *)
