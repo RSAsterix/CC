@@ -59,10 +59,18 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
+let filename = "input4"
+
+let in_channel =
+	try
+		open_in ("C:/Users/tom_e/workspace/CC/"^filename^".txt")
+	with
+	| _ -> open_in ("C:/Users/Martin/workspace/CC/"^filename^".txt");;
+
 let filename = "C:/Users/tom_e/workspace/CC/input4.txt";;
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
-let in_channel = open_in filename;;
+(* let in_channel = open_in filename;; *)
 let tokenlist = ref [];;
 let l = ref 0;;
 try
@@ -77,8 +85,8 @@ with End_of_file ->
   close_in in_channel;;
 
 let structure = spl_parser [] !tokenlist;;
-let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
-(* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
+(* let outfile = "C:/Users/tom_e/workspace/CC/output.txt";; *)
+let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
 
 (* (*types of input4 *)                                                                                                      *)

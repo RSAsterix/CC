@@ -291,9 +291,9 @@ let rec vardecl_gen vars = function
 	| [] -> ""
 
 (* append_unique l1 l2: append el l2 als hij niet voorkomt in l1 *)
-let rec append_unique l1 = function
+let rec append_unique (l1: idstruct list) (l2: idstruct list) = match l2 with
 	| el2::l2 -> 
-		if List.exists (fun x -> x.id = el2.id) l1
+		if List.exists (fun (x: idstruct) -> x.id = el2.id) l1
 		then
 			append_unique l1 l2
 		else
@@ -327,7 +327,7 @@ let rec functions_gen (gvars:'a list) funtypes vartypes = function
 		let fargtypes = ftype_to_fargtypes func.t in
 		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs in
 		let locals = Env_var.fold (fun x list ->
-			if (List.exists (fun y -> y.id = x.id) fargs)
+			if (List.exists (fun (y: idstruct) -> y.id = x.id) fargs)
 			then list
 			else x::list) func.locals [] in
 		let lvars = vartypes_to_idstructs false 1 locals in
