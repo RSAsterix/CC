@@ -69,9 +69,9 @@ module Env =
 		let add_locals x env =
 			Env_var.fold (fun el beginenv -> update_var el beginenv) x env
 		let list_vars env =
-			(Env_var.fold (fun x list -> List.append list [x.id, x.t]) (fst env) [])
+			(Env_var.fold (fun x list -> List.append list [x]) (fst env) [])
 		let list_funs env =
-			(Env_fun.fold (fun x list -> List.append list [x.id, x.t, list_vars (x.locals,Env_fun.empty)]) (snd env) [])
+			(Env_fun.fold (fun x list -> List.append list [x]) (snd env) [])
 		let elements env =
 			list_vars env, list_funs env			
 	end;;
