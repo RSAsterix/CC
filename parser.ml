@@ -11,7 +11,9 @@ open Exp_parser
 (* 		| '[' type ']'        *)
 (* basictype = 'Int' | 'Bool' | 'Char' *)
 let rec type_parser = function
-	| (_,Basictoken a)::list -> Success (Basictype a),list
+	| (_,Basic_int)::list -> Success (Type_int),list
+	| (_,Basic_bool)::list -> Success (Type_bool),list
+	| (_,Basic_char)::list -> Success (Type_char),list
 	| (_,IDtok id)::list -> Success (Type_id id),list
 	| (l0,OPEN_PAR)::list -> 
 		(match (type_parser list) with
@@ -213,9 +215,35 @@ let decl_parser = function
 		| Success vardecl, list -> Success (Vardecl vardecl), list
 		| Error e, faillist -> Error e, faillist);;
 
+(* Predefined functions *)
+let isEmpty = Fundecl ("isEmpty", ["l"], None, [], 
+[Stmt_return (Some (Exp_infix (Exp_field (Nofield "l"), Eqop Eq, Exp_emptylist)))]);;
+(* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
+(* read *)
+
+
+
+let rec remove_comments = function
+	| Success ((l,Startcomment)::list) -> remove_comments' (Success list)
+	| Success ((l,token)::list) -> 
+		(match remove_comments (Success list) with
+		| Success list -> Success ((l,token)::list)
+		| Error e -> Error e)
+	| Success [] -> Success []
+	| Error e -> Error e
+and
+remove_comments' = function
+	| Success ((l,Endcomment)::list) -> remove_comments (Success list)
+	| Success ((l,token)::list) -> remove_comments' (Success list)
+	| Success [] -> Error "comment eindigt niet"
+	| Error e -> Error e
+
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
-	match decl_parser tokenlist with
-  | Success decls, [] -> Success  (List.rev (decls::decllist))
-  | Success decls, list -> spl_parser (decls::decllist) list
-  | Error e, list -> Error e;;
+	match remove_comments (Success tokenlist) with
+	| Error e -> Error e
+	| Success list ->
+  	match decl_parser list with
+    | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
+    | Success decls, list -> spl_parser (decls::decllist) list
+    | Error e, list -> Error e;;

@@ -121,15 +121,11 @@ let rec print_fargs ppf = function
 	| (a::list) ->
 		fprintf ppf "%a, %a" print_id a print_fargs list;;
 
-(* Print basictypes int, bool of char *)
-let print_basictype ppf = function
-	| Type_int -> fprintf ppf "%s" "Int";
-	| Type_bool -> fprintf ppf "%s" "Bool";
-	| Type_char -> fprintf ppf "%s" "Char";;
-
 (* Print een typetoken *)
 let rec print_typetoken ppf = function
-	| Basictype b -> fprintf ppf "%a" print_basictype b;
+	| Type_int -> fprintf ppf "%s" "Int";
+	| Type_bool -> fprintf ppf "%s" "Bool";
+	| Type_char -> fprintf ppf "%s" "Char";
 	| Type_tuple (t1, t2) -> fprintf ppf "(%a, %a)" print_typetoken t1 print_typetoken t2;
 	| Type_list t -> fprintf ppf "[%a]" print_typetoken t;
 	| Type_id id -> fprintf ppf "%a" print_id id;;

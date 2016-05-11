@@ -28,15 +28,14 @@ type exp =
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
 type stmt = 
-	| Stmt_if of exp *  stmt list
-	| Stmt_if_else of exp *  stmt list *  stmt list
-	| Stmt_while of exp *  stmt list
+	| Stmt_if of exp * stmt list
+	| Stmt_if_else of exp * stmt list * stmt list
+	| Stmt_while of exp * stmt list
 	| Stmt_define of fieldexp * exp
-	| Stmt_function_call of id *  exp list
+	| Stmt_function_call of id * exp list
 	| Stmt_return of exp option
 type fargs = id list
-type basictype = Type_int | Type_bool | Type_char
-type typetoken =  Basictype of basictype
+type typetoken = Type_int | Type_bool | Type_char
 	| Type_tuple of typetoken * typetoken
 	| Type_list of typetoken
 	| Type_id of id
@@ -65,7 +64,7 @@ type token =
 	| COMMA
 	| EMPTYLIST
 	| OPEN_BRACK | CLOSE_BRACK
-	| Basictoken of basictype
+	| Basic_int | Basic_bool | Basic_char
 	| IF | ELSE | WHILE | RETURN
 	| FALSE | TRUE
 	| PERIOD 
@@ -73,4 +72,6 @@ type token =
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
-	| Chartok of char;;
+	| Chartok of char
+	| Startcomment
+	| Endcomment;;
