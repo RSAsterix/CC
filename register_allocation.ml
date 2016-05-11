@@ -42,13 +42,15 @@ let vars_in_exp = function
 	| Exp_function_call (_,explist) -> fold_left union SS.empty (map vars_in_exp explist);;
 
 let get_lines_spl allvarwls = function
-	| Vardecl (_,id,exp) -> line := !line + 1;
+	| Vardecl (_,id,exp) -> line := !line + 1; (* id wordt gedefinieerd *)
 		let usedvars = vars_in_exp exp in
-		if mem id usedvars then
+		if mem id usedvars then (* id is nodig voor zijn eigen definitie *)
 			if mem {id=id;lines=[]} allvarwls then
 				let varwl = (Vwls.find (fun x -> x.id ) allvars) in
 				if varwl.lines = [] then
-					(* kan niet *)
-				else
+					(* kan niet aangezien id al eerder gedefinieerd moet zijn *)
+				else (* id is al eerder gedefinieerd *)
 					if snd (hd varwl.lines) = (-1) then
+						Vwls.add {id=id;lines=(line,-1)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
+					else
 						Vwls.add {id=id;lines=(line,-1)::(tl varwl.lines)} (Vwls.remove {id=id;lines=[]} allvarwls)
