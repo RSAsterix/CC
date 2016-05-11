@@ -45,6 +45,10 @@ open Typechecker_print
 (* open Typechecker_lib;;                            *)
 (* #load "typechecker.cmo";;                         *)
 (* open Typechecker;;                                *)
+(* #load "codefragments.cmo";;                       *)
+(* open Codefragments;;                              *)
+(* #load "code_generator.cmo";;                      *)
+(* open Code_generator;;                             *)
 (* #use "test.ml";;                                  *)
 
 (* === code die file reading regelt. === *)
@@ -55,8 +59,8 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-(* let filename = "C:/Users/tom_e/workspace/CC/inputT.txt";; *)
-let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
+let filename = "C:/Users/tom_e/workspace/CC/input4.txt";;
+(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 let in_channel = open_in filename;;
 let tokenlist = ref [];;

@@ -293,7 +293,8 @@ let rec vardecl_gen vars = function
 (* append_unique l1 l2: append el l2 als hij niet voorkomt in l1 *)
 let rec append_unique l1 = function
 	| el2::l2 -> 
-		if mem el2 l1 then
+		if List.exists (fun x -> x.id = el2.id) l1
+		then
 			append_unique l1 l2
 		else
 			append_unique (el2::l1) l2
@@ -324,8 +325,9 @@ let rec functions_gen (gvars:'a list) funtypes vartypes = function
 	| (fid,fargs,_,vardecllist,stmtlist)::decllist ->
 		let func = get_fun fid funtypes in
 		let fargtypes = ftype_to_fargtypes func.t in
-		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs  in
-		let lvars = vartypes_to_idstructs false 1 (Env_var.elements func.locals) in
+		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs in
+		let locals = Env_var.fold (fun x list -> x::list) func.locals [] in
+		let lvars = vartypes_to_idstructs false 1 locals in
 		let localknown = localknown fargs lvars gvars in
 			pointlabel fid^
   		reservelocalcode (length lvars)^
