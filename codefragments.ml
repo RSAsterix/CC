@@ -102,7 +102,9 @@ let op2code = function
 	| Weakop Minus -> "sub \n"
 
 let end_code =
-"trap 0"
+"ldr RR \n"^
+"trap 0 \n"^
+"halt \n"
 
 let read_code =
 "read: link 0 \n"^

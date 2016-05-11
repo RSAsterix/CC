@@ -9,9 +9,9 @@ return r ;
 
 var b = read();
 var c = facI(b);
-var d = f();
 
-f () {
+
+main() {
 write(c);
 return 1;
 }

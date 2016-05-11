@@ -361,14 +361,16 @@ let rec print_vardecls = function
 let code_gen (vartypes, funtypes) (spl:decl list) = 
 	let mainlabel = "main" in
 	let gvars = vartypes_to_idstructs true 0 vartypes in
-		bra mainlabel^
+		reservecode (length gvars)^ 
+		vardecl_gen gvars (get_vardecls spl)^
+		"bsr "^ mainlabel^" \n"^
+		end_code^
 		functions_gen gvars funtypes vartypes (get_fundecls spl)^
 		isempty_code^ 
 		read_code^
-		write_code^
-		pointlabel mainlabel^ 
-		reservecode (length gvars)^ 
-		vardecl_gen gvars (get_vardecls spl)^
-		end_code
+		write_code
+		
+
+		
 
 
