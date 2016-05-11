@@ -364,8 +364,11 @@ let code_gen (vartypes, funtypes) (spl:decl list) =
 		bra mainlabel^
 		functions_gen gvars funtypes vartypes (get_fundecls spl)^
 		isempty_code^ 
+		read_code^
+		write_code^
 		pointlabel mainlabel^ 
 		reservecode (length gvars)^ 
-		vardecl_gen gvars (get_vardecls spl)
+		vardecl_gen gvars (get_vardecls spl)^
+		end_code
 
 

@@ -101,6 +101,23 @@ let op2code = function
 	| Weakop Plus -> "add \n"
 	| Weakop Minus -> "sub \n"
 
+let end_code =
+"trap 0"
+
+let read_code =
+"read: link 0 \n"^
+"trap 10 \n"^
+"str RR \n"^
+"unlink \n"^
+"ret \n"
+
+let write_code =
+"write: link 0 \n"^
+"ldl -2 \n"^
+"trap 0 \n"^
+"unlink \n"^
+"ret \n"
+
 let isempty_code =
 "isEmpty: link 0 \n"^
 "ldc 0 \n"^

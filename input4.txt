@@ -7,4 +7,11 @@ n = n - 1;
 return r ;
 }
 
-var b = facI(6);
+var b = read();
+var c = facI(b);
+var d = f();
+
+f () {
+write(c);
+return 1;
+}
