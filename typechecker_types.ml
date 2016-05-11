@@ -68,8 +68,12 @@ module Env =
 			Env_var.diff (fst x) (fst y), Env_fun.diff (snd x) (snd y)
 		let add_locals x env =
 			Env_var.fold (fun el beginenv -> update_var el beginenv) x env
-		let remove x env =
-			Env_var.remove {id = x; t = Void} (fst env), snd env
+		let list_vars env =
+			(Env_var.fold (fun x list -> List.append list [x.id, x.t]) (fst env) [])
+		let list_funs env =
+			(Env_fun.fold (fun x list -> List.append list [x.id, x.t, list_vars (x.locals,Env_fun.empty)]) (snd env) [])
+		let elements env =
+			list_vars env, list_funs env			
 	end;;
 	
 module RW = Set.Make(

@@ -8,7 +8,6 @@ open Graph_make
 open Graph_cycles
 open Graph_lib
 
-(* Env: (x,a,t) ? *)
 let m_field env var = function
 	| Hd -> fresh(); u (Imp (Lis (Var !v), (Var !v)),var)
 	| Tl -> fresh(); u (Imp (Lis (Var !v), Lis (Var !v)),var)
@@ -108,10 +107,7 @@ let rec m_exp env var = function
 						| Success x ->
   						match match_type rest (substitute x resttype) with
   						| Error e -> Error e
-							| Success res ->
-								let new_res = o res x in
-								(* let new_res = RW.fold (fun y rw -> RW.add (fst y, substitute x (snd y)) rw) res RW.empty in *)
-								Success new_res)
+							| Success res -> Success (o res x))
   			| rettype ->
   				match arglist with
   				| [] -> u (var, rettype)
@@ -332,7 +328,7 @@ let rec m_sccs env var = function
     		(match m_scc env' var scc with
     		| Error e -> Error e
     		| Success xn ->
-    			let envxn = env in
+    			let envxn = (* substitute_env xn *) env in
     			let varxn = substitute xn var in
 					let newvar = new_var env' (substitute xn var) scc in
     			let ads = Env.diff (substitute_env xn newvar) envxn in
