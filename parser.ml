@@ -218,7 +218,7 @@ let decl_parser = function
 (* Predefined functions *)
 let isEmpty = Fundecl ("isEmpty", ["l"], None, [], 
 [Stmt_return (Some (Exp_infix (Exp_field (Nofield "l"), Eqop Eq, Exp_emptylist)))]);;
-let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);;
+(* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
 (* read *)
 
 
