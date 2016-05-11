@@ -114,7 +114,12 @@ let rec m_exp env var = function
   				| _ -> Error "Too many arguments." in
 			match match_type args elt with
 			| Error e -> Error e
-			| Success x -> Success (o x xa);;
+			| Success x -> 
+				let res = o x xa in
+				Success res;;
+				(* match u (var, substitute res var) with *)
+				(* | Success x1 -> Success (o x1 res)     *)
+				(* | Error e -> Error e;;                 *)
 
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
@@ -131,11 +136,14 @@ let rec m_stmts env var = function
 			| Success res -> Success (o res x)
 and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
-	| Stmt_return (Some exp) -> m_exp env var exp
+	| Stmt_return (Some exp) -> 
+		(match m_exp env var exp with
+		| Success x -> u (var, substitute x var)
+		| Error e -> Error e)
 	| Stmt_function_call (id,args) ->
 		fresh();
 		let a = Var !v in
-		m_exp env a (Exp_function_call (id,args))
+		m_exp env a (Exp_function_call (id,args))		
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -233,7 +241,10 @@ let m_vardecl env var = function
 		let a = pretype_var pretype in
 		match m_exp env a exp with
 		| Error e -> Error (sprintf "In '%s':\n%s" id e)
-		| Success x -> u (var, substitute x a);;
+		| Success x -> u (var, substitute x a)
+			(* match u (var, substitute x a) with *)
+			(* | Success res -> Success (o res x) *)
+			(* | Error e -> Error e;;             *)
 
 let m_fundecl env var = function
 	| id,fargs,_,vardecls,stmts ->
