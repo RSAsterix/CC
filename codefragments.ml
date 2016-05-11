@@ -1,22 +1,10 @@
 open Printf
 open Types
 open String
+open Typechecker_types
 
-type types = 
-	| Var of string
-	| Imp of types * types
-	| Tup of types *types
-	| Lis of types
-	| Int | Bool | Char | Void;;
 
-type variabletype = id * types;;
-type functiontype = {
-	fid:id;
-	ftype:types;
-	locals:variabletype list;
-	}
-
-let empty_functiontype = {fid="henkst";ftype=Void;locals=[]}
+let empty_fun = {id="henkst";bound=SS.empty;t=Void;locals=Env_var.empty}
 
 let heapstart = 2000
 let truenr =(-1)

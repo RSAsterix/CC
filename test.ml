@@ -77,20 +77,20 @@ let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
 (* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
 (* let oc = open_out outfile;; *)
 
-(*types of input4 *)
-let vartypes4 = [("b",Int)];;
-let funtypes4 = [{fid="facI";ftype=Imp(Int,Int);locals=[("r",Int)]}];;
+(* (*types of input4 *)                                                                                                      *)
+(* let vartypes4 = [("b",Int)];;                                                                                             *)
+(* let funtypes4 = [{fid="facI";ftype=Imp(Int,Int);locals=[("r",Int)]}];;                                                    *)
 
-(*types of input7 *)
-let vartypes7 = [("p",Lis Int);("ft",Lis Int);("r",Lis Int);("sc",Tup (Lis Int,Bool));("s",Tup(Int,Int));("a",Lis Int)];;
-let funtypes7 = [
-	{fid="product";ftype=Imp (Lis Int,Int);locals=[]};
-	{fid="fromTo";ftype=Imp(Int, Imp (Int,Lis Int));locals=[]};
-	{fid="reverse";ftype=Imp(Lis (Var "a"),Lis (Var "a"));locals=[("accu",Lis (Var "a"))]};
-	{fid="swapCopy";ftype=Imp(Tup(Var "a",Var "b"),Tup(Var "b",Var "a"));locals=[]};
-	{fid="swap";ftype=Imp(Tup(Var "a",Var "a"),Tup(Var "a",Var "a"));locals=[("tmp",Var "a")]};
-	{fid="append";ftype=Imp(Lis Int,Imp(Lis Int,Lis Int));locals=[]}
-	];;
+(* (*types of input7 *)                                                                                                      *)
+(* let vartypes7 = [("p",Lis Int);("ft",Lis Int);("r",Lis Int);("sc",Tup (Lis Int,Bool));("s",Tup(Int,Int));("a",Lis Int)];; *)
+(* let funtypes7 = [                                                                                                         *)
+(* 	{fid="product";ftype=Imp (Lis Int,Int);locals=[]};                                                                      *)
+(* 	{fid="fromTo";ftype=Imp(Int, Imp (Int,Lis Int));locals=[]};                                                             *)
+(* 	{fid="reverse";ftype=Imp(Lis (Var "a"),Lis (Var "a"));locals=[("accu",Lis (Var "a"))]};                                 *)
+(* 	{fid="swapCopy";ftype=Imp(Tup(Var "a",Var "b"),Tup(Var "b",Var "a"));locals=[]};                                        *)
+(* 	{fid="swap";ftype=Imp(Tup(Var "a",Var "a"),Tup(Var "a",Var "a"));locals=[("tmp",Var "a")]};                             *)
+(* 	{fid="append";ftype=Imp(Lis Int,Imp(Lis Int,Lis Int));locals=[]}                                                        *)
+(* 	];;                                                                                                                     *)
 
 match structure with
 | Error e -> print_endline e;

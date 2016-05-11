@@ -4,8 +4,9 @@ open Char
 open Codefragments
 open List
 open Pretty_printer_files
+open Typechecker_types
 	
-let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen alist) ("")
+let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen alist) ("");;
 
 (* TODO: *)
 (* checken of een functie altijd returnt? *)
@@ -61,18 +62,23 @@ let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen 
 	LDC	3
 	ADD *)
 
-let get_vartype id vars = 
-	let vt = (try find (fun x -> fst x =id) vars with
-	| Not_found -> ("henkst",Int))
-	in snd vt
+let get_vartype id (vars : env_var list) =
+	try
+		(List.find (fun (x : env_var) -> x.id = id) vars).t
+	with
+	| Not_found -> Void;;
 	
-let get_funtype (id:id) funs = 
-	try find (fun (x:functiontype) -> x.fid=id) funs with
-	| Not_found -> empty_functiontype
+let get_fun id (funs : env_fun list) =
+	try
+		(List.find (fun (x : env_fun) -> x.id=id) funs)
+	with
+	| Not_found -> empty_fun;;
 
-let get_idstruct id vars =
-	try find (fun x -> x.id=id) vars with
-	| Not_found -> empty_idstruct
+let get_idstruct id (idstructs : idstruct list) =
+	try 
+		List.find (fun (x : idstruct) -> x.id=id) idstructs 
+	with
+	| Not_found -> empty_idstruct;;
 
 (* Deze functie gaat er nog even van uit dat alle vars global zijn *)
 (* let rec field_gen vars = function                                        *)
@@ -91,8 +97,7 @@ let rec expfield_gen vars = function
 	| Field (exp,Hd)
 	| Field (exp,Fst) -> (expfield_gen vars exp) ^ lda (-1)
 	| Field (exp,Tl)
-	| Field (exp,Snd) -> (expfield_gen vars exp) ^ lda 0
-
+	| Field (exp,Snd) -> (expfield_gen vars exp) ^ lda 0;;
 
 let rec exp_gen vars exp =
 	match exp with
@@ -105,7 +110,7 @@ let rec exp_gen vars exp =
 	| Exp_prefix (op,exp) -> (exp_gen vars exp) ^ (op1code op)
 	| Exp_function_call (id,explist) -> (list_gen (exp_gen vars) (explist)) ^ (some_funcallcode id (length explist))
 	| Exp_emptylist -> ldc 0
-	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode
+	| Exp_tuple (exp1,exp2) -> (exp_gen vars exp1) ^ (exp_gen vars exp2) ^ create_tuplecode;;
 	
 (* sta: *)
 (* Store via Address. *)
@@ -299,7 +304,7 @@ let rec append_unique l1 = function
 let localknown fargs lvars gvars = append_unique lvars (append_unique fargs gvars)
 
 let rec vartypes_to_idstructs global index = function
-	| (id, t )::vartypes -> {id=id;vartype=t;global=global;index=index}::vartypes_to_idstructs global (index+1) vartypes
+	| (x : env_var)::vartypes -> {id=x.id;vartype=x.t;global=global;index=index}::vartypes_to_idstructs global (index+1) vartypes
 	| [] -> []
 
 let rec print_vars = function
@@ -317,10 +322,10 @@ let rec ftype_to_fargtypes=function
 (* parse de stmts. This includes return *)
 let rec functions_gen (gvars:'a list) funtypes vartypes = function
 	| (fid,fargs,_,vardecllist,stmtlist)::decllist ->
-		let funtype = get_funtype fid funtypes in
-		let fargtypes = ftype_to_fargtypes funtype.ftype in
+		let func = get_fun fid funtypes in
+		let fargtypes = ftype_to_fargtypes func.t in
 		let fargs = fargs_to_idstructs (-1-(length fargs)) fargtypes fargs  in
-		let lvars = vartypes_to_idstructs false 1 funtype.locals in
+		let lvars = vartypes_to_idstructs false 1 (Env_var.elements func.locals) in
 		let localknown = localknown fargs lvars gvars in
 			pointlabel fid^
   		reservelocalcode (length lvars)^
@@ -348,7 +353,7 @@ let rec print_vardecls = function
 (* reserve space for all global vars *)
 (* define all functions *)
 (* generate main: only look at vardecls *)
-let code_gen vartypes funtypes (spl:decl list) = 
+let code_gen (vartypes, funtypes) (spl:decl list) = 
 	let mainlabel = "main" in
 	let gvars = vartypes_to_idstructs true 0 vartypes in
 		bra mainlabel^
