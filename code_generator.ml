@@ -8,19 +8,14 @@ open Pretty_printer_files
 let list_gen (gen:'a->string) (alist:'a list): string = fold_right (^) (map gen alist) ("")
 
 (* TODO: *)
-(* onze tokenizer moet comments wegmieteren *)
 (* checken of een functie altijd returnt? *)
-(* + en - zijn ook defined voor char. ga er even van uit dat het niet defined moet worden voor andere types. Tom moet dit nog regelen *)
-(* als r5 constant is, kan hij ook gwn in dit document geladen worden *)
-(* global lists moeten niet in 2 locs maar in 1 pointerloc *)
-(* de fout zit in hoe define_gen omgaat met tuples *)
+(* gebruikmaken van registers *)
 
 
 (* besluiten *)
 (* "var id = exp" betekent niks anders dan dat je geen zin had om de type van id te specificeren *) 
 (* lists zijn single linkedlists, oftewel tuples van (waarde, pointer naar volgende plek) *)
 (* Als een pointer is 0, dan wijst hij naar een lege lijst *)
-(* R5 bevat het begin van de heap *)
 
 (* open Set  *)
 
