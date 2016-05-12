@@ -1,5 +1,5 @@
 SPL = decl+
-decl = id '('  funDecl | varDecl
+decl = | 'type' id '=' type ';' | id '('  funDecl | varDecl
 funDecl = fargs '(' vardeclList stmt stmtList
 		| fargs '::' funtype '(' vardeclList stmtList
 fargs =   ')' | fargs2
@@ -12,6 +12,10 @@ stmt =   'if' '(' exp ')' '{' stmtList 'else' '{' stmtList
 		| 'return' exp ';'
 		| id '(' funcall
 		| id field '=' exp
+		| 'match' exp 'with' caseList
+caseList = 
+		| '|' exp '->' stmtList caseList
+		| '|' exp '->' stmtList ';'
 vardeclList = varDecl*
 varDecl = 'var' varDeclRest
 		| type varDeclRest

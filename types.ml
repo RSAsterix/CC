@@ -27,6 +27,7 @@ type exp =
 	| Exp_function_call of id * exp list
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
+type case = exp * stmt list
 type stmt = 
 	| Stmt_if of exp * stmt list
 	| Stmt_if_else of exp * stmt list * stmt list
@@ -34,6 +35,7 @@ type stmt =
 	| Stmt_define of fieldexp * exp
 	| Stmt_function_call of id * exp list
 	| Stmt_return of exp option
+	| Stmt_match of exp * (exp * stmt list) list
 type fargs = id list
 type typetoken = Type_int | Type_bool | Type_char
 	| Type_tuple of typetoken * typetoken
@@ -43,7 +45,8 @@ type rettype = Rettype of typetoken | Type_void
 type funtype = typetoken list * rettype
 type vardecl = typetoken option * id * exp 
 type fundecl = id * fargs * funtype option * vardecl list * stmt list
-type decl = Vardecl of vardecl | Fundecl of fundecl
+type typedecl = id * typetoken
+type decl = Typedecl of typedecl | Vardecl of vardecl | Fundecl of fundecl
 type spl = decl list;;
 
 
@@ -74,4 +77,8 @@ type token =
 	| IDtok of string
 	| Chartok of char
 	| Startcomment
-	| Endcomment;;
+	| Endcomment
+	| TYPE 
+	| MATCH
+	| WITH
+	| PIPE;;
