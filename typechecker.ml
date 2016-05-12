@@ -9,18 +9,22 @@ open Graph_cycles
 open Graph_lib
 
 let m_field env var = function
-	| Hd -> fresh(); u (Imp (Lis (Var !v), (Var !v)),var)
-	| Tl -> fresh(); u (Imp (Lis (Var !v), Lis (Var !v)),var)
+	| Hd -> 
+		fresh();
+		u (Imp (Lis (Var !v), (Var !v)),var)
+	| Tl -> 
+		fresh(); 
+		u (Imp (Lis (Var !v), Lis (Var !v)),var)
 	| Fst -> 
 		fresh();
-		let a1 = Var !v in
+		let a = Var !v in
 		fresh();
-		u (Imp (Tup (a1, (Var !v)), a1),var)
+		u (Imp (Tup (a, (Var !v)), a),var)
 	| Snd ->
 		fresh();
-		let a1 = Var !v in
+		let a = Var !v in
 		fresh();
-		u (Imp (Tup (a1, (Var !v)), (Var !v)),var);;
+		u (Imp (Tup (a, (Var !v)), (Var !v)),var);;
 
 let m_id_var env var id =
 	try
@@ -43,7 +47,8 @@ let m_id_fun env var id =
 	| Not_found -> Error (sprintf "Function '%s' not found in environment." id);;
 
 let rec m_fieldexp (env : environment) var = function
-	| Nofield id -> m_id_var env var id
+	| Nofield id ->
+		m_id_var env var id
 	| Field (fieldexp, field) ->
 		fresh();
 		let a = Var !v in
@@ -55,11 +60,17 @@ let rec m_fieldexp (env : environment) var = function
 			| Success res1 -> Success (o res1 x);;
 
 let rec m_exp env var = function
-	| Exp_int _ -> u (var, Int)
-	| Exp_bool _ -> u (var, Bool)
-	| Exp_char _ -> u (var, Char)
-	| Exp_emptylist -> fresh(); u (var, Lis (Var !v))
-	| Exp_tuple (e1, e2) -> fresh();
+	| Exp_int _ ->
+		u (var, Int)
+	| Exp_bool _ ->
+		u (var, Bool)
+	| Exp_char _ ->
+		u (var, Char)
+	| Exp_emptylist ->
+		fresh();
+		u (var, Lis (Var !v))
+	| Exp_tuple (e1, e2) -> 
+		fresh();
 		let a1 = Var !v in
 		(match m_exp env a1 e1 with
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)
@@ -73,26 +84,27 @@ let rec m_exp env var = function
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)
 				| Success res2 -> Success (o res2 x))
 	| Exp_prefix (op, e1) ->
-		(let typeRES = op1_to_subs op in
+		let typeRES = op1_to_subs op in
 		(match m_exp env typeRES e1 with
+		| Error e -> Error ("Value ill-typed because of:\n" ^ e)
 		| Success x ->
-			(match u (substitute x var, typeRES) with
+			match u (substitute x var, typeRES) with
 			| Success res1 -> Success (o res1 x)
 			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
-		| Error e -> Error ("Value ill-typed because of:\n" ^ e)))
 	| Exp_infix (e1, op, e2) ->
-		(let (typeL, typeR, typeRES) = op2_to_subs op in
+		let (typeL, typeR, typeRES) = op2_to_subs op in
 		(match m_exp env typeL e1 with
+			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)
 			| Success x1 ->
-				(match m_exp (substitute_env x1 env) (substitute x1 typeR) e2 with
+				match m_exp (substitute_env x1 env) (substitute x1 typeR) e2 with
+				| Error e -> Error ("Right part ill-typed because of:\n" ^ e)
 				| Success res1 ->
-					(let x = o res1 x1 in
-					(match u (substitute x var, substitute x typeRES) with
-					| Success res2 -> Success (o res2 x)
-					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)))
-				| Error e -> Error ("Right part ill-typed because of:\n" ^ e))
-			|	Error e -> Error ("Left part ill-typed because of:\n" ^ e)))
-	| Exp_field fieldexp -> m_fieldexp env var fieldexp
+					let x = o res1 x1 in
+					match u (substitute x var, substitute x typeRES) with
+					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)
+					| Success res2 -> Success (o res2 x))
+	| Exp_field fieldexp ->
+		m_fieldexp env var fieldexp
 	| Exp_function_call (id, args) ->
 		fresh();
 		let a = Var !v in
@@ -117,19 +129,14 @@ let rec m_exp env var = function
   				| _ -> Error "Too many arguments." in
 			match match_type args elt with
 			| Error e -> Error e
-			| Success x -> 
-				let res = o x xa in
-				Success res;;
-				(* match u (var, substitute res var) with *)
-				(* | Success x1 -> Success (o x1 res)     *)
-				(* | Error e -> Error e;;                 *)
+			| Success x -> Success (o x xa);;
 
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
 	| [stmt] ->
 		(match m_stmt env var stmt with
 		| Error e -> Error (sprintf "Master type '%s' cannot be unified anymore:\n%s" (string_of_type var) e)
-		| res -> res)
+		| success -> success)
 	| stmt::rest ->
 		match m_stmt env var stmt with
 		| Error e -> Error e
@@ -138,7 +145,8 @@ let rec m_stmts env var = function
 			| Error e -> Error e
 			| Success res -> Success (o res x)
 and m_stmt env var = function
-	| Stmt_return None -> u (var, Void)
+	| Stmt_return None ->
+		u (var, Void)
 	| Stmt_return (Some exp) -> 
 		(match m_exp env var exp with
 		| Success x -> u (var, substitute x var)
@@ -146,7 +154,7 @@ and m_stmt env var = function
 	| Stmt_function_call (id,args) ->
 		fresh();
 		let a = Var !v in
-		m_exp env a (Exp_function_call (id,args))		
+		m_exp env a (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -205,7 +213,8 @@ let rec type_fargs t = function
 		| Imp (targ,trest) ->
 			(match type_fargs trest rest with
 			| Error e -> Error e
-			| Success resttype -> Success (Env_var.add {id = arg; t = targ} resttype))
+			| Success resttype ->
+				Success (Env_var.add {id = arg; t = targ} resttype))
 		| t -> Error "Too many arguments.";;		
 
 let new_var env var = function
@@ -216,11 +225,9 @@ let new_var env var = function
 		| Vardecl (_,id,_) ->
   		let xa = {id = id; t = var} in
   		try
-  			let _ = Env_var.find xa (fst env) in
-  			raise (Invalid_argument id)
+				Env.add_var xa env
   		with
-  		| Not_found ->
-  			Env_var.add xa (fst env), snd env)
+  		| Already_known el -> raise (Invalid_argument el))
 	| _ -> env;;
 
 let rec new_funs env = function
@@ -356,7 +363,7 @@ let rec m_sccs env var = function
   		with
   		| Invalid_argument a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
-let m exp = 
+let m exp =
   try 
 		let graph = make_graph exp in
 		m_sccs Env.empty (Var "0") (tarjan graph)
