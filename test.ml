@@ -4,6 +4,8 @@ open Parser
 open Char_func
 open Types
 open Pretty_printer_files
+open Code_generator
+open Codefragments
 
 open Graph_make
 open Graph_lib
@@ -43,6 +45,10 @@ open Typechecker_print
 (* open Typechecker_lib;;                            *)
 (* #load "typechecker.cmo";;                         *)
 (* open Typechecker;;                                *)
+(* #load "codefragments.cmo";;                       *)
+(* open Codefragments;;                              *)
+(* #load "code_generator.cmo";;                      *)
+(* open Code_generator;;                             *)
 (* #use "test.ml";;                                  *)
 
 (* === code die file reading regelt. === *)
@@ -53,10 +59,18 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "C:/Users/tom_e/workspace/CC/inputT.txt";;
+let filename = "input4"
+
+let in_channel =
+	try
+		open_in ("C:/Users/tom_e/workspace/CC/"^filename^".txt")
+	with
+	| _ -> open_in ("C:/Users/Martin/workspace/CC/"^filename^".txt");;
+
+let filename = "C:/Users/tom_e/workspace/CC/input4.txt";;
 (* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
-let in_channel = open_in filename;;
+(* let in_channel = open_in filename;; *)
 let tokenlist = ref [];;
 let l = ref 0;;
 try
@@ -71,13 +85,29 @@ with End_of_file ->
   close_in in_channel;;
 
 let structure = spl_parser [] !tokenlist;;
-let outfile = "C:/Users/tom_e/workspace/CC/output.txt";;
-(* let outfile = "C:/Users/Martin/workspace/CC/output.txt";; *)
+(* let outfile = "C:/Users/tom_e/workspace/CC/output.txt";; *)
+let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
+
+(* (*types of input4 *)                                                                                                      *)
+(* let vartypes4 = [("b",Int)];;                                                                                             *)
+(* let funtypes4 = [{fid="facI";ftype=Imp(Int,Int);locals=[("r",Int)]}];;                                                    *)
+
+(* (*types of input7 *)                                                                                                      *)
+(* let vartypes7 = [("p",Lis Int);("ft",Lis Int);("r",Lis Int);("sc",Tup (Lis Int,Bool));("s",Tup(Int,Int));("a",Lis Int)];; *)
+(* let funtypes7 = [                                                                                                         *)
+(* 	{fid="product";ftype=Imp (Lis Int,Int);locals=[]};                                                                      *)
+(* 	{fid="fromTo";ftype=Imp(Int, Imp (Int,Lis Int));locals=[]};                                                             *)
+(* 	{fid="reverse";ftype=Imp(Lis (Var "a"),Lis (Var "a"));locals=[("accu",Lis (Var "a"))]};                                 *)
+(* 	{fid="swapCopy";ftype=Imp(Tup(Var "a",Var "b"),Tup(Var "b",Var "a"));locals=[]};                                        *)
+(* 	{fid="swap";ftype=Imp(Tup(Var "a",Var "a"),Tup(Var "a",Var "a"));locals=[("tmp",Var "a")]};                             *)
+(* 	{fid="append";ftype=Imp(Lis Int,Imp(Lis Int,Lis Int));locals=[]}                                                        *)
+(* 	];;                                                                                                                     *)
+
 match structure with
 | Error e -> print_endline e;
 | Success x ->
-	match m (Env_var.empty, Env_fun.empty) x with
+	match m x with
 	| Error e -> print_endline e;
-	| Success env -> print_endline (prettyprint_env env);;
+	| Success env -> print_string (code_gen (Env.elements env) x);;
 (* close_out oc;; *)

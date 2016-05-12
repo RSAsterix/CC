@@ -1,7 +1,6 @@
-facR ( n ) :: Int -> Int
-{ if ( n < 2 ) {
-	return 1;
-  } else {
-	return n * facR ( n - 1 );
-  }
+var x = facR(3,1);
+facR ( a,b ) :: Int -> Int
+{ a=a;
+a=a;
+return a-b;
 }
