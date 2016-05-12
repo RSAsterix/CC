@@ -241,7 +241,10 @@ let m_vardecl env var = function
 		let a = pretype_var pretype in
 		match m_exp env a exp with
 		| Error e -> Error (sprintf "In '%s':\n%s" id e)
-		| Success x -> u (var, substitute x a)
+		| Success x -> 
+			match u (var, substitute x a) with
+			| Error e -> Error (sprintf "In '%s':\n%s" id e)
+			| Success res -> Success (o res x)
 			(* match u (var, substitute x a) with *)
 			(* | Success res -> Success (o res x) *)
 			(* | Error e -> Error e;;             *)
@@ -342,7 +345,7 @@ let rec m_sccs env var = function
     		(match m_scc env' var scc with
     		| Error e -> Error e
     		| Success xn ->
-    			let envxn = (* substitute_env xn *) env in
+    			let envxn = substitute_env xn env in
     			let varxn = substitute xn var in
 					let newvar = new_var env' (substitute xn var) scc in
     			let ads = Env.diff (substitute_env xn newvar) envxn in
