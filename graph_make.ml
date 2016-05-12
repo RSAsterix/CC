@@ -78,6 +78,43 @@ let fv_spl graph spl =
 	add_edges spl;;
 
 let make_graph spl = 
-	let g = {v = []; e = []} in
+	let g = {v = [
+		{id = "read";
+		i = -1;
+		lowlink = -1;
+		onStack = false;
+		spl_decl =
+			Fundecl (
+				"read",
+				[],
+				None,
+				[None,"x",Exp_int 1],
+				[Stmt_return (Some (Exp_field (Nofield "x")))])};
+		{id = "write";
+		i = -1;
+		lowlink = -1;
+		onStack = false;
+		spl_decl =
+			Fundecl (
+				"write",
+				["x"],
+				Some([Type_int],Type_void),
+				[],
+				[Stmt_return None])};
+		{id = "isEmpty"; 
+		i = -1; 
+		lowlink = -1; 
+		onStack = false; 
+		spl_decl = 
+			Fundecl (
+				"isEmpty", 
+				["l"], 
+				None, 
+				[],
+				[Stmt_return 
+				(Some (Exp_infix 
+					(Exp_field (Nofield "l"),
+					 Eqop Eq,
+					 Exp_emptylist)))])}]; e = []} in
 	fv_spl g spl;
 	g;;

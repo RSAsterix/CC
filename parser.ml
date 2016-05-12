@@ -135,9 +135,11 @@ stmt_parser = function
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing 'return'." l0), [] 
 		| Error e, list -> Error e, list)
-	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
+	| (l0,IDtok id)::(_,OPEN_PAR)::list -> 
   	(match funcall_parser list with
-  	| Success exp_list, list -> Success (Stmt_function_call (id, exp_list)), list
+  	| Success exp_list, (_,SEMICOLON)::list -> Success (Stmt_function_call (id, exp_list)), list
+		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), list
+		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing 'return'." l0), []
 		| Error e, list -> Error e, list)
 	| (l0,IDtok id)::list ->
 		(match (field_parser [] list) with
@@ -215,9 +217,6 @@ let decl_parser = function
 		| Success vardecl, list -> Success (Vardecl vardecl), list
 		| Error e, faillist -> Error e, faillist);;
 
-(* Predefined functions *)
-let isEmpty = Fundecl ("isEmpty", ["l"], None, [], 
-[Stmt_return (Some (Exp_infix (Exp_field (Nofield "l"), Eqop Eq, Exp_emptylist)))]);;
 (* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
 (* read *)
 
@@ -244,6 +243,6 @@ let rec spl_parser decllist tokenlist =
 	| Error e -> Error e
 	| Success list ->
   	match decl_parser list with
-    | Success decls, [] -> Success (isEmpty::print::(List.rev (decls::decllist)))
+    | Success decls, [] -> Success (List.rev (decls::decllist))
     | Success decls, list -> spl_parser (decls::decllist) list
     | Error e, list -> Error e;;

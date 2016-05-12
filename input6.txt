@@ -1,0 +1,18 @@
+var a = facR(6);
+
+facR ( n ) :: Int -> Int {
+if ( n < 2 ) {
+return 1;
+} else {
+return n * facR ( n - 1 );
+}
+}
+
+facI ( n ) :: Int -> Int {
+while ( n > 1 ) {
+n = n - 1;
+}
+return n ;
+}
+
+var b = facI(6);

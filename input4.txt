@@ -1,0 +1,17 @@
+facI ( n ) :: Int -> Int {
+var r = 1;
+while ( n > 1 ) {
+r = r * n;
+n = n - 1;
+}
+return r ;
+}
+
+var b = read();
+var c = facI(b);
+
+
+main() {
+write(c);
+return 1;
+}
