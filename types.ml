@@ -1,5 +1,6 @@
 (*==    structure    ==*)
 type id = string
+type constructor = string
 type op1 = Not | Neg
 type logop = And | Or
 type eqop = Eq | Neq
@@ -27,7 +28,8 @@ type exp =
 	| Exp_function_call of id * exp list
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
-type case = exp * stmt list
+	| Exp_low_bar
+	| Exp_constructor of constructor
 type stmt = 
 	| Stmt_if of exp * stmt list
 	| Stmt_if_else of exp * stmt list * stmt list
@@ -45,7 +47,7 @@ type rettype = Rettype of typetoken | Type_void
 type funtype = typetoken list * rettype
 type vardecl = typetoken option * id * exp 
 type fundecl = id * fargs * funtype option * vardecl list * stmt list
-type typedecl = id * typetoken
+type typedecl = Rename of id * typetoken | Enum of id * constructor list
 type decl = Typedecl of typedecl | Vardecl of vardecl | Fundecl of fundecl
 type spl = decl list;;
 

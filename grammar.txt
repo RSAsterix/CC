@@ -1,5 +1,5 @@
 SPL = decl+
-decl = | 'type' id '=' type ';' | id '('  funDecl | varDecl
+decl = | 'type' id '=' decltype ';' | id '('  funDecl | varDecl
 funDecl = fargs '(' vardeclList stmt stmtList
 		| fargs '::' funtype '(' vardeclList stmtList
 fargs =   ')' | fargs2
@@ -21,12 +21,14 @@ varDecl = 'var' varDeclRest
 		| type varDeclRest
 varDeclRest = id '=' exp ';'
 funtype = '->' rettype | type funtype
-rettype = 'Void' | type
+decltype =  constructor [constructortype] | type
+constructortype = '|' constructor [constructortype]
+rettype = 'void' | type
 type =    basictype
 		| id
 		| '(' type , type ')'
 		| '[' type ']'
-basictype = 'Int' | 'Bool' | 'Char'
+basictype = 'int' | 'bool' | 'char'
 exp = expLogical [opColon exp]
 expLogical = expEq [opLogical expLogical]
 expEq = expPlus [opEq expEq]
@@ -42,6 +44,8 @@ expStrongest =    int
 				| '(' exp ',' exp ')'
 				| '(' exp ')'
 				| op1 exp
+				| '_'
+				| constructor
 funcall = ')' | actargs
 actargs = exp ')' | exp ',' actargs
 field = '.' fieldtoken [field]
@@ -53,5 +57,6 @@ opPlus = '+' | '-'
 opTimes = '*' | '/' | '%'
 op1 = '!' | '-'
 int = digit+
-id = alpha ( '_' | alphaNum )*
+id = lowerAlpha ( '_' | alphaNum )*
+constructor = capitalAlpha ('_' | alphaNum)*
 

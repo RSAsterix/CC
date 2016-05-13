@@ -24,10 +24,10 @@ let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_dig
 let rec scan_line l = function
 	| [] -> []
 	| 'v'::'a'::'r'::line when (match_next line) -> (l, VAR)::(scan_line l line)
-	| 'V'::'o'::'i'::'d'::line when (match_next line) -> (l, VOID)::(scan_line l line)
-	| 'I'::'n'::'t'::line when (match_next line) -> (l, Basic_int)::(scan_line l line)
-	| 'B'::'o'::'o'::'l'::line when (match_next line) -> (l, Basic_bool)::(scan_line l line)
-	| 'C'::'h'::'a'::'r'::line when (match_next line) -> (l, Basic_char)::(scan_line l line)
+	| 'v'::'o'::'i'::'d'::line when (match_next line) -> (l, VOID)::(scan_line l line)
+	| 'i'::'n'::'t'::line when (match_next line) -> (l, Basic_int)::(scan_line l line)
+	| 'b'::'o'::'o'::'l'::line when (match_next line) -> (l, Basic_bool)::(scan_line l line)
+	| 'c'::'h'::'a'::'r'::line when (match_next line) -> (l, Basic_char)::(scan_line l line)
 	| 'i'::'f'::line when (match_next line) -> (l, IF)::(scan_line l line)
 	| 'e'::'l'::'s'::'e'::line when (match_next line) -> (l, ELSE)::(scan_line l line)
 	| 'w'::'h'::'i'::'l'::'e'::line when (match_next line) -> (l, WHILE)::(scan_line l line)
