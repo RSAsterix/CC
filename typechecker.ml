@@ -31,20 +31,20 @@ let m_id_var env var id =
 		let el = Env.find_var id env in
 		u (var, el.t)
 	with
-	| Not_found -> Error (sprintf "Variable '%s' not found in environment." id);;
+	| Not_in_env el -> Error (sprintf "Variable '%s' not found in environment." el);;
 
 let m_id_fun env var id = 
-	try
-		let el = env_fun_find id env in
-		let x = 
-			SS.fold (fun x rw -> 
-				fresh(); 
-				RW.add (x, Var !v) rw) el.bound RW.empty in
-		(match u (var, substitute x el.t) with
+	try (
+		let el = Env.find_fun id env in
+		let f = (fun x rw -> 
+			fresh(); 
+			RW.add (x, Var !v) rw) in
+		let x = SS.fold f el.bound RW.empty in
+		match u (var, substitute x el.t) with
 		| Error e -> Error e
 		| Success res -> Success (o res x))
 	with
-	| Not_found -> Error (sprintf "Function '%s' not found in environment." id);;
+	| Not_in_env el -> Error (sprintf "Function '%s' not found in environment." el);;
 
 let rec m_fieldexp (env : environment) var = function
 	| Nofield id ->
@@ -219,13 +219,12 @@ let rec type_fargs t = function
 
 let new_var env var = function
 	| [] -> env
-	| [vert] -> 
-		(match vert.spl_decl with
+	| [vert] -> ( 
+		match vert.spl_decl with
 		| Fundecl _ -> env
 		| Vardecl (_,id,_) ->
   		let xa = {id = id; t = var} in
-  		try
-				Env.add_var xa env
+  		try Env.add_var xa env
   		with
   		| Already_known el -> raise (Invalid_argument el))
 	| _ -> env;;
@@ -234,15 +233,12 @@ let rec new_funs env = function
 	| [] -> env
 	| vert::scc ->
 		match vert.spl_decl with
-  	| Fundecl (id,fargs,pretype,_,_) ->
+  	| Fundecl (id,fargs,pretype,_,_) -> (
   		let t = pretype_fun fargs pretype in
   		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
-  		(try
-  			let _ = Env_fun.find xa (snd env) in
-  			raise (Invalid_argument id)
+  		try new_funs (Env.add_fun xa env) scc
   		with
-  		| Not_found ->
-  			new_funs (fst env, Env_fun.add xa (snd env)) scc)
+  		| Already_known el -> raise (Invalid_argument el))
   	| Vardecl _ ->
 			new_funs env scc;; 
 
@@ -276,30 +272,30 @@ let m_fundecl env var = function
   					let rec m_vardecls localenv var = function
     				| [] -> Success (RW.empty, localenv)
     				| (_,vid,_ as vardecl)::rest ->
-  						try
-  							let _ = env_var_find vid localenv in
-  							Error (sprintf "Variable '%s' already local in '%s'." vid id)
-  						with
-  						| _ ->
+  						try (
 								fresh();
 								let a = Var !v in
-      					match m_vardecl (Env.add_locals (fst localenv) env) a vardecl with
+      					match m_vardecl (Env.add_locals localenv env) a vardecl with
       					| Error e -> Error e
       					| Success x ->
 									let newvar = {id = vid; t = a} in
-  								let localenv' = Env.update_var newvar localenv in
-      						match m_vardecls (substitute_env x localenv') (substitute x var) rest with
+  								let localenv' = Env_var.add_safe newvar localenv in
+      						match m_vardecls (substitute_vars x localenv') (substitute x var) rest with
       						| Error e -> Error e
-      						| Success (res, localenv') -> 
-  									Success (o res x, localenv') in 
-  					match m_vardecls (locals,Env_fun.empty) var vardecls with
+      						| Success (res, localenv') -> Success (o res x, localenv'))
+							with
+							| Already_known el -> Error (sprintf "Variable '%s' already local in '%s'." el id) in
+  					match m_vardecls locals var vardecls with
   					| Error e -> Error (sprintf "In '%s':\n%s" id e)
   					| Success (x, locals) ->
-							let newenv = Env.add_locals (fst locals) env in
-							(env_fun_find id newenv).locals <- fst locals;
-  						match m_stmts (substitute_env x newenv) (returntype elt) stmts with
-  						| Error e -> Error (sprintf "In '%s':\n%s" id e)
-  						| Success res -> Success (o res x));;
+							try (
+								let newenv = Env.add_locals locals env in
+								(Env.find_fun id newenv).locals <- locals;
+								match m_stmts (substitute_env x newenv) (returntype elt) stmts with
+    						| Error e -> Error (sprintf "In '%s':\n%s" id e)
+    						| Success res -> Success (o res x))
+							with
+							| Not_in_env el -> Error (sprintf "Function '%s' not found in environment (in '%s')." el id));;
 		
 let rec m_scc env var = function
 	| [] -> Success (RW.empty)
@@ -325,12 +321,12 @@ let rec argify env ads xn = function
 	| vert::scc ->
 		match vert.spl_decl with
 		| Vardecl (_,id,_) -> 
-			let el = env_var_find id ads in
+			let el = Env.find_var id ads in
 			let aixn = substitute xn el.t in
 			let newel = {el with t = aixn} in
 			argify env (Env.update_var newel ads) xn scc
 		| Fundecl (id,fargs,_,_,_) ->
-			let el = env_fun_find id ads in
+			let el = Env.find_fun id ads in
 			let aixn = substitute xn el.t in
 			let bi = SS.diff (tv aixn) (tv_env env) in
 			match type_fargs aixn fargs with
@@ -350,9 +346,9 @@ let rec m_sccs env var = function
 		if check_scc scc
 		then Error "Interdependent global variable declarations."
 		else (
-  		try
+  		try (
     		let env' = new_funs env scc in
-    		(match m_scc env' var scc with
+    		match m_scc env' var scc with
     		| Error e -> Error e
     		| Success xn ->
     			let envxn = substitute_env xn env in
