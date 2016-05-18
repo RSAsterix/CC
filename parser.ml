@@ -99,7 +99,21 @@ let rec stmt_list_parser stmt_list = function
 		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
 		| Error e, list -> Error e, list)
 and
+case_parser = function
+	| (_,PIPE)::list -> 
+		(match exp_parser list with
+		| Success exp, (_,ARROW)::list -> 
+			(match stmt_list_parser [] with
+			| Success stmt_list, list -> Success (exp,stmt_list)
+			| Error e, list -> Error e, list)
+		| Success exp, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
+		| Error e, list -> Error e, list)
+	| (l,x)::list -> Error (sprintf "(r.%i) No match case, but: %s" l (token_to_string x)), (l,x)::list
+and
 stmt_parser = function
+	| (_,MATCH)::list ->
+		(match exp_parser list with
+		| Success exp, (_,WITH)::
   | (_,IF)::(l0,OPEN_PAR)::list ->
   	(match exp_parser list with
 		| Success exp, (_,CLOSE_PAR)::(_,OPEN_ACO)::list ->

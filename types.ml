@@ -77,6 +77,7 @@ type token =
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
+	| Constructortok of string
 	| Chartok of char
 	| Startcomment
 	| Endcomment

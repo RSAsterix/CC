@@ -10,10 +10,17 @@ let rec get_number number line = match line with
 			else (Some (Inttok (int_of_string (implode (List.rev number)))), line)
 		| [] -> (Some (Inttok (int_of_string (implode (List.rev number)))),line);;
 
-let rec get_name name line = match line with
+let rec get_constructor name line = match line with
 		| char::restline -> 
 			if is_letter char || is_digit char || char == '_' 
-			then get_name (char::name) restline 
+			then get_constructor (char::name) restline 
+			else (Some (Constructortok (implode (List.rev name))),line)
+		| [] -> (Some (Constructortok (implode (List.rev name))),line);;
+
+let rec get_id name line = match line with
+		| char::restline -> 
+			if is_letter char || is_digit char || char == '_' 
+			then get_id (char::name) restline 
 			else (Some (IDtok (implode (List.rev name))),line)
 		| [] -> (Some (IDtok (implode (List.rev name))),line);;
 
@@ -76,7 +83,8 @@ let rec scan_line l = function
 	| '\''::c::'\''::line -> (l, (Chartok c))::(scan_line l line)
 	| char::line -> match
 			 (if is_digit char then (get_number [] (char::line))
-      	else if is_letter char then (get_name [] (char::line))
+      	else if is_uppercase char then (get_constructor [] (char::line))
+				else if is_lowercase char then (get_id [] (char::line))
       	else (None, line)) with
     		| None,line -> scan_line l line
     		| Some s, line -> (l, s)::(scan_line l line);;
@@ -113,9 +121,14 @@ let token_to_string t = match t with
 	| Optok a -> a
 	| Inttok a -> string_of_int a
 	| IDtok a -> a
+	| Constructortok a -> a
 	| Chartok a -> implode ['\'';a;'\''] 
 	| Startcomment -> "/* "
-	| Endcomment -> " */" ;;
+	| Endcomment -> " */" 
+	| TYPE -> "type"
+	| MATCH -> "match" 
+	| WITH -> "with" 
+	| PIPE -> "|";;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
