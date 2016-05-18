@@ -66,6 +66,7 @@ let rec scan_line l = function
 	| '!'::'='::line -> (l, Optok "!=")::(scan_line l line)
 	| '&'::'&'::line -> (l, Optok "&&")::(scan_line l line)
 	| '|'::'|'::line -> (l, Optok "||")::(scan_line l line)
+	| '_'::line -> (l,LOWBAR)::(scan_line l line)
 	| '|'::line -> (l,PIPE)::(scan_line l line)
 	| ':'::line -> (l, Optok ":")::(scan_line l line)
 	| '!'::line -> (l, Optok "!")::(scan_line l line)
@@ -125,6 +126,7 @@ let token_to_string t = match t with
 	| Chartok a -> implode ['\'';a;'\''] 
 	| Startcomment -> "/* "
 	| Endcomment -> " */" 
+	| LOWBAR -> "_"
 	| TYPE -> "type"
 	| MATCH -> "match" 
 	| WITH -> "with" 

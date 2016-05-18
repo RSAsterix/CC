@@ -81,6 +81,7 @@ type token =
 	| Chartok of char
 	| Startcomment
 	| Endcomment
+	| LOWBAR
 	| TYPE 
 	| MATCH
 	| WITH

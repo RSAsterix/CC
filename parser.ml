@@ -103,17 +103,31 @@ case_parser = function
 	| (_,PIPE)::list -> 
 		(match exp_parser list with
 		| Success exp, (_,ARROW)::list -> 
-			(match stmt_list_parser [] with
-			| Success stmt_list, list -> Success (exp,stmt_list)
+			(match stmt_list_parser [] list with
+			| Success stmt_list, list -> Success (exp,stmt_list), list
 			| Error e, list -> Error e, list)
 		| Success exp, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
+		| Success exp, [] -> Error "Unexpected EOF when expecting arrow.", [] 
 		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) No match case, but: %s" l (token_to_string x)), (l,x)::list
+	| (l,x)::list -> Error (sprintf "(r.%i) No match case or semicolon, but: %s" l (token_to_string x)), (l,x)::list
+	| [] -> Error "Unexpected EOF when expecting case matching.", [] 
+and
+case_list_parser case_list list = 
+	match case_parser list with
+	| Success (exp,stmt_list), (_,SEMICOLON)::list -> Success (List.rev ((exp,stmt_list)::case_list)), list
+	| Success (exp,stmt_list), list -> case_list_parser ((exp,stmt_list)::case_list) list
+	| Error e, list -> Error e, list
 and
 stmt_parser = function
 	| (_,MATCH)::list ->
 		(match exp_parser list with
-		| Success exp, (_,WITH)::
+		| Success exp, (_,WITH)::list ->
+			(match case_list_parser [] list with
+			| Success case_list, list -> Success (Stmt_match (exp,case_list)), list
+			| Error e, list -> Error e, list)
+		| Success exp, (l,x)::list -> Error (sprintf "(r.%i) No 'with' keyword, but: %s" l (token_to_string x)), (l,x)::list
+		| Success exp, [] -> Error "(r.%i) Unexpected EOF when expecting 'with' keyword.", [] 
+		| Error e, list -> Error e, list)
   | (_,IF)::(l0,OPEN_PAR)::list ->
   	(match exp_parser list with
 		| Success exp, (_,CLOSE_PAR)::(_,OPEN_ACO)::list ->
@@ -219,8 +233,18 @@ let fundecl_parser id list = match fargs_parser list with
 	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No opening parenthesis or '::', but: %s" l (token_to_string x)), (l,x)::list
 	| Success _, [] -> Error "Unexpected EOF while parsing function declaration.", [];;
 
+(* (renames: (constructor * typetoken) list) (enums: (constructor * int) list) *)
+
+let rec parse_rename c = function
+	| (_,Constructortok c)::(_,PIPE) -> 
+
+let typedecl_parser = function
+	| (_,Constructortok c)::(_,PIPE)
+
 (* Decl = id '('  FunDecl | VarDecl *)
 let decl_parser = function
+	| (_,TYPE)::(_,IDtok id)::(_,EQUALS)::list ->
+		match
 	| (_,IDtok id)::(_,OPEN_PAR)::list ->
 		(match fundecl_parser id list with
 		| Success fundecl, list -> Success (Fundecl fundecl), list
@@ -233,8 +257,6 @@ let decl_parser = function
 
 (* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
 (* read *)
-
-
 
 let rec remove_comments = function
 	| Success ((l,Startcomment)::list) -> remove_comments' (Success list)

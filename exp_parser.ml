@@ -160,6 +160,8 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 	| (_,FALSE)::list -> Success (Some (Exp_bool false)), list
 	| (_,TRUE)::list -> Success (Some (Exp_bool true)), list
 	| (_,EMPTYLIST)::list -> Success (Some (Exp_emptylist)), list
+	| (_,LOWBAR)::list -> Success (Some (Exp_low_bar)), list
+	| (_,Constructortok c)::list -> Success (Some (Exp_constructor c)), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
 		| Success exps, list -> Success (Some (Exp_function_call (id, exps))), list 
