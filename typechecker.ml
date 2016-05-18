@@ -9,27 +9,15 @@ open Graph_cycles
 open Graph_lib
 
 let m_field env var = function
-	| Hd -> 
-		fresh();
-		u (Imp (Lis (Var !v), (Var !v)),var)
-	| Tl -> 
-		fresh(); 
-		u (Imp (Lis (Var !v), Lis (Var !v)),var)
-	| Fst -> 
-		fresh();
-		let a = Var !v in
-		fresh();
-		u (Imp (Tup (a, (Var !v)), a),var)
-	| Snd ->
-		fresh();
-		let a = Var !v in
-		fresh();
-		u (Imp (Tup (a, (Var !v)), (Var !v)),var);;
+	| Hd -> fresh(); u (var, Imp (Lis (Var !v), (Var !v)))
+	| Tl -> fresh(); u (var, Imp (Lis (Var !v), Lis (Var !v)))
+	| Fst -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), a))
+	| Snd -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), (Var !v)));;
 
 let m_id_var env var id =
 	try
 		let el = Env.find_var id env in
-		u (el.t, var)
+		u (var,el.t)
 	with
 	| Not_in_env el -> Error (sprintf "Variable '%s' not found in environment." el);;
 
@@ -40,13 +28,12 @@ let m_id_fun env var id =
 			fresh(); 
 			RW.add (x, Var !v) rw) in
 		let x = SS.fold f el.bound RW.empty in
-		u (substitute x el.t, var))
+		u (var,substitute x el.t))
 	with
 	| Not_in_env el -> Error (sprintf "Function '%s' not found in environment." el);;
 
 let rec m_fieldexp (env : environment) var = function
-	| Nofield id ->
-		m_id_var env var id
+	| Nofield id -> m_id_var env var id
 	| Field (fieldexp, field) ->
 		fresh();
 		let a = Var !v in
@@ -55,25 +42,9 @@ let rec m_fieldexp (env : environment) var = function
 		| Success x ->
 			match m_fieldexp (substitute_env x env) (substitute x a) fieldexp with
 			| Error e -> Error ("Field cannot be applied to expression because of:\n" ^ e)
-			| Success res1 -> Success (o res1 x);;
+			| Success res1 -> Success (o x res1);;
 
-let rec m_fargs env' var = function
-	| [] -> Error "Too few arguments."
-	| [arg] -> 
-		(match var with
-		| Imp (_,_) -> Error "Too few arguments."
-		| _ -> m_exp env' var arg)
-	| arg::rest ->
-		match var with
-		| Imp (argtype, resttype) ->
-			(match m_exp env' argtype arg with
-			| Error e -> Error ("Argument not matching:\n" ^ e)
-			| Success x ->
-				match m_fargs (substitute_env x env') (substitute x resttype) rest with
-				| Error e -> Error e
-				| Success res -> Success (o res x))
-		| _ -> Error "Too many arguments."
-and m_exp env var = function
+let rec m_exp env var = function
 	| Exp_int _ -> u (var, Int)
 	| Exp_bool _ -> u (var, Bool)
 	| Exp_char _ -> u (var, Char)
@@ -116,10 +87,26 @@ and m_exp env var = function
 	| Exp_function_call (id, args) ->
 		fresh();
 		let a = Var !v in
-		match m_id_fun env (Imp (a, var)) id with
+		match m_id_fun env a id with
 		| Error e -> Error e
 		| Success xa ->
-			match m_fargs (substitute_env xa env) (substitute xa a) args with
+			let elt = substitute xa a in
+		  let rec match_type arglist = function
+  			| Imp (argtype1,resttype) ->
+  				(match arglist with
+  				| [] -> Error "Too few arguments."
+  				| arg1::rest ->
+  					match m_exp env argtype1 arg1 with
+  					| Error e -> Error ("Argument not matching:\n" ^ e)
+						| Success x ->
+  						match match_type rest (substitute x resttype) with
+  						| Error e -> Error e
+							| Success res -> Success (o res x))
+  			| rettype ->
+  				match arglist with
+  				| [] -> u (var, rettype)
+  				| _ -> Error "Too many arguments." in
+			match match_type args elt with
 			| Error e -> Error e
 			| Success x -> Success (o x xa);;		
 
@@ -165,7 +152,7 @@ and m_stmt env var = function
 				match m_exp (substitute_env x env) Bool exp with
   			| Error e -> Error ("Condition not a boolean:\n" ^ e)
 				| Success res -> Success (o res x))
-	| Stmt_define (fieldexp,exp) -> 
+	| Stmt_define (fieldexp,exp) ->
 		fresh();
 		let a = Var !v in
 		match m_fieldexp env a fieldexp with
@@ -173,7 +160,7 @@ and m_stmt env var = function
 		| Success x ->
 			match m_exp (substitute_env x env) (substitute x a) exp with
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e)
-			| Success res -> Success (o res x);;
+			| Success res -> Success (o x res);;
 
 let rec type_fargs t = function
 	| [] ->
@@ -242,7 +229,7 @@ let m_fundecl env var (id,fargs,pretype,vardecls,stmts) =
 								let locals' = Env_var.add_safe newvar locals in
     						match m_vardecls (substitute_vars x locals') (substitute x var) rest with
     						| Error e -> Error e
-    						| Success (res, locals') -> Success (o res x, locals'))
+    						| Success (res, locals') -> Success (o x res, locals'))
 						with
 						| Already_known el -> Error (sprintf "Variable '%s' already local in '%s'." el id) in
 					match m_vardecls locals var vardecls with
@@ -349,4 +336,4 @@ let m exp =
 		let graph = make_graph exp in
 		m_sccs Env.empty (Var "0") (tarjan graph)
 	with
-	| Already_known e -> Error e;;
+	| Invalid_argument e -> Error e;;
