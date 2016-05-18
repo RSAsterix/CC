@@ -235,16 +235,41 @@ let fundecl_parser id list = match fargs_parser list with
 
 (* (renames: (constructor * typetoken) list) (enums: (constructor * int) list) *)
 
-let rec parse_rename c = function
-	| (_,Constructortok c)::(_,PIPE) -> 
+let rec parse_enum enumlist = function
+	| (_,Constructortok c)::(_,PIPE)::list -> parse_enum (c::enumlist) list
+	| (_,Constructortok c)::list -> Success (List.rev (c::enumlist)), list
+	| (l,x)::list -> Error (sprintf "(r.%i) No enum, but: %s" l (token_to_string x)), (l,x)::list
+	| [] -> Error "Unexpected EOF after parsing '|'.", []
 
-let typedecl_parser = function
-	| (_,Constructortok c)::(_,PIPE)
+let rec split_at predicate parsed = function
+	| head::tail when predicate head -> List.rev parsed, tail
+	| head::tail -> split_at predicate (head::parsed) tail
+	| [] -> parsed,[] 
+
+
+let rec parse_rename id list =
+	let typelist,restlist = split_at (fun x -> snd x = SEMICOLON) [] list in
+	match type_parser typelist with
+	| Success _, [] -> Success None, List.fold_right (fun el newlist -> if snd el=IDtok id then List.append typelist newlist else el::newlist) restlist []
+	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
+	| Error e, list -> Error e, list
+
+let typedecl_parser id = function
+	| (_,Constructortok c)::(_,PIPE)::list ->
+		(match parse_enum [] list with
+		| Success enumlist, list -> Success (Enum (id,c::enumlist)),list
+		| Error e, list -> Error e, list)
+	| list -> 
+		(match parse_rename id list with
+		| Success _, list -> Success Ignorable, list
+		| Error e, list -> Error e, list)
 
 (* Decl = id '('  FunDecl | VarDecl *)
 let decl_parser = function
-	| (_,TYPE)::(_,IDtok id)::(_,EQUALS)::list ->
-		match
+	| (_,TYPE)::(_,IDtok id)::(_,Optok "=")::list ->
+		(match typedecl_parser id list with
+		| Success typedecl, list -> Success (Typedecl typedecl), list
+		| Error e, list -> Error e, list)
 	| (_,IDtok id)::(_,OPEN_PAR)::list ->
 		(match fundecl_parser id list with
 		| Success fundecl, list -> Success (Fundecl fundecl), list

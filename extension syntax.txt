@@ -22,6 +22,31 @@ stel d bestaat niet, dan wordt gekeken of g(a) match met de vorm (_,0).
 Zoja, dan geven we d de waarde die _ had in de stmts na de pijl. 
 Dit is een vorm van een zeer locale variabele. d bestaat niet buiten deze stmts.
 
+De vertaling van deze functie naar if-statements (waarbij c bestaat, d niet en de var u (van unnamed) ook nog niet)
+is als volgt. Denk er aan dat == niet gedefinieerd is voor tuples en lijsten
+f(a){
+	var u = g(a);
+	if (fst u == 0){
+		if (snd u == 0)
+			{return 3;}
+		else
+			{break;} //bestaat niet, maar is makkelijk te maken in ssm
+	}
+	else { if (fst u == fac(c)){
+		if (snd u == 0)
+			{if b then c = 1 + c; return c;}
+		else
+			{break;}
+	}
+	else { if snd u == 0)
+		{return fst u;}
+	}
+	else 
+		{return snd a;}
+} 
+			
+	
+
 in toplevel mag je nu typedecls doen.
 Voorbeelden van een typedecl is:
 
