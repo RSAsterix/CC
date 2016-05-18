@@ -182,13 +182,6 @@ let rec pretype_var = function
 
 let m_vardecl env var (pretype, id, exp) =
 	m_exp env var exp;;
-	(* let a = pretype_var pretype in                     *)
-	(* match m_exp env a exp with                         *)
-	(* | Error e -> Error (sprintf "In '%s':\n%s" id e)   *)
-	(* | Success x ->                                     *)
-	(* 	match u (var, substitute x a) with               *)
-	(* 	| Error e -> Error (sprintf "In '%s':\n%s" id e) *)
-	(* 	| Success res -> Success (o res x);;             *)
 
 let rec type_fargs t = function
 	| [] ->
