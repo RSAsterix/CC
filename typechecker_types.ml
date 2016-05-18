@@ -40,6 +40,15 @@ module Env_var =
 			let y = find_safe x set in
   		let set' = remove y set in
   		add x set'
+		let add_locals x set =
+			fold (fun el beginset ->
+				try
+					update el beginset
+				with
+				| Not_in_env e -> add_safe el beginset) x set
+		let exclude x set =
+			let y = find_safe {id = x; t = Void} set in
+			remove y set
 	end;;
 
 type env_fun = {
@@ -71,7 +80,7 @@ module Env_fun =
 			with
 			| Not_found -> add x set
 		let update x set =
-  		let y = find x set in
+  		let y = find_safe x set in
   		let set' = remove y set in
   		add x set'
 	end;;
@@ -99,18 +108,16 @@ module Env =
 			Env_var.update x (fst env), snd env
 		
 		let find_fun x env =
-			Env_fun.find_safe {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} (snd env)	
+			Env_fun.find_safe {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} (snd env)
 		let add_fun x env =
 			fst env, Env_fun.add_safe x (snd env)
 		let update_fun x env =
 			fst env, Env_fun.update x (snd env)
 		
-		let add_locals x env =
-			Env_var.fold (fun el beginenv ->
-				try
-					update_var el beginenv
-				with
-				| Not_in_env e -> add_var el beginenv) x env			
+		let add_locals locals env = 
+			Env_var.add_locals locals (fst env), snd env
+		let exclude x env =
+			Env_var.exclude x (fst env), snd env
 	end;;
 	
 module RW = Set.Make(

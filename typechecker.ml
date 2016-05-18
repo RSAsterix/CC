@@ -29,7 +29,7 @@ let m_field env var = function
 let m_id_var env var id =
 	try
 		let el = Env.find_var id env in
-		u (var, el.t)
+		u (el.t, var)
 	with
 	| Not_in_env el -> Error (sprintf "Variable '%s' not found in environment." el);;
 
@@ -40,9 +40,7 @@ let m_id_fun env var id =
 			fresh(); 
 			RW.add (x, Var !v) rw) in
 		let x = SS.fold f el.bound RW.empty in
-		match u (var, substitute x el.t) with
-		| Error e -> Error e
-		| Success res -> Success (o res x))
+		u (substitute x el.t, var))
 	with
 	| Not_in_env el -> Error (sprintf "Function '%s' not found in environment." el);;
 
@@ -59,16 +57,27 @@ let rec m_fieldexp (env : environment) var = function
 			| Error e -> Error ("Field cannot be applied to expression because of:\n" ^ e)
 			| Success res1 -> Success (o res1 x);;
 
-let rec m_exp env var = function
-	| Exp_int _ ->
-		u (var, Int)
-	| Exp_bool _ ->
-		u (var, Bool)
-	| Exp_char _ ->
-		u (var, Char)
-	| Exp_emptylist ->
-		fresh();
-		u (var, Lis (Var !v))
+let rec m_fargs env' var = function
+	| [] -> Error "Too few arguments."
+	| [arg] -> 
+		(match var with
+		| Imp (_,_) -> Error "Too few arguments."
+		| _ -> m_exp env' var arg)
+	| arg::rest ->
+		match var with
+		| Imp (argtype, resttype) ->
+			(match m_exp env' argtype arg with
+			| Error e -> Error ("Argument not matching:\n" ^ e)
+			| Success x ->
+				match m_fargs (substitute_env x env') (substitute x resttype) rest with
+				| Error e -> Error e
+				| Success res -> Success (o res x))
+		| _ -> Error "Too many arguments."
+and m_exp env var = function
+	| Exp_int _ -> u (var, Int)
+	| Exp_bool _ -> u (var, Bool)
+	| Exp_char _ -> u (var, Char)
+	| Exp_emptylist -> fresh(); u (var, Lis (Var !v))
 	| Exp_tuple (e1, e2) -> 
 		fresh();
 		let a1 = Var !v in
@@ -103,33 +112,16 @@ let rec m_exp env var = function
 					match u (substitute x var, substitute x typeRES) with
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)
 					| Success res2 -> Success (o res2 x))
-	| Exp_field fieldexp ->
-		m_fieldexp env var fieldexp
+	| Exp_field fieldexp -> m_fieldexp env var fieldexp
 	| Exp_function_call (id, args) ->
 		fresh();
 		let a = Var !v in
-		match m_id_fun env a id with
-		| Error e -> Error (sprintf "Identifier '%s' not found." id)
+		match m_id_fun env (Imp (a, var)) id with
+		| Error e -> Error e
 		| Success xa ->
-			let elt = substitute xa a in
-		  let rec match_type arglist = function
-  			| Imp (argtype1,resttype) ->
-  				(match arglist with
-  				| [] -> Error "Too few arguments."
-  				| arg1::rest ->
-  					match m_exp env argtype1 arg1 with
-  					| Error e -> Error ("Argument not matching:\n" ^ e)
-						| Success x ->
-  						match match_type rest (substitute x resttype) with
-  						| Error e -> Error e
-							| Success res -> Success (o res x))
-  			| rettype ->
-  				match arglist with
-  				| [] -> u (var, rettype)
-  				| _ -> Error "Too many arguments." in
-			match match_type args elt with
+			match m_fargs (substitute_env xa env) (substitute xa a) args with
 			| Error e -> Error e
-			| Success x -> Success (o x xa);;
+			| Success x -> Success (o x xa);;		
 
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
@@ -145,16 +137,9 @@ let rec m_stmts env var = function
 			| Error e -> Error e
 			| Success res -> Success (o res x)
 and m_stmt env var = function
-	| Stmt_return None ->
-		u (var, Void)
-	| Stmt_return (Some exp) -> 
-		(match m_exp env var exp with
-		| Success x -> u (var, substitute x var)
-		| Error e -> Error e)
-	| Stmt_function_call (id,args) ->
-		fresh();
-		let a = Var !v in
-		m_exp env a (Exp_function_call (id,args))
+	| Stmt_return None -> u (var, Void)
+	| Stmt_return (Some exp) -> m_exp env var exp
+	| Stmt_function_call (id,args) -> m_exp env var (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -190,21 +175,8 @@ and m_stmt env var = function
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e)
 			| Success res -> Success (o res x);;
 
-let rec pretype_fun fargs = function
-	| Some (argtypes,rettype as t) -> make_type t
-	| None ->
-		match fargs with
-		| [] -> fresh(); Var !v
-		| arg::rest -> fresh();
-			let a = Var !v in
-		 	Imp (a, pretype_fun rest None);;
-
-let rec pretype_var = function
-	| Some t -> convert_typetoken t
-	| None -> fresh(); Var !v;; 
-
 let rec type_fargs t = function
-	| [] -> 
+	| [] ->
 		(match t with
 		| Imp (_,_) -> Error "Too few arguments."
 		| t -> Success Env_var.empty)
@@ -215,94 +187,83 @@ let rec type_fargs t = function
 			| Error e -> Error e
 			| Success resttype ->
 				Success (Env_var.add {id = arg; t = targ} resttype))
-		| t -> Error "Too many arguments.";;		
+		| t -> Error "Too many arguments.";;
 
-let new_var env var = function
-	| [] -> env
-	| [vert] -> ( 
-		match vert.spl_decl with
-		| Fundecl _ -> env
-		| Vardecl (_,id,_) ->
-  		let xa = {id = id; t = var} in
-  		try Env.add_var xa env
-  		with
-  		| Already_known el -> raise (Invalid_argument el))
-	| _ -> env;;
+let rec pretype_var = function
+	| Some t -> convert_typetoken t
+	| None -> fresh(); Var !v;;
 
-let rec new_funs env = function
-	| [] -> env
-	| vert::scc ->
-		match vert.spl_decl with
-  	| Fundecl (id,fargs,pretype,_,_) -> (
-  		let t = pretype_fun fargs pretype in
-  		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
-  		try new_funs (Env.add_fun xa env) scc
-  		with
-  		| Already_known el -> raise (Invalid_argument el))
-  	| Vardecl _ ->
-			new_funs env scc;; 
+let m_vardecl env var (pretype, id, exp) =
+	m_exp env var exp;;
+	(* let a = pretype_var pretype in                     *)
+	(* match m_exp env a exp with                         *)
+	(* | Error e -> Error (sprintf "In '%s':\n%s" id e)   *)
+	(* | Success x ->                                     *)
+	(* 	match u (var, substitute x a) with               *)
+	(* 	| Error e -> Error (sprintf "In '%s':\n%s" id e) *)
+	(* 	| Success res -> Success (o res x);;             *)
 
-let m_vardecl env var = function
-	| pretype,id,exp ->
-		let a = pretype_var pretype in
-		match m_exp env a exp with
-		| Error e -> Error (sprintf "In '%s':\n%s" id e)
-		| Success x -> 
-			match u (var, substitute x a) with
-			| Error e -> Error (sprintf "In '%s':\n%s" id e)
-			| Success res -> Success (o res x)
-			(* match u (var, substitute x a) with *)
-			(* | Success res -> Success (o res x) *)
-			(* | Error e -> Error e;;             *)
+let rec type_fargs t = function
+	| [] ->
+		(match t with
+		| Imp (_,_) -> Error "Too few arguments."
+		| t -> Success Env_var.empty)
+	| arg::rest ->
+		match t with
+		| Imp (targ,trest) ->
+			(match type_fargs trest rest with
+			| Error e -> Error e
+			| Success resttype ->
+				Success (Env_var.add {id = arg; t = targ} resttype))
+		| t -> Error "Too many arguments.";;
 
-let m_fundecl env var = function
-	| id,fargs,_,vardecls,stmts ->
-		if dups fargs
-		then Error (sprintf "Function '%s' contains some duplicate argument." id)
-		else (
-			fresh();
-			let a = Var !v in
-			match m_id_fun env a id with
-			| Error e -> Error (sprintf "Function '%s' not found." id)
-			| Success xa ->
-				let elt = (substitute xa a) in
-  			match type_fargs elt fargs with
-  				| Error e -> Error (sprintf "Error in '%s':\n%s" id e)
-  				| Success locals ->
-  					let rec m_vardecls localenv var = function
-    				| [] -> Success (RW.empty, localenv)
-    				| (_,vid,_ as vardecl)::rest ->
-  						try (
-								fresh();
-								let a = Var !v in
-      					match m_vardecl (Env.add_locals localenv env) a vardecl with
-      					| Error e -> Error e
-      					| Success x ->
-									let newvar = {id = vid; t = a} in
-  								let localenv' = Env_var.add_safe newvar localenv in
-      						match m_vardecls (substitute_vars x localenv') (substitute x var) rest with
-      						| Error e -> Error e
-      						| Success (res, localenv') -> Success (o res x, localenv'))
-							with
-							| Already_known el -> Error (sprintf "Variable '%s' already local in '%s'." el id) in
-  					match m_vardecls locals var vardecls with
-  					| Error e -> Error (sprintf "In '%s':\n%s" id e)
-  					| Success (x, locals) ->
-							try (
-								let newenv = Env.add_locals locals env in
-								(Env.find_fun id newenv).locals <- locals;
-								match m_stmts (substitute_env x newenv) (returntype elt) stmts with
-    						| Error e -> Error (sprintf "In '%s':\n%s" id e)
-    						| Success res -> Success (o res x))
-							with
-							| Not_in_env el -> Error (sprintf "Function '%s' not found in environment (in '%s')." el id));;
-		
+let m_fundecl env var (id,fargs,pretype,vardecls,stmts) = 
+	if dups fargs
+	then Error (sprintf "Function '%s' contains some duplicate argument." id)
+	else (		
+		fresh();
+		let a = Var !v in
+		match m_id_fun env a id with
+		| Error e -> Error (sprintf "Function '%s' not found." id)
+		| Success xa ->
+			let elt = (substitute xa a) in
+			match type_fargs elt fargs with
+				| Error e -> Error (sprintf "Error in '%s':\n%s" id e)
+				| Success locals ->
+					let rec m_vardecls locals var = function
+  				| [] -> Success (RW.empty, locals)
+  				| (vpretype,vid,_ as vardecl)::rest ->
+						try (
+							let a = pretype_var vpretype in
+    					match m_vardecl (Env.add_locals locals env) a vardecl with
+    					| Error e -> Error e
+    					| Success x ->
+								let newvar = {id = vid; t = a} in
+								let locals' = Env_var.add_safe newvar locals in
+    						match m_vardecls (substitute_vars x locals') (substitute x var) rest with
+    						| Error e -> Error e
+    						| Success (res, locals') -> Success (o res x, locals'))
+						with
+						| Already_known el -> Error (sprintf "Variable '%s' already local in '%s'." el id) in
+					match m_vardecls locals var vardecls with
+					| Error e -> Error (sprintf "In '%s':\n%s" id e)
+					| Success (x, locals) ->
+						try (
+							let newenv = Env.add_locals locals env in
+							(Env.find_fun id newenv).locals <- locals;
+							match m_stmts (substitute_env x newenv) (returntype elt) stmts with
+  						| Error e -> Error (sprintf "In '%s':\n%s" id e)
+  						| Success res -> Success (o res x))
+						with
+						| Not_in_env el -> Error (sprintf "Function '%s' not found in environment (in '%s')." el id));;
+
 let rec m_scc env var = function
 	| [] -> Success (RW.empty)
 	| vert::rest ->
 		match vert.spl_decl with
-		| Vardecl vardecl ->
-  		(match m_vardecl env var vardecl with
+		| Vardecl (pretype,id,_ as vardecl) ->
+			let a = (Env.find_var id env).t in
+  		(match m_vardecl (Env.exclude id env) a vardecl with
   		| Error e -> Error e
   		| Success x1 ->
   			match m_scc (substitute_env x1 env) (substitute x1 var) rest with
@@ -332,13 +293,35 @@ let rec argify env ads xn = function
 			match type_fargs aixn fargs with
 			| Error e -> raise (Invalid_argument e)
 			| Success locals ->
-				let newel = {el with bound = bi; t = aixn; locals = fst (Env.add_locals locals (el.locals, Env_fun.empty))} in
+				let newel = {el with bound = bi; t = aixn; locals = Env_var.add_locals locals el.locals} in
 				argify env (Env.update_fun newel ads) xn scc;;
 
 let rec check_scc = function
 	| [] -> false
 	| [_] -> false
 	| scc -> List.exists (fun x -> match x.spl_decl with Vardecl _ -> true | _ -> false) scc;;
+
+let rec pretype_fun fargs = function
+	| Some (argtypes,rettype as t) -> make_type t
+	| None ->
+		match fargs with
+		| [] -> fresh(); Var !v
+		| arg::rest -> fresh();
+			let a = Var !v in
+		 	Imp (a, pretype_fun rest None);;
+
+let rec new_env env = function
+	| [] -> env
+	| vert::scc ->
+		match vert.spl_decl with
+  	| Fundecl (id,fargs,pretype,_,_) ->
+  		let t = pretype_fun fargs pretype in
+  		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
+			new_env (Env.add_fun xa env) scc
+  	| Vardecl (pretype,id,_) ->
+  		let t = pretype_var pretype in
+  		let xa = {id = id; t = t} in
+			new_env (Env.add_var xa env) scc;; 
 
 let rec m_sccs env var = function
 	| [] -> Success env
@@ -347,24 +330,23 @@ let rec m_sccs env var = function
 		then Error "Interdependent global variable declarations."
 		else (
   		try (
-    		let env' = new_funs env scc in
+    		let env' = new_env env scc in
     		match m_scc env' var scc with
     		| Error e -> Error e
     		| Success xn ->
     			let envxn = substitute_env xn env in
     			let varxn = substitute xn var in
-					let newvar = new_var env' (substitute xn var) scc in
-    			let ads = Env.diff (substitute_env xn newvar) envxn in
+    			let ads = Env.diff (substitute_env xn env') envxn in
     			let envxn_ads = argify envxn ads xn scc in
     			match m_sccs envxn_ads varxn rest with
     			| Error e -> Error e
     			| Success res -> Success (Env.union envxn_ads res))
   		with
-  		| Invalid_argument a -> Error (sprintf "Duplicate declaration: '%s'" a))
+  		| Already_known a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
 let m exp =
   try 
 		let graph = make_graph exp in
 		m_sccs Env.empty (Var "0") (tarjan graph)
 	with
-	| Invalid_argument e -> Error e;;
+	| Already_known e -> Error e;;
