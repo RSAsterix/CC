@@ -160,7 +160,7 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 	| (_,FALSE)::list -> Success (Some (Exp_bool false)), list
 	| (_,TRUE)::list -> Success (Some (Exp_bool true)), list
 	| (_,EMPTYLIST)::list -> Success (Some (Exp_emptylist)), list
-	| (_,LOWBAR)::list -> Success (Some (Exp_low_bar)), list
+	| (l,LOWBAR)::list -> Error (sprintf "(r.%i) '_' is not allowed in expressions" l, (l,LOWBAR)::list
 	| (_,Constructortok c)::list -> Success (Some (Exp_constructor c)), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
@@ -206,3 +206,45 @@ funcall_parser (list:tlt) :(exp list result * tlt) =
 	match list with
 	| (_,CLOSE_PAR)::list -> Success([]), list
 	| list -> actargs_parser [] list;;
+
+(* in stellingen mogen geen infix operators of functies voorkomen *)
+(* behalve de lijst operator *)
+let stelling_parser = 
+	match atom_stelling_parser with
+	| Success exp1, (_,DDPOINT)::list -> 
+		(match stelling_parser with
+		| Success exp2, list -> Exp_infix(exp,Listop,exp2), list
+		| Error e, list -> Error e, list)
+	| Success exp1, list -> Success exp1, list
+	| Error e, list -> Error e, list
+and
+atom_stelling_parser = function
+	| (_,Inttok i)::list -> Success (Exp_int i), list
+	| (_,Chartok c)::list -> Success (Exp_char c), list
+	| (_,FALSE)::list -> Success (Exp_bool false), list
+	| (_,TRUE)::list -> Success (Exp_bool true), list
+	| (_,EMPTYLIST)::list -> Success (Exp_emptylist), list
+	| (_,LOWBAR)::list -> Success (Exp_low_bar), list
+	| (_,Constructortok c)::list -> Success (Exp_constructor c), list
+	| (l1,IDtok id)::(l2,OPEN_PAR)::list ->Error (sprintf "(r.%i) Functions are not allowed in match clauses" l1), (l1,IDtok id)::(l2,OPEN_PAR)::list
+	|	(_,IDtok id)::list -> Success (Exp_field (Nofield id)), list
+	| (l0,OPEN_PAR)::list -> 
+		(match (stelling_parser list) with
+		| Success exp1, (l1,COMMA)::list -> 
+			(match (stelling_parser list) with
+			| Success exp2, (_,CLOSE_PAR)::list -> Success (Exp_tuple (exp1,exp2)), list
+			| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis after comma, but: %s" l (token_to_string x)), (l,x)::list
+			| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after comma." l1), []
+			| Error e, list -> Error e, list)
+		| Success exp, (_,CLOSE_PAR)::list -> Success exp, list
+		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing parenthesis, but: %s" l (token_to_string x)), (l,x)::list
+		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
+		| Error e, list -> Error e, list)
+	| (l,x)::list ->
+		(match parse_op1 (l,x)::list with
+		| Some op, list ->
+			(match (atom_stelling_parser list) with
+  		| Success exp, list ->  Success (Exp_prefix (op, exp)), list
+  		| Error e, list -> Error e, list)
+		| None, list -> Error (sprintf "(r.%i) Unexpected symbol in match clause: %s" l (token_to_string x)), (l,x)::list)
+	| [] -> "Unexpected EOF in match clause.", []
