@@ -300,10 +300,11 @@ remove_comments' = function
 
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
-	match remove_comments (Success tokenlist) with
-	| Error e -> Error e
-	| Success list ->
-  	match decl_parser list with
+	let spl_parser' = match decl_parser list with
     | Success decls, [] -> Success (List.rev (decls::decllist))
     | Success decls, list -> spl_parser (decls::decllist) list
-    | Error e, list -> Error e;;
+    | Error e, list -> Error e in
+	match remove_comments (Success tokenlist) with
+	| Error e -> Error e
+	| Success list -> spl_parser';;
+  	

@@ -209,6 +209,15 @@ return_gen vars = function
 			return_none_code in
 			(code,None)
 and
+case_gen vars = function
+	| 
+and
+match_gen vars = function
+	| exp,case_list -> 
+		let code = 
+			exp_gen vars exp^
+			
+and
 stmt_gen vars fid nalabeloption = function
 	| Stmt_if (a,b) -> if_gen vars fid nalabeloption (a,b)
 	| Stmt_if_else (a,b,c) -> if_else_gen vars fid nalabeloption (a,b,c)
@@ -216,6 +225,7 @@ stmt_gen vars fid nalabeloption = function
 	| Stmt_define (a,b) -> define_gen vars (a,b)
 	| Stmt_function_call (a,b) -> function_call_gen vars (a,b)
 	| Stmt_return a -> return_gen vars a
+	| Stmt_match (a,b) -> match_gen vars (a,b)
 and
 stmtlist_gen vars fid startlabel stmtlist = 
 	let rec stmtlist_gen' vars fid = function
