@@ -62,7 +62,7 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "input4"
+let filename = "inputmatch"
 
 let in_channel =
 	try

@@ -32,7 +32,7 @@ let rec type_parser = function
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No closing bracket, but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening bracket." l0), [] 
 		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) Unexpected token: %s" l (token_to_string x)), (l,x)::list
+	| (l,x)::list -> Error (sprintf "(r.%i) Unexpected token when expecting type: %s" l (token_to_string x)), (l,x)::list
 	| [] -> Error "Unexpected EOF while parsing type.", [];;
 
 (* rettype = 'Void' | type *)
@@ -99,37 +99,35 @@ let rec stmt_list_parser stmt_list = function
 		| Success stmt, list -> stmt_list_parser (stmt::stmt_list) list
 		| Error e, list -> Error e, list)
 and
-case_parser = function
-	| (_,PIPE)::list -> 
-		(match stelling_parser list with
-		| Success stelling, (_,WHEN)::list ->
-			(match exp_parser list with
-			| Success predicate, (_,ARROW)::list ->
-  			(match stmt_list_parser [] list with
-  			| Success stmt_list, list -> Success (stelling,Some predicate,stmt_list), list
-				| Error e, list -> Error e, list)
-			| Success predicate, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
-			| Success predicate, [] -> Error "Unexpected EOF when expecting arrow.", []) 
-		| Success stelling, (_,ARROW)::list -> 
+case_parser list = 
+	match stelling_parser list with
+	| Success stelling, (_,WHEN)::list ->
+		(match exp_parser list with
+		| Success predicate, (_,ARROW)::(_,OPEN_ACO)::list ->
 			(match stmt_list_parser [] list with
-			| Success stmt_list, list -> Success (stelling,None,stmt_list), list
+			| Success stmt_list, list -> Success (stelling,Some predicate,stmt_list), list
 			| Error e, list -> Error e, list)
-		| Success stelling, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
-		| Success stelling, [] -> Error "Unexpected EOF when expecting arrow.", [] 
+		| Success predicate, (l,x)::list -> Error (sprintf "(r.%i) No arrow and open acolade, but: %s" l (token_to_string x)), (l,x)::list
+		| Success predicate, [] -> Error "Unexpected EOF when expecting arrow.", []
 		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) No match case or semicolon, but: %s" l (token_to_string x)), (l,x)::list
-	| [] -> Error "Unexpected EOF when expecting case matching.", [] 
-and
-case_list_parser case_list list = 
-	match case_parser list with
-	| Success (stelling,predicate,stmt_list), (_,SEMICOLON)::list -> Success (List.rev ((stelling,predicate,stmt_list)::case_list)), list
-	| Success (stelling,predicate,stmt_list), list -> case_list_parser ((stelling,predicate,stmt_list)::case_list) list
+	| Success stelling, (_,ARROW)::(_,OPEN_ACO)::list -> 
+		(match stmt_list_parser [] list with
+		| Success stmt_list, list -> Success (stelling,None,stmt_list), list
+		| Error e, list -> Error e, list)
+	| Success stelling, (l,x)::list -> Error (sprintf "(r.%i) No arrow and open acolade, but: %s" l (token_to_string x)), (l,x)::list
+	| Success stelling, [] -> Error "Unexpected EOF when expecting arrow.", [] 
 	| Error e, list -> Error e, list
+and
+case_list_parser case_list list =
+  	match case_parser list with
+  	| Success (stelling,predicate,stmt_list), (_,PIPE)::list -> case_list_parser ((stelling,predicate,stmt_list)::case_list) list
+  	| Success (stelling,predicate,stmt_list), list -> Success (List.rev ((stelling,predicate,stmt_list)::case_list)), list
+  	| Error e, list -> Error e, list
 and
 stmt_parser = function
 	| (_,MATCH)::list ->
 		(match exp_parser list with
-		| Success exp, (_,WITH)::list ->
+		| Success exp, (_,WITH)::(_,PIPE)::list ->
 			(match case_list_parser [] list with
 			| Success case_list, list -> Success (Stmt_match (exp,case_list)), list
 			| Error e, list -> Error e, list)
@@ -192,7 +190,7 @@ stmt_parser = function
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No '=', but: %s" l (token_to_string x)), (l,x)::list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing %s" l0 id), []
 		| Error e, list -> Error e, list)
-	| (l,x)::list -> Error (sprintf "(r.%i) Unexpected token: %s" l (token_to_string x)), (l,x)::list
+	| (l,x)::list -> Error (sprintf "(r.%i) Unexpected token in stmt: %s" l (token_to_string x)), (l,x)::list
 	| [] -> Error "Unexpected EOF while parsing statement.", []
 
 (* fargs =   ')' | fargs2          *)
@@ -307,7 +305,7 @@ and
 remove_comments' = function
 	| Success ((l,Endcomment)::list) -> remove_comments (Success list)
 	| Success ((l,token)::list) -> remove_comments' (Success list)
-	| Success [] -> Error "comment eindigt niet"
+	| Success [] -> Error "comment does not end"
 	| Error e -> Error e
 
 (* SPL = Decl+ *)
@@ -315,7 +313,7 @@ let rec spl_parser decllist tokenlist =
 	let spl_parser' = match decl_parser tokenlist with
     | Success decls, [] -> Success (List.rev (decls::decllist))
     | Success decls, list -> spl_parser (decls::decllist) list
-    | Error e, list -> Error e in
+    | Error e, list -> Error (e^"\n"^token_list_to_string list) in
 	match remove_comments (Success tokenlist) with
 	| Error e -> Error e
 	| Success list -> spl_parser';;

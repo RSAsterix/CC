@@ -211,7 +211,7 @@ funcall_parser (list:tlt) :(exp list result * tlt) =
 (* behalve de lijst operator *)
 let rec stelling_parser list = 
 	match atom_stelling_parser list with
-	| Success exp1, (_,DDPOINT)::list -> 
+	| Success exp1, (_,Optok ":")::list -> 
 		(match stelling_parser list with
 		| Success exp2, list -> Success (Exp_infix(exp1,Listop,exp2)), list
 		| Error e, list -> Error e, list)

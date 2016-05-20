@@ -3,17 +3,15 @@ hier is een voorbeeld van een functie met een case matching:
 f (a) {
 var x =0;
 match g(a) with
- | (0,0) -> return 3;
- | (x,0) when x=c -> if b then c = 1 + c; return c;
- | (d,0) -> return d;
- | _ -> x = snd a;;
+ | (0,0) -> {return 3;}
+ | (x,0) when x=c -> {if b then c = 1 + c; return c;}
+ | (d,0) -> {return d;}
+ | _ -> x = {snd a;}
 return x;
 }
 
 merk op dat bij een functionele taal na de pijl een expressie zou staan wat de nieuwe a zou worden.
 Hier staat na de pijl een rijtje statements die uitgevoerd wordt.
-merk op dat de match casing eindigt met 2 puntkomma's. 
-Een om het rijtje stmts af te sluiten, een om de match casing af te sluiten.
 merk op dat de functie g blijkbaar een tupel van ints teruggeeft.
 De functie f geeft een int terug.
 

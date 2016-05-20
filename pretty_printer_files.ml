@@ -76,6 +76,7 @@ let rec print_exp ppf = function
 	| Exp_bool b -> fprintf ppf "%a" print_bool b;
 	| Exp_function_call (id, exps) -> fprintf ppf "%a" print_funcall (id, exps);
 	| Exp_emptylist -> fprintf ppf "%s" "[]";
+	| Exp_low_bar -> fprintf ppf "%s" "_";
 	| Exp_tuple (exp1, exp2) ->
 		fprintf ppf "(%a,%a)" print_exp exp1 print_exp exp2;
 and print_exp_list ppf = function
@@ -123,9 +124,9 @@ let rec print_fargs ppf = function
 
 (* Print een typetoken *)
 let rec print_typetoken ppf = function
-	| Type_int -> fprintf ppf "%s" "Int";
-	| Type_bool -> fprintf ppf "%s" "Bool";
-	| Type_char -> fprintf ppf "%s" "Char";
+	| Type_int -> fprintf ppf "%s" "int";
+	| Type_bool -> fprintf ppf "%s" "bool";
+	| Type_char -> fprintf ppf "%s" "char";
 	| Type_tuple (t1, t2) -> fprintf ppf "(%a, %a)" print_typetoken t1 print_typetoken t2;
 	| Type_list t -> fprintf ppf "[%a]" print_typetoken t;
 	| Type_id id -> fprintf ppf "%a" print_id id;;

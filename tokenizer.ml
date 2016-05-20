@@ -46,9 +46,9 @@ let rec scan_line l = function
 	| 't'::'l'::line when (match_next line) -> (l, Fieldtoken Tl)::(scan_line l line)
 	| 'f'::'s'::'t'::line when (match_next line) -> (l, Fieldtoken Fst)::(scan_line l line)
 	| 's'::'n'::'d'::line when (match_next line) -> (l, Fieldtoken Snd)::(scan_line l line)
-	| 't'::'y'::'p'::'e'::line when (match_next line) -> (l, Fieldtoken Snd)::(scan_line l line)
-	| 'm'::'a'::'t'::'c'::'h'::line when (match_next line) -> (l, Fieldtoken Snd)::(scan_line l line)
-	| 'w'::'i'::'t'::'h'::line when (match_next line) -> (l, Fieldtoken Snd)::(scan_line l line)
+	| 't'::'y'::'p'::'e'::line when (match_next line) -> (l,TYPE)::(scan_line l line)
+	| 'm'::'a'::'t'::'c'::'h'::line when (match_next line) -> (l,MATCH)::(scan_line l line)
+	| 'w'::'i'::'t'::'h'::line when (match_next line) -> (l,WITH)::(scan_line l line)
 	| ':'::':'::line -> (l, DDPOINT)::(scan_line l line)
 	| '-'::'>'::line -> (l, ARROW)::(scan_line l line)
 	| '['::']'::line -> (l, EMPTYLIST)::(scan_line l line)
@@ -131,8 +131,9 @@ let token_to_string t = match t with
 	| TYPE -> "type"
 	| MATCH -> "match" 
 	| WITH -> "with" 
-	| PIPE -> "|";;
+	| PIPE -> "|"
+	| WHEN -> "when" ;;
 
 let rec token_list_to_string list = match list with
 	| [] -> "" 
-	| (_,t)::list -> (token_to_string t) ^ (token_list_to_string list);;
+	| (_,t)::list -> (token_to_string t) ^" "^(token_list_to_string list);;

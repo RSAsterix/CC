@@ -1,7 +1,4 @@
 product ( list ) :: [ int ] -> int {
-match list with
-| [] -> return 1;
-| head::tail -> 
 if ( isEmpty ( list ) ) {
 return 1;
 } else {
