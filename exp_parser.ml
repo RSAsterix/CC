@@ -160,7 +160,7 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 	| (_,FALSE)::list -> Success (Some (Exp_bool false)), list
 	| (_,TRUE)::list -> Success (Some (Exp_bool true)), list
 	| (_,EMPTYLIST)::list -> Success (Some (Exp_emptylist)), list
-	| (l,LOWBAR)::list -> Error (sprintf "(r.%i) '_' is not allowed in expressions" l, (l,LOWBAR)::list
+	| (l,LOWBAR)::list -> Error (sprintf "(r.%i) '_' is not allowed in expressions" l), (l,LOWBAR)::list
 	| (_,Constructortok c)::list -> Success (Some (Exp_constructor c)), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
@@ -209,11 +209,11 @@ funcall_parser (list:tlt) :(exp list result * tlt) =
 
 (* in stellingen mogen geen infix operators of functies voorkomen *)
 (* behalve de lijst operator *)
-let stelling_parser = 
-	match atom_stelling_parser with
+let rec stelling_parser list = 
+	match atom_stelling_parser list with
 	| Success exp1, (_,DDPOINT)::list -> 
-		(match stelling_parser with
-		| Success exp2, list -> Exp_infix(exp,Listop,exp2), list
+		(match stelling_parser list with
+		| Success exp2, list -> Success (Exp_infix(exp1,Listop,exp2)), list
 		| Error e, list -> Error e, list)
 	| Success exp1, list -> Success exp1, list
 	| Error e, list -> Error e, list
@@ -241,10 +241,10 @@ atom_stelling_parser = function
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after opening parenthesis." l0), [] 
 		| Error e, list -> Error e, list)
 	| (l,x)::list ->
-		(match parse_op1 (l,x)::list with
+		(match parse_op1 ((l,x)::list) with
 		| Some op, list ->
 			(match (atom_stelling_parser list) with
   		| Success exp, list ->  Success (Exp_prefix (op, exp)), list
   		| Error e, list -> Error e, list)
 		| None, list -> Error (sprintf "(r.%i) Unexpected symbol in match clause: %s" l (token_to_string x)), (l,x)::list)
-	| [] -> "Unexpected EOF in match clause.", []
+	| [] -> Error "Unexpected EOF in match clause.", []

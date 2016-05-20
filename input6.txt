@@ -1,6 +1,6 @@
 var a = facR(6);
 
-facR ( n ) :: Int -> Int {
+facR ( n ) :: int -> int {
 if ( n < 2 ) {
 return 1;
 } else {
@@ -8,7 +8,7 @@ return n * facR ( n - 1 );
 }
 }
 
-facI ( n ) :: Int -> Int {
+facI ( n ) :: int -> int {
 while ( n > 1 ) {
 n = n - 1;
 }

@@ -1,8 +1,8 @@
-facL(n) :: Int -> Int {
+facL(n) :: int -> int {
   return product(fromTo(1, n));
 }
 
-product(list) :: [Int] -> Int {
+product(list) :: [int] -> int {
   if(isEmpty(list)){
     return 1;
   }else{
@@ -10,7 +10,7 @@ product(list) :: [Int] -> Int {
   }
 }
 
-fromTo(from, to) :: Int Int -> [Int] {
+fromTo(from, to) :: int int -> [int] {
   if(from <= to){
     return from : fromTo(from + 1, to);
   }else{
@@ -27,7 +27,7 @@ reverse(list) :: [t] -> [t] {
   return accu;
 }
 
-abs(n) :: Int -> Int {
+abs(n) :: int -> int {
   if(n < 0){
     return -n;
   }else{
@@ -55,7 +55,7 @@ append(l1, l2) :: [t] [t] -> [t] {
   }
 }
 
-squareOddNumbers(list) :: [Int] -> [Int] {
+squareOddNumbers(list) :: [int] -> [int] {
   while(!isEmpty(list) && list.hd % 2 == 0){
     list = list.tl;
   }

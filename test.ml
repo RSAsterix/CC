@@ -6,6 +6,7 @@ open Types
 open Pretty_printer_files
 open Code_generator
 open Codefragments
+open Rewrite_match_casings
 
 open Graph_make
 open Graph_lib
@@ -16,6 +17,8 @@ open Typechecker
 open Typechecker_types
 open Typechecker_lib
 open Typechecker_print
+
+open Format
 
 (* #directory "C:/Users/tom_e/workspace/CC/_build";; *)
 (* open Printf;;                                     *)
@@ -106,8 +109,8 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 
 match structure with
 | Error e -> print_endline e;
-| Success x ->
-	match m x with
-	| Error e -> print_endline e;
-	| Success env -> print_string (code_gen (Env.elements env) x);;
+| Success x -> print_spl std_formatter (rmc_spl x);
+	(* match m x with                                                  *)
+	(* | Error e -> print_endline e;                                   *)
+	(* | Success env -> print_string (code_gen (Env.elements env) x);; *)
 (* close_out oc;; *)

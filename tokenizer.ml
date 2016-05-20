@@ -30,6 +30,7 @@ let match_next line = line == [] || (not(is_letter (List.hd line)) && not(is_dig
 
 let rec scan_line l = function
 	| [] -> []
+	| 'w'::'h'::'e'::'n'::line when (match_next line) -> (l, WHEN)::(scan_line l line)
 	| 'v'::'a'::'r'::line when (match_next line) -> (l, VAR)::(scan_line l line)
 	| 'v'::'o'::'i'::'d'::line when (match_next line) -> (l, VOID)::(scan_line l line)
 	| 'i'::'n'::'t'::line when (match_next line) -> (l, Basic_int)::(scan_line l line)

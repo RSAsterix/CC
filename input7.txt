@@ -1,4 +1,7 @@
-product ( list ) :: [ Int ] -> Int {
+product ( list ) :: [ int ] -> int {
+match list with
+| [] -> return 1;
+| head::tail -> 
 if ( isEmpty ( list ) ) {
 return 1;
 } else {
@@ -8,7 +11,7 @@ return list.hd * product ( list.tl );
 
 var p = product(1:2:3:[]);
 
-fromTo ( from , to ) :: Int Int -> [ Int ] {
+fromTo ( from , to ) :: int int -> [ int ] {
 if ( from <= to ) {
 return from : fromTo ( from + 1, to );
 } else {

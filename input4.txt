@@ -1,4 +1,4 @@
-facI ( n ) :: Int -> Int {
+facI ( n ) :: int -> int {
 var r = 1;
 while ( n > 1 ) {
 r = r * n;

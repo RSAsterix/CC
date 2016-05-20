@@ -102,20 +102,28 @@ and
 case_parser = function
 	| (_,PIPE)::list -> 
 		(match stelling_parser list with
-		| Success exp, (_,ARROW)::list -> 
+		| Success stelling, (_,WHEN)::list ->
+			(match exp_parser list with
+			| Success predicate, (_,ARROW)::list ->
+  			(match stmt_list_parser [] list with
+  			| Success stmt_list, list -> Success (stelling,Some predicate,stmt_list), list
+				| Error e, list -> Error e, list)
+			| Success predicate, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
+			| Success predicate, [] -> Error "Unexpected EOF when expecting arrow.", []) 
+		| Success stelling, (_,ARROW)::list -> 
 			(match stmt_list_parser [] list with
-			| Success stmt_list, list -> Success (exp,stmt_list), list
+			| Success stmt_list, list -> Success (stelling,None,stmt_list), list
 			| Error e, list -> Error e, list)
-		| Success exp, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
-		| Success exp, [] -> Error "Unexpected EOF when expecting arrow.", [] 
+		| Success stelling, (l,x)::list -> Error (sprintf "(r.%i) No arrow, but: %s" l (token_to_string x)), (l,x)::list
+		| Success stelling, [] -> Error "Unexpected EOF when expecting arrow.", [] 
 		| Error e, list -> Error e, list)
 	| (l,x)::list -> Error (sprintf "(r.%i) No match case or semicolon, but: %s" l (token_to_string x)), (l,x)::list
 	| [] -> Error "Unexpected EOF when expecting case matching.", [] 
 and
 case_list_parser case_list list = 
 	match case_parser list with
-	| Success (exp,stmt_list), (_,SEMICOLON)::list -> Success (List.rev ((exp,stmt_list)::case_list)), list
-	| Success (exp,stmt_list), list -> case_list_parser ((exp,stmt_list)::case_list) list
+	| Success (stelling,predicate,stmt_list), (_,SEMICOLON)::list -> Success (List.rev ((stelling,predicate,stmt_list)::case_list)), list
+	| Success (stelling,predicate,stmt_list), list -> case_list_parser ((stelling,predicate,stmt_list)::case_list) list
 	| Error e, list -> Error e, list
 and
 stmt_parser = function
@@ -241,17 +249,21 @@ let rec parse_enum enumlist = function
 	| (l,x)::list -> Error (sprintf "(r.%i) No enum, but: %s" l (token_to_string x)), (l,x)::list
 	| [] -> Error "Unexpected EOF after parsing '|'.", []
 
-let rec split_at predicate parsed = function
-	| head::tail when predicate head -> List.rev parsed, tail
-	| head::tail -> split_at predicate (head::parsed) tail
-	| [] -> parsed,[] 
+(* let rec split_at predicate parsed = function                *)
+(* 	| head::tail when predicate head -> List.rev parsed, tail *)
+(* 	| head::tail -> split_at predicate (head::parsed) tail    *)
+(* 	| [] -> parsed,[]                                         *)
 
+(* let rec parse_rename id list =                                                                                                                           *)
+(* 	let typelist,restlist = split_at (fun x -> snd x = SEMICOLON) [] list in                                                                               *)
+(* 	match type_parser typelist with                                                                                                                        *)
+(* 	| Success _, [] -> Success None, List.fold_right (fun el newlist -> if snd el=IDtok id then List.append typelist newlist else el::newlist) restlist [] *)
+(* 	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list                                          *)
+(* 	| Error e, list -> Error e, list                                                                                                                       *)
 
 let rec parse_rename id list =
-	let typelist,restlist = split_at (fun x -> snd x = SEMICOLON) [] list in
-	match type_parser typelist with
-	| Success _, [] -> Success None, List.fold_right (fun el newlist -> if snd el=IDtok id then List.append typelist newlist else el::newlist) restlist []
-	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
+	match type_parser list with
+	| Success typetoken, list -> Success (Rename (id,typetoken)), list
 	| Error e, list -> Error e, list
 
 let typedecl_parser id = function
@@ -261,7 +273,7 @@ let typedecl_parser id = function
 		| Error e, list -> Error e, list)
 	| list -> 
 		(match parse_rename id list with
-		| Success _, list -> Success Ignorable, list
+		| Success rename, list -> Success rename, list
 		| Error e, list -> Error e, list)
 
 (* Decl = id '('  FunDecl | VarDecl *)
@@ -300,7 +312,7 @@ remove_comments' = function
 
 (* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
-	let spl_parser' = match decl_parser list with
+	let spl_parser' = match decl_parser tokenlist with
     | Success decls, [] -> Success (List.rev (decls::decllist))
     | Success decls, list -> spl_parser (decls::decllist) list
     | Error e, list -> Error e in

@@ -47,7 +47,7 @@ type rettype = Rettype of typetoken | Type_void
 type funtype = typetoken list * rettype
 type vardecl = typetoken option * id * exp 
 type fundecl = id * fargs * funtype option * vardecl list * stmt list
-type typedecl = (*Rename of id * typetoken |*) Ignorable | Enum of id * constructor list
+type typedecl = Rename of id * typetoken | (*Ignorable |*)Enum of id * constructor list
 type decl = Typedecl of typedecl | Vardecl of vardecl | Fundecl of fundecl
 type spl = decl list;;
 
@@ -85,4 +85,5 @@ type token =
 	| TYPE 
 	| MATCH
 	| WITH
-	| PIPE;;
+	| PIPE
+	| WHEN;;

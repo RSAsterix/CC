@@ -1,7 +1,3 @@
-facL ( n ) :: int -> int {
-return product (fromTo ( 1, n ));
-}
-
 product ( list ) :: [ int ] -> int {
 if ( isEmpty ( list ) ) {
 return 1;
@@ -10,6 +6,8 @@ return list.hd * product ( list.tl );
 }
 }
 
+var p = product(1:2:3:[]);
+
 fromTo ( from , to ) :: int int -> [ int ] {
 if ( from <= to ) {
 return from : fromTo ( from + 1, to );
@@ -17,6 +15,8 @@ return from : fromTo ( from + 1, to );
 return [] ;
 }
 }
+
+var ft = fromTo(2,5);
 
 reverse ( list ) :: [ t ] -> [ t ] {
 var accu = [] ;
@@ -27,11 +27,13 @@ list = list.tl ;
 return accu ;
 }
 
-abs ( n ) :: int -> int { if (n < 0) {return -n;} else {return n ;} }
+var r = reverse(1:2:3:[]);
 
 swapCopy ( pair ) :: (a, b) -> (b, a) {
 return ( pair.snd, pair.fst );
 }
+
+var sc = swapCopy((True,1:[]));
 
 swap ( tuple ) :: (a, a) -> (a, a) {
 var tmp = tuple.fst ;
@@ -39,6 +41,8 @@ tuple.fst = tuple.snd;
 tuple.snd = tmp;
 return tuple ;
 }
+
+var s = swap((4,5));
 
 append ( l1 , l2 ) :: [ t ] [ t ] -> [ t ] {
 if ( isEmpty ( l1 ) ) {
@@ -49,13 +53,4 @@ return l1 ;
 }
 }
 
-squareOddNumbers ( list ) :: [ int ] -> [ int ] {
-while (! isEmpty ( list ) && list.hd % 2 == 0) {
-list = list.tl ;
-}
-if ( ! isEmpty ( list ) ) {
-list.hd = list.hd * list.hd;
-list.tl = squareOddNumbers( list.tl );
-}
-return list ;
-}
+var a = append(1:[], 2:3:[]);
