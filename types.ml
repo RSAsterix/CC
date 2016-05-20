@@ -37,7 +37,7 @@ type stmt =
 	| Stmt_define of fieldexp * exp
 	| Stmt_function_call of id * exp list
 	| Stmt_return of exp option
-	| Stmt_match of exp * (exp * stmt list) list
+	| Stmt_match of exp * (exp * exp option * stmt list) list
 type fargs = id list
 type typetoken = Type_int | Type_bool | Type_char
 	| Type_tuple of typetoken * typetoken

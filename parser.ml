@@ -101,7 +101,7 @@ let rec stmt_list_parser stmt_list = function
 and
 case_parser = function
 	| (_,PIPE)::list -> 
-		(match exp_parser list with
+		(match stelling_parser list with
 		| Success exp, (_,ARROW)::list -> 
 			(match stmt_list_parser [] list with
 			| Success stmt_list, list -> Success (exp,stmt_list), list

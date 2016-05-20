@@ -1,12 +1,14 @@
 hier is een voorbeeld van een functie met een case matching:
 
 f (a) {
+var x =0;
 match g(a) with
  | (0,0) -> return 3;
- | (fac(c),0) -> if b then c = 1 + c; return c;
+ | (x,0) when x=c -> if b then c = 1 + c; return c;
  | (d,0) -> return d;
- | _ -> return snd a;;
- }
+ | _ -> x = snd a;;
+return x;
+}
 
 merk op dat bij een functionele taal na de pijl een expressie zou staan wat de nieuwe a zou worden.
 Hier staat na de pijl een rijtje statements die uitgevoerd wordt.
@@ -15,55 +17,42 @@ Een om het rijtje stmts af te sluiten, een om de match casing af te sluiten.
 merk op dat de functie g blijkbaar een tupel van ints teruggeeft.
 De functie f geeft een int terug.
 
-Stel c bestaat al, dan wordt gewoon de waarde van fac(c) uitgerekend.
-Stel c bestaat niet, dan is dit illegale syntax, want dan kunnen we fac(c) niet uitrekenen.
-stel d bestaat al, dan wordt gewoon de tupel (d,0) gegeven voor matching
-stel d bestaat niet, dan wordt gekeken of g(a) match met de vorm (_,0). 
-Zoja, dan geven we d de waarde die _ had in de stmts na de pijl. 
-Dit is een vorm van een zeer locale variabele. d bestaat niet buiten deze stmts.
+de expressie voor de pijl wordt de stelling genoemd, de stmts na de pijl wordt het antwoord genoemd
+in een stelling zijn alle voorkomende variabelen hyperlokaal. 
+Dat betekent dat ze dezelfde naam mogen hebben als globale en lokale variabelen.
+In het antwoord dan dat id wordt gebruikt, dan wordt de hyperlokale variabele gebruikt en niet de globale of lokale.
+Dit betekent gelijk dat globale en lokale variabelen niet in een stelling voor kunnen komen.
+wil je toch globale of lokale variabelen voor laten komen, dan kan dit met het when keyword.
+achter de when keyword moet een booleaanse expressie voorkomen.
+is deze boolean true, dan wordt het antwoord uitgevoerd.
+
+functies mogen niet voorkomen in stellingen. Dit geldt ook voor infix operators.
+
+Voorbeeld hyperlokale variabele: d in match case 3:
+Om dit uit te rekenen wordt gekeken of g(a) match met de vorm (_,0). 
+Zoja, dan geven we de d in het antwoord de waarde die _ had. 
+d bestaat niet in deze vorm buiten deze case.
 
 De vertaling van deze functie naar if-statements (waarbij c bestaat, d niet en de var u (van unnamed) ook nog niet)
 is als volgt. Denk er aan dat == niet gedefinieerd is voor tuples en lijsten
-f(a){
-	var u = g(a);
-	if (fst u == 0 && snd u == 0){
-		if (snd u == 0)
-			{return 3;}
-		else
-			{break;} //bestaat niet, maar is makkelijk te maken in ssm
-	}
-	else { if (fst u == fac(c)){
-		if (snd u == 0)
-			{if b then c = 1 + c; return c;}
-		else
-			{break;}
-	}
-	else { if snd u == 0)
-		{return fst u;}
-	}
-	else 
-		{return snd a;}
-} 
 
 f(a){
-	return f_match1(g(a));
-	}
+var x = 0;
+var u = g(a);
+if (fst u == 0 && snd u == 0){
+	return 3;
+}
+else { if (snd u == 0 && fst u == c){
+	if b then c = 1 + c; return c;
+}}
+else { if (snd u == 0){
+	return (fst u);
+}}
+else
+	{x = snd a;}
+return x;
+}
 
-f_match1(u){
-	if (fst u == 0 && snd u == 0){
-		return 3;
-	}
-	else { if (fst u == fac(c) && snd u == 0){
-		if b then c = 1 + c; return c;
-	}}
-	else { if (snd u == 0){
-		return fst u;
-	}}
-	else
-		{return snd a;}
-	
-			
-	
 
 in toplevel mag je nu typedecls doen.
 Voorbeelden van een typedecl is:
