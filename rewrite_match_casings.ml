@@ -56,6 +56,7 @@ let merge_extracts mid extract1 extract2 : stelling_extract =
 (* verder heb je een werkruimte nodig*)
 let rec rmc_stelling mid extract = function
 	| Exp_field (Nofield id) -> add_to_vars mid extract id
+	| Exp_field _ -> raise Not_found
 	| Exp_prefix (op1,exp) -> rmc_stelling mid {extract with werkruimte=(Some op1,snd extract.werkruimte)} exp 
 	| Exp_int i -> add_to_predicates mid extract (Exp_int i)
 	| Exp_char c -> add_to_predicates mid extract (Exp_char c)
@@ -66,9 +67,11 @@ let rec rmc_stelling mid extract = function
 		(rmc_stelling mid {vars=[];predicates=[];werkruimte=(fst extract.werkruimte,Field (snd extract.werkruimte,Fst))} exp1)
 		(rmc_stelling mid {extract with werkruimte=(fst extract.werkruimte,Field (snd extract.werkruimte, Snd))} exp2)
 	| Exp_low_bar -> extract
+	| Exp_function_call _ -> raise Not_found
 	| Exp_infix (exp1,Listop,exp2) -> merge_extracts mid
 		(rmc_stelling mid {vars=[];predicates=[];werkruimte=(fst extract.werkruimte,Field (snd extract.werkruimte,Hd))} exp1)
 		(rmc_stelling mid {extract with werkruimte=(fst extract.werkruimte, Field (snd extract.werkruimte, Tl))} exp2)
+	| Exp_infix _ -> raise Not_found	
 
 let rmc_hyperlocalvar id (vars : (id*varbeschrijving) list) =
 	try
@@ -133,6 +136,7 @@ let rmc_case mid = function
 
 (* missing match case: when an match stmt is given with no cases*)
 let rec to_ifstmts = function
+	| [] -> raise Not_found
 	| (predicate, ifbody)::[] -> Stmt_if (predicate, ifbody)
 	| (predicate,ifbody)::case_list -> Stmt_if_else (predicate,ifbody,[to_ifstmts case_list])
 
