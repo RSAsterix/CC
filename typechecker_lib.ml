@@ -108,12 +108,6 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let env_var_find x env = 
-	Env_var.find {id = x; t = Void} (fst env);;
-
-let env_fun_find x env =
-	Env_fun.find {id = x; bound = SS.empty; t = Void; locals = Env_var.empty} (snd env);;
-
 let rec convert_typetoken = function
 	| Type_int -> Int
 	| Type_bool -> Bool
