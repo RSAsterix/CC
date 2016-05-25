@@ -276,10 +276,6 @@ let typedecl_parser id = function
 
 (* Decl = id '('  FunDecl | VarDecl *)
 let decl_parser = function
-	| (_,TYPE)::(_,IDtok id)::(_,Optok "=")::list ->
-		(match typedecl_parser id list with
-		| Success typedecl, list -> Success (Typedecl typedecl), list
-		| Error e, list -> Error e, list)
 	| (_,IDtok id)::(_,OPEN_PAR)::list ->
 		(match fundecl_parser id list with
 		| Success fundecl, list -> Success (Fundecl fundecl), list
@@ -308,13 +304,28 @@ remove_comments' = function
 	| Success [] -> Error "comment does not end"
 	| Error e -> Error e
 
-(* SPL = Decl+ *)
 let rec spl_parser decllist tokenlist = 
-	let spl_parser' = match decl_parser tokenlist with
-    | Success decls, [] -> Success (List.rev (decls::decllist))
-    | Success decls, list -> spl_parser (decls::decllist) list
-    | Error e, list -> Error (e^"\n"^token_list_to_string list) in
+	match decl_parser tokenlist with
+  | Success decls, [] -> Success (List.rev (decls::decllist))
+  | Success decls, list -> spl_parser (decls::decllist) list
+  | Error e, list -> Error (e^"\n"^token_list_to_string list)
+
+let rec typedecllist_parser typedecllist = function
+	| (_,TYPE)::(_,IDtok id)::(_,Optok "=")::list ->
+		(match typedecl_parser id list with
+		| Success typedecl, list -> typedecllist_parser (typedecl::typedecllist) list
+		| Error e, list -> Error e, list)
+	| list -> Success typedecllist, list
+
+(* SPL = Decl+ *)
+let parser decllist tokenlist = 
 	match remove_comments (Success tokenlist) with
 	| Error e -> Error e
-	| Success list -> spl_parser';;
+	| Success tokenlist ->
+		(match typedecllist_parser [] tokenlist with
+		| Error e, tokenlist -> Error e
+		| Success typedecllist,tokenlist -> 
+			(match spl_parser [] tokenlist with
+			| Error e -> Error e
+			| Success decllist -> Success (typedecllist,decllist)));;
   	

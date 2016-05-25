@@ -87,7 +87,7 @@ try
 with End_of_file ->
   close_in in_channel;;
 
-let structure = spl_parser [] !tokenlist;;
+let structure = parser [] !tokenlist;;
 (* let outfile = "C:/Users/tom_e/workspace/CC/output.txt";; *)
 let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
@@ -109,7 +109,7 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 
 match structure with
 | Error e -> print_endline e;
-| Success x -> print_spl std_formatter (rmc_spl x);
+| Success (typedecls,decls) -> print_spl std_formatter (rmc_spl decls);
 	(* match m x with                                                  *)
 	(* | Error e -> print_endline e;                                   *)
 	(* | Success env -> print_string (code_gen (Env.elements env) x);; *)
