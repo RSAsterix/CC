@@ -47,7 +47,10 @@ type rettype = Rettype of typetoken | Type_void
 type funtype = typetoken list * rettype
 type vardecl = typetoken option * id * exp 
 type fundecl = id * fargs * funtype option * vardecl list * stmt list
-type typedecl = Rename of id * typetoken | (*Ignorable |*)Enum of id * constructor list
+type typedecl = 
+	| Rename of id * typetoken 
+	| Enum of id * constructor list
+	(* | Typedef of id * (constructor * typetoken) list *)
 type decl = Vardecl of vardecl | Fundecl of fundecl
 type spl = typedecl list * decl list;;
 
