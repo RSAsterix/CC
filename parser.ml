@@ -290,19 +290,17 @@ let decl_parser = function
 (* read *)
 
 let rec remove_comments = function
-	| Success ((l,Startcomment)::list) -> remove_comments' (Success list)
-	| Success ((l,token)::list) -> 
-		(match remove_comments (Success list) with
+	| (l,Startcomment)::list -> remove_comments' list
+	| (l,token)::list -> 
+		(match remove_comments list with
 		| Success list -> Success ((l,token)::list)
 		| Error e -> Error e)
-	| Success [] -> Success []
-	| Error e -> Error e
+	| [] -> Success []
 and
 remove_comments' = function
-	| Success ((l,Endcomment)::list) -> remove_comments (Success list)
-	| Success ((l,token)::list) -> remove_comments' (Success list)
-	| Success [] -> Error "comment does not end"
-	| Error e -> Error e
+	| (l,Endcomment)::list -> remove_comments list
+	| (l,token)::list -> remove_comments' list
+	| [] -> Error "comment does not end"
 
 let rec spl_parser decllist tokenlist = 
 	match decl_parser tokenlist with
@@ -311,15 +309,17 @@ let rec spl_parser decllist tokenlist =
   | Error e, list -> Error (e^"\n"^token_list_to_string list)
 
 let rec typedecllist_parser typedecllist = function
-	| (_,TYPE)::(_,IDtok id)::(_,Optok "=")::list ->
+	| (_,TYPE)::(_,IDtok id)::(l1,EQ)::list ->
 		(match typedecl_parser id list with
-		| Success typedecl, list -> typedecllist_parser (typedecl::typedecllist) list
+		| Success typedecl, (_,SEMICOLON)::list -> typedecllist_parser (typedecl::typedecllist) list
+		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list
+		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after id." l1), []
 		| Error e, list -> Error e, list)
 	| list -> Success typedecllist, list
 
 (* SPL = Decl+ *)
 let parser decllist tokenlist = 
-	match remove_comments (Success tokenlist) with
+	match remove_comments tokenlist with
 	| Error e -> Error e
 	| Success tokenlist ->
 		(match typedecllist_parser [] tokenlist with
