@@ -109,8 +109,8 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 
 match structure with
 | Error e -> print_endline e;
-| Success (typedecls,decls) -> print_spl std_formatter (rmc_spl decls);
-	(* match m x with                                                  *)
-	(* | Error e -> print_endline e;                                   *)
-	(* | Success env -> print_string (code_gen (Env.elements env) x);; *)
+| Success x -> (*print_spl std_formatter (rmc_spl x);*)
+  match m x with
+  | Error e -> print_endline e;
+  | Success env -> print_string (prettyprint_env env);;
 (* close_out oc;; *)

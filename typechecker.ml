@@ -393,9 +393,25 @@ let rec m_sccs env var = function
   		with
   		| Already_known a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
+let rec m_typedecls = function
+	| [] -> Env_var.empty
+	| typedecl::rest ->
+		let rec m_typedecl = function
+			| Rename (id,tt) -> 
+				Env_var.singleton {id = id; t = convert_typetoken tt}
+			| Enum (id,[]) -> 
+				raise (Invalid_argument (sprintf "No type listed for '%s'." id))
+			| Enum (id,[e]) -> 
+				Env_var.singleton {id = e; t = Var id}
+			| Enum (id,e::tl) -> 
+				Env_var.add_safe {id = e; t = Var id} (m_typedecl (Enum (id,tl))) in
+		Env_var.union_safe (m_typedecl typedecl) (m_typedecls rest);;
+
 let m exp =
   try 
-		let graph = make_graph exp in
-		m_sccs Env.empty (Var "0") (tarjan graph)
+		let graph = make_graph (snd exp) in
+		let env = m_typedecls (fst exp), Env_fun.empty in
+		m_sccs env (Var "0") (tarjan graph)
 	with
-	| Invalid_argument e -> Error e;;
+	| Invalid_argument e -> Error e
+	| Already_known e -> Error (sprintf "Duplicate type '%s'." e);;
