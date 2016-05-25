@@ -49,6 +49,8 @@ module Env_var =
 		let exclude x set =
 			let y = find_safe {id = x; t = Void} set in
 			remove y set
+		let union_safe set1 set2 =
+			fold (fun el beginset -> add_safe el beginset) set1 set2
 	end;;
 
 type env_fun = {

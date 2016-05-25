@@ -49,8 +49,9 @@ let rec m_exp env var = function
 	| Exp_bool _ -> u (var, Bool)
 	| Exp_char _ -> u (var, Char)
 	| Exp_emptylist -> fresh(); u (var, Lis (Var !v))
-	| Exp_tuple (e1, e2) -> 
-		fresh();
+	| Exp_low_bar -> fresh(); u (var, Var !v)
+	| Exp_constructor cons -> m_id_var env var cons
+	| Exp_tuple (e1, e2) -> fresh();
 		let a1 = Var !v in
 		(match m_exp env a1 e1 with
 		| Error e -> Error ("Left ill-typed because of:\n" ^ e)
@@ -155,12 +156,80 @@ and m_stmt env var = function
 	| Stmt_define (fieldexp,exp) ->
 		fresh();
 		let a = Var !v in
-		match m_fieldexp env a fieldexp with
+		(match m_fieldexp env a fieldexp with
 		| Error e -> Error e
 		| Success x ->
 			match m_exp (substitute_env x env) (substitute x a) exp with
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e)
-			| Success res -> Success (o x res);;
+			| Success res -> Success (o x res))
+	| Stmt_match (exp,caselist) ->
+		fresh();
+		let a = Var !v in
+		match m_exp env a exp with
+		| Error e -> Error e
+		| Success x ->
+			let varexp = substitute x a in
+			let rec hyperlocals = function
+				| Exp_field (Nofield id) -> fresh();
+					Success (Env_var.singleton {id = id; t = Var !v})
+				| Exp_field _ -> Error "Not allowed to match to a function call (field)."
+				| Exp_function_call _ -> Error "Not allowed to match to a function call."
+				| Exp_infix (head,Listop,tail) ->
+					(match hyperlocals head with
+					| Error e -> Error e
+					| Success h ->
+						match hyperlocals tail with
+						| Error e -> Error e
+						| Success t -> 
+							try 
+								Success (Env_var.union_safe h t) 
+							with 
+							| Already_known e -> Error (sprintf "Duplicate hyperlocal '%s'." e))
+				| Exp_prefix (Neg, Exp_int _) -> Success Env_var.empty
+				| Exp_prefix _ -> Error "Can't use negation/negative this way."
+				| Exp_tuple (left,right) ->
+					(match hyperlocals left with
+					| Error e -> Error e
+					| Success l ->
+						match hyperlocals right with
+						| Error e -> Error e
+						| Success r -> 
+							try 
+								Success (Env_var.union_safe l r) 
+							with 
+							| Already_known e -> Error (sprintf "Duplicate hyperlocal '%s'." e))
+				| _ -> Success Env_var.empty in
+			let m_case env var (mexp,mwhen,mstmts) =
+				(match hyperlocals mexp with
+				| Error e -> Error e
+				| Success hlocals ->
+					match m_exp (hlocals,Env_fun.empty) varexp mexp with
+					| Error e -> Error e
+					| Success x_cl ->
+						let env' = Env.add_locals hlocals env in
+						let m_when = function
+							| None -> Success RW.empty
+							| Some mwhen -> m_exp (substitute_env x_cl env') Bool mwhen in 
+						match m_when mwhen with
+						| Error e -> Error e
+						| Success res_cl ->
+							let x1_cl = o res_cl x_cl in
+							match m_stmts (substitute_env x1_cl env') (substitute x1_cl var) mstmts with
+							| Error e -> Error e
+							| Success res2_cl -> Success (o res2_cl x1_cl)) in
+			let rec m_caselist env var = function
+				| [] -> Error "No match-case found."
+				| [mcase] -> m_case env var mcase
+				| mcase::cases ->
+					(match m_case env var mcase with
+					| Error e -> Error e
+					| Success x ->
+						match m_caselist (substitute_env x env) (substitute x var) cases with
+						| Error e -> Error e
+						| Success res -> Success (o res x)) in
+			match m_caselist (substitute_env x env) (substitute x var) caselist with
+			| Error e -> Error e
+			| Success res -> Success (o res x);;
 
 let rec type_fargs t = function
 	| [] ->
