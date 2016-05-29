@@ -203,7 +203,7 @@ and m_stmt env var = function
 				(match hyperlocals mexp with
 				| Error e -> Error e
 				| Success hlocals ->
-					match m_exp (hlocals,Env_fun.empty) varexp mexp with
+					match m_exp {Env.empty with vars = hlocals} varexp mexp with
 					| Error e -> Error e
 					| Success x_cl ->
 						let env' = Env.add_locals hlocals env in
@@ -245,8 +245,8 @@ let rec type_fargs t = function
 				Success (Env_var.add {id = arg; t = targ} resttype))
 		| t -> Error "Too many arguments.";;
 
-let rec pretype_var = function
-	| Some t -> convert_typetoken t
+let rec pretype_var env = function
+	| Some t -> convert_typetoken env t
 	| None -> fresh(); Var !v;;
 
 let m_vardecl env var (pretype, id, exp) =
@@ -283,7 +283,7 @@ let m_fundecl env var (id,fargs,pretype,vardecls,stmts) =
   				| [] -> Success (RW.empty, locals)
   				| (vpretype,vid,_ as vardecl)::rest ->
 						try (
-							let a = pretype_var vpretype in
+							let a = pretype_var env vpretype in
     					match m_vardecl (Env.add_locals locals env) a vardecl with
     					| Error e -> Error e
     					| Success x ->
@@ -350,25 +350,25 @@ let rec check_scc = function
 	| [_] -> false
 	| scc -> List.exists (fun x -> match x.spl_decl with Vardecl _ -> true | _ -> false) scc;;
 
-let rec pretype_fun fargs = function
-	| Some (argtypes,rettype as t) -> make_type t
+let rec pretype_fun env fargs = function
+	| Some (argtypes,rettype as t) -> make_type env t
 	| None ->
 		match fargs with
 		| [] -> fresh(); Var !v
 		| arg::rest -> fresh();
 			let a = Var !v in
-		 	Imp (a, pretype_fun rest None);;
+		 	Imp (a, pretype_fun env rest None);;
 
 let rec new_env env = function
 	| [] -> env
 	| vert::scc ->
 		match vert.spl_decl with
   	| Fundecl (id,fargs,pretype,_,_) ->
-  		let t = pretype_fun fargs pretype in
+  		let t = pretype_fun env fargs pretype in
   		let xa = {id = id; bound = SS.empty; t = t; locals = Env_var.empty} in
 			new_env (Env.add_fun xa env) scc
   	| Vardecl (pretype,id,_) ->
-  		let t = pretype_var pretype in
+  		let t = pretype_var env pretype in
   		let xa = {id = id; t = t} in
 			new_env (Env.add_var xa env) scc;; 
 
@@ -393,24 +393,28 @@ let rec m_sccs env var = function
   		with
   		| Already_known a -> Error (sprintf "Duplicate declaration: '%s'" a))
 
-let rec m_typedecls = function
-	| [] -> Env_var.empty
+let rec m_typedecls env = function
+	| [] -> env
 	| typedecl::rest ->
-		let rec m_typedecl = function
-			| Rename (id,tt) -> 
-				Env_var.singleton {id = id; t = convert_typetoken tt}
-			| Enum (id,[]) -> 
-				raise (Invalid_argument (sprintf "No type listed for '%s'." id))
-			| Enum (id,[e]) -> 
-				Env_var.singleton {id = e; t = Var id}
-			| Enum (id,e::tl) -> 
-				Env_var.add_safe {id = e; t = Var id} (m_typedecl (Enum (id,tl))) in
-		Env_var.union_safe (m_typedecl typedecl) (m_typedecls rest);;
+		match typedecl with
+		| Rename (id,tt) -> 
+			let env' = Env.add_type {id = id; t = convert_typetoken env tt} env in
+			m_typedecls env' rest
+		| Enum (id,[]) -> 
+			raise (Invalid_argument (sprintf "No type listed for '%s'." id))
+		| Enum (id,enum) ->
+			let rec tt_to_enum = function
+				| [] -> []
+				| e::tl when not (List.mem e tl) -> (e,None)::(tt_to_enum tl)
+					(* Hier moet dus straks iets komen om daadwerkelijke constructoren af te handelen *)
+				| e::_ -> raise (Invalid_argument (sprintf "Duplicate typeconstructor '%s'." e)) in
+			let env' = Env.add_type {id = id; t = Enum (tt_to_enum enum)} env in
+			m_typedecls env' rest;;
 
 let m exp =
   try 
 		let graph = make_graph (snd exp) in
-		let env = m_typedecls (fst exp), Env_fun.empty in
+		let env = m_typedecls Env.empty (fst exp) in
 		m_sccs env (Var "0") (tarjan graph)
 	with
 	| Invalid_argument e -> Error e

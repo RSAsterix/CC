@@ -7,6 +7,7 @@ let rec string_of_type = function
 	| Imp (t1,t2) -> sprintf "%s -> %s" (string_of_type t1) (string_of_type t2)
 	| Tup (t1,t2) -> sprintf "(%s,%s)" (string_of_type t1) (string_of_type t2)
 	| Lis t -> sprintf "[%s]" (string_of_type t)
+	| Enum enum -> "custom enum"
 	| Int -> sprintf "Int"
 	| Bool -> sprintf "Bool"
 	| Char -> sprintf "Char"
@@ -71,8 +72,8 @@ let prettyprint_env env =
 	let funstring = ref "" in
 	let funs f = Env_fun.iter (fun el -> funstring := (sprintf "@[<v 0>%s@]@." (print_function el)) ^ !funstring) f in
 	
-	vars (fst env);
-	funs (snd env);
+	vars env.vars;
+	funs env.funs;
 	
 	sprintf "%s\n%s" !varstring !funstring;;
 

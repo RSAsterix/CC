@@ -30,6 +30,12 @@ let rec substitute subs = function
 	| Lis t -> Lis (substitute subs t)
 	| t -> t;;
 
+let substitute_types subs typeenv =
+	Env_type.fold (
+		(fun x ev -> Env_type.add 
+		{x with t = substitute subs x.t} ev))
+		typeenv Env_type.empty;;
+
 let substitute_vars subs varenv =
 	Env_var.fold (
 		(fun x ev -> Env_var.add 
@@ -43,9 +49,10 @@ let substitute_funs subs funenv =
 		funenv Env_fun.empty;; 
 
 let substitute_env subs env =
-	let newvars = substitute_vars subs (fst env) in
-	let newfuns = substitute_funs subs (snd env) in
-	(newvars, newfuns);;
+	let newtypes = substitute_types subs env.types in
+	let newvars = substitute_vars subs env.vars in
+	let newfuns = substitute_funs subs env.funs in
+	{types = newtypes; vars = newvars; funs = newfuns};;
 	
 (* Infix versie van o, vervangt alle substituties in s2 *)
 (* volgens de regels in s1 *)
@@ -63,6 +70,9 @@ let tv t =
   	| t -> free in
 	tv_help SS.empty t;;
 
+let tv_env_type (env_type : Env_type.t) =
+	Env_type.fold (fun x beginfree -> SS.union beginfree (tv x.t)) env_type (SS.empty);;
+
 let tv_env_var (env_var : Env_var.t) =
 	Env_var.fold (fun x beginfree -> SS.union beginfree (tv x.t)) env_var (SS.empty);;
 
@@ -73,7 +83,8 @@ let tv_env_fun (env_fun : Env_fun.t) =
 		SS.union part1 part2) env_fun (SS.empty);;
 
 let tv_env (env : environment) = 
-	SS.union (tv_env_var (fst env)) (tv_env_fun (snd env));;
+	SS.union (tv_env_type env.types) (
+		SS.union (tv_env_var env.vars) (tv_env_fun env.funs));;
 
 let rec u = function
 	| (Var a, Var b) when a = b -> Success RW.empty
@@ -108,22 +119,26 @@ let op1_to_subs = function
 	| Not -> Bool
 	| Neg -> Int;;
 
-let rec convert_typetoken = function
+let rec convert_typetoken env = function
 	| Type_int -> Int
 	| Type_bool -> Bool
 	| Type_char -> Char
-	| Type_tuple (t1,t2) -> Tup (convert_typetoken t1, convert_typetoken t2)
-	| Type_list t -> Lis (convert_typetoken t)
-	| Type_id id -> Var id;;  
+	| Type_tuple (t1,t2) -> Tup (convert_typetoken env t1, convert_typetoken env t2)
+	| Type_list t -> Lis (convert_typetoken env t)
+	| Type_id id ->
+		try
+			(Env.find_type id env).t
+		with
+		| Not_in_env _ -> Var id;;  
 
-let convert_rettype = function
+let convert_rettype env = function
 	| Type_void -> Void
-	| Rettype t -> convert_typetoken t;;
+	| Rettype t -> convert_typetoken env t;;
 
-let make_type functiontype = 
+let make_type env functiontype = 
 	let rec help = function
-	| ([],rettype) -> convert_rettype rettype
-	| (a::rest,rettype) -> Imp (convert_typetoken a, help (rest,rettype)) in
+	| ([],rettype) -> convert_rettype env rettype
+	| (a::rest,rettype) -> Imp (convert_typetoken env a, help (rest,rettype)) in
 	let functiontype = help functiontype in
 	let rewrites = SS.fold (fun x beginr -> fresh(); RW.add (x, Var !v) beginr) (tv functiontype) (RW.empty) in
 	substitute rewrites functiontype;; 
