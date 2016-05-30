@@ -2,12 +2,18 @@ open Printf
 open Typechecker_types
 open Format
 
+let rec string_of_enum = function
+	| [] -> ""
+	| [e,None] -> e
+	| (e,None)::rest -> e ^ " | " ^ (string_of_enum rest);;
+(* meer is nog niet supported *)
+
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
 	| Imp (t1,t2) -> sprintf "%s -> %s" (string_of_type t1) (string_of_type t2)
 	| Tup (t1,t2) -> sprintf "(%s,%s)" (string_of_type t1) (string_of_type t2)
 	| Lis t -> sprintf "[%s]" (string_of_type t)
-	| Enum enum -> "custom enum"
+	| Enum enum -> string_of_enum enum
 	| Int -> sprintf "Int"
 	| Bool -> sprintf "Bool"
 	| Char -> sprintf "Char"

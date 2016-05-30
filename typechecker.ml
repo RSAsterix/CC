@@ -14,6 +14,13 @@ let m_field env var = function
 	| Fst -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), a))
 	| Snd -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), (Var !v)));;
 
+let m_cons env var cons =
+	try
+		let el = Env.find_type cons env in
+		u (var,el.t)
+	with
+	| Not_in_env el -> Error (sprintf "Constructor '%s' not found in environment." el);;
+
 let m_id_var env var id =
 	try
 		let el = Env.find_var id env in
@@ -50,7 +57,7 @@ let rec m_exp env var = function
 	| Exp_char _ -> u (var, Char)
 	| Exp_emptylist -> fresh(); u (var, Lis (Var !v))
 	| Exp_low_bar -> fresh(); u (var, Var !v)
-	| Exp_constructor cons -> m_id_var env var cons
+	| Exp_constructor cons -> m_cons env var cons
 	| Exp_tuple (e1, e2) -> fresh();
 		let a1 = Var !v in
 		(match m_exp env a1 e1 with
@@ -203,13 +210,13 @@ and m_stmt env var = function
 				(match hyperlocals mexp with
 				| Error e -> Error e
 				| Success hlocals ->
-					match m_exp {Env.empty with vars = hlocals} varexp mexp with
+					match m_exp {env with vars = hlocals} varexp mexp with
 					| Error e -> Error e
 					| Success x_cl ->
 						let env' = Env.add_locals hlocals env in
 						let m_when = function
 							| None -> Success RW.empty
-							| Some mwhen -> m_exp (substitute_env x_cl env') Bool mwhen in 
+							| Some mwhen -> m_exp (substitute_env x_cl env') Bool mwhen in
 						match m_when mwhen with
 						| Error e -> Error e
 						| Success res_cl ->
@@ -405,11 +412,17 @@ let rec m_typedecls env = function
 		| Enum (id,enum) ->
 			let rec tt_to_enum = function
 				| [] -> []
-				| e::tl when not (List.mem e tl) -> (e,None)::(tt_to_enum tl)
+				| e::tl when not ((List.mem e tl) || (Env.exists_cons e env)) -> (e,None)::(tt_to_enum tl)
 					(* Hier moet dus straks iets komen om daadwerkelijke constructoren af te handelen *)
+					(* Vergeet niet ook Env.exists_cons en Env.get_cons ofzo te updaten *)
 				| e::_ -> raise (Invalid_argument (sprintf "Duplicate typeconstructor '%s'." e)) in
 			let env' = Env.add_type {id = id; t = Enum (tt_to_enum enum)} env in
-			m_typedecls env' rest;;
+			let rec tt_to_env env'' = function
+				| [] -> env''
+				| e::tl -> 
+					let env'' = Env.add_type {id = e; t = convert_typetoken env' (Type_id id)} env'' in
+					tt_to_env env'' tl in
+			m_typedecls (tt_to_env env' enum) rest;;
 
 let m exp =
   try 

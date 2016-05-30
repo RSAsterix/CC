@@ -87,6 +87,7 @@ let tv_env (env : environment) =
 		SS.union (tv_env_var env.vars) (tv_env_fun env.funs));;
 
 let rec u = function
+	| (Enum a, Enum b) when a = b -> Success RW.empty
 	| (Var a, Var b) when a = b -> Success RW.empty
 	| (Var a, t) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))
 	| (t, Var a) when not (SS.mem a (tv t)) -> Success (RW.singleton (a,t))

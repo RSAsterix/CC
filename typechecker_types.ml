@@ -189,6 +189,12 @@ module Env =
 		let exclude x env = {
 			env with vars =
 				Env_var.exclude x env.vars}
+		let exists_cons x env =
+			try
+				let _ = find_type x env in
+				true
+			with
+			| Not_in_env _ -> false
 	end;;
 	
 module RW = Set.Make(
