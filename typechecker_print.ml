@@ -2,11 +2,18 @@ open Printf
 open Typechecker_types
 open Format
 
+let rec string_of_enum = function
+	| [] -> ""
+	| [e,None] -> e
+	| (e,None)::rest -> e ^ " | " ^ (string_of_enum rest);;
+(* meer is nog niet supported *)
+
 let rec string_of_type = function
 	| Var s -> sprintf "%s" s
 	| Imp (t1,t2) -> sprintf "%s -> %s" (string_of_type t1) (string_of_type t2)
 	| Tup (t1,t2) -> sprintf "(%s,%s)" (string_of_type t1) (string_of_type t2)
 	| Lis t -> sprintf "[%s]" (string_of_type t)
+	| Enum enum -> string_of_enum enum
 	| Int -> sprintf "Int"
 	| Bool -> sprintf "Bool"
 	| Char -> sprintf "Char"
@@ -71,8 +78,8 @@ let prettyprint_env env =
 	let funstring = ref "" in
 	let funs f = Env_fun.iter (fun el -> funstring := (sprintf "@[<v 0>%s@]@." (print_function el)) ^ !funstring) f in
 	
-	vars (fst env);
-	funs (snd env);
+	vars env.vars;
+	funs env.funs;
 	
 	sprintf "%s\n%s" !varstring !funstring;;
 
