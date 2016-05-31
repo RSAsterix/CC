@@ -175,7 +175,6 @@ and m_stmt env var = function
 		match m_exp env a exp with
 		| Error e -> Error e
 		| Success x ->
-			let varexp = substitute x a in
 			let rec hyperlocals = function
 				| Exp_field (Nofield id) -> fresh();
 					Success (Env_var.singleton {id = id; t = Var !v})
@@ -206,7 +205,7 @@ and m_stmt env var = function
 							with 
 							| Already_known e -> Error (sprintf "Duplicate hyperlocal '%s'." e))
 				| _ -> Success Env_var.empty in
-			let m_case env var (mexp,mwhen,mstmts) =
+			let m_case env var varexp (mexp,mwhen,mstmts) =
 				(match hyperlocals mexp with
 				| Error e -> Error e
 				| Success hlocals ->
@@ -224,17 +223,17 @@ and m_stmt env var = function
 							match m_stmts (substitute_env x1_cl env') (substitute x1_cl var) mstmts with
 							| Error e -> Error e
 							| Success res2_cl -> Success (o res2_cl x1_cl)) in
-			let rec m_caselist env var = function
+			let rec m_caselist env var varexp = function
 				| [] -> Error "No match-case found."
-				| [mcase] -> m_case env var mcase
+				| [mcase] -> m_case env var varexp mcase
 				| mcase::cases ->
-					(match m_case env var mcase with
+					(match m_case env var varexp mcase with
 					| Error e -> Error e
 					| Success x ->
-						match m_caselist (substitute_env x env) (substitute x var) cases with
+						match m_caselist (substitute_env x env) (substitute x var) (substitute x varexp) cases with
 						| Error e -> Error e
 						| Success res -> Success (o res x)) in
-			match m_caselist (substitute_env x env) (substitute x var) caselist with
+			match m_caselist (substitute_env x env) (substitute x var) (substitute x a) caselist with
 			| Error e -> Error e
 			| Success res -> Success (o res x);;
 
