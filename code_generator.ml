@@ -358,7 +358,9 @@ let rec print_vardecls = function
 (* reserve space for all global vars *)
 (* define all functions *)
 (* generate main: only look at vardecls *)
-let code_gen (vartypes, funtypes) (spl:decl list) = 
+let code_gen env (spl:decl list) = 
+	let vartypes = Env_var.elements env.vars in
+	let funtypes = Env_fun.elements env.funs in
 	let mainlabel = "main" in
 	let gvars = vartypes_to_idstructs true 0 vartypes in
 		reservecode (length gvars)^ 
