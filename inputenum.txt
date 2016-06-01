@@ -1,0 +1,29 @@
+
+
+type jemo = int;
+type e = Een | Twee | Drie;
+
+facI ( n ) :: jemo -> int {
+var r = 1;
+while ( n > 1 ) {
+r = r * n;
+n = n - 1;
+}
+return r ;
+}
+
+var b = read();
+var c = facI(b);
+
+f (x) {
+var y=0;
+match x with
+| Een -> {y=1;}
+| Twee -> {y=2;}
+if (x == Drie) {y=3;}
+return 3;
+}
+
+main() {
+write(c);
+}
