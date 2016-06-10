@@ -237,20 +237,6 @@ and m_stmt env var = function
 			| Error e -> Error e
 			| Success res -> Success (o res x);;
 
-let rec type_fargs t = function
-	| [] ->
-		(match t with
-		| Imp (_,_) -> Error "Too few arguments."
-		| t -> Success Env_var.empty)
-	| arg::rest ->
-		match t with
-		| Imp (targ,trest) ->
-			(match type_fargs trest rest with
-			| Error e -> Error e
-			| Success resttype ->
-				Success (Env_var.add {id = arg; t = targ} resttype))
-		| t -> Error "Too many arguments.";;
-
 let rec pretype_var env = function
 	| Some t -> convert_typetoken env t
 	| None -> fresh(); Var !v;;
