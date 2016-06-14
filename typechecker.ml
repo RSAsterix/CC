@@ -413,7 +413,9 @@ let m exp =
   try 
 		let graph = make_graph (snd exp) in
 		let env = m_typedecls Env.empty (fst exp) in
-		m_sccs env (Var "0") (tarjan graph)
+		if not (List.exists (fun x -> x.id = "main") graph.v)
+		then raise (Invalid_argument "No 'main' found.")
+		else m_sccs env (Var "0") (tarjan graph)
 	with
 	| Invalid_argument e -> Error e
 	| Already_known e -> Error (sprintf "Duplicate type '%s'." e);;
