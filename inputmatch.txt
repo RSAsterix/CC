@@ -29,3 +29,7 @@ return l1 ;
 }
 
 var a = append(1:[], 2:3:[]);
+
+main() {
+return 1;
+}

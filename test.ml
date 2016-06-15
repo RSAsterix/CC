@@ -62,16 +62,13 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "inputenum"
+let filename = "inputmatch"
 
 let in_channel =
 	try
 		open_in ("C:/Users/tom_e/workspace/CC/"^filename^".txt")
 	with
 	| _ -> open_in ("C:/Users/Martin/workspace/CC/"^filename^".txt");;
-
-let filename = "C:/Users/tom_e/workspace/CC/input4.txt";;
-(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 (* let in_channel = open_in filename;; *)
 let tokenlist = ref [];;
@@ -109,7 +106,8 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 
 match structure with
 | Error e -> print_endline e;
-| Success x -> (*print_spl std_formatter (rmc_spl x);*)
+| Success x -> 
+			(* print_spl std_formatter (rmc_spl (snd x)); *)
   match m x with
   | Error e -> print_endline e;
   | Success env -> print_endline (code_gen env (rmc_spl (snd x)));;

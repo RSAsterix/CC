@@ -133,41 +133,44 @@ let choose_label labeloption label2 =
 	| Some label1 -> label1
 	| None -> label2
 
-let rec if_gen vars fid nalabeloption = function
+let rec if_gen vars fid = function
 	| (exp,stmts) -> branchindex := !branchindex + 1;
-		let endiflabel = choose_label nalabeloption (endiflabel fid !branchindex) in
+		let (ifbody,labeloption) = stmtlist_gen vars fid None stmts in
+		let endiflabel = choose_label labeloption (endiflabel fid !branchindex) in
 		let code =
   		exp_gen vars exp^
   		brf endiflabel^ 
-  		stmtlist_gen vars fid None stmts^
-  		pointlabel endiflabel in
-		(code, None)
+  		ifbody^
+  		(if labeloption = None then pointlabel endiflabel else "") in
+		(code, Some endiflabel)
 and
-if_else_gen vars fid nalabeloption = function
+if_else_gen vars fid = function
 	| (exp,stmtsif,stmtselse) -> branchindex := !branchindex + 1;
 		let endiflabel = endiflabel fid !branchindex in
-		let endelselabel = choose_label nalabeloption (endelselabel fid !branchindex) in
+		let (elsebody, labeloption) = stmtlist_gen vars fid (Some endiflabel) stmtselse in
+		let endelselabel = choose_label labeloption (endelselabel fid !branchindex) in
 		let code =
   		exp_gen vars exp^
   		brf endiflabel^ 
-  		stmtlist_gen vars fid None stmtsif^ 
+  		fst (stmtlist_gen vars fid None stmtsif)^ 
   		bra endelselabel^ 
-  		stmtlist_gen vars fid (Some endiflabel) stmtselse^
-  		pointlabel endelselabel in
-		(code,None)
+			pointlabel endiflabel^
+  		elsebody^
+  		(if labeloption = None then pointlabel endelselabel else "") in
+		(code,Some endelselabel)
 and
-while_gen vars fid startlabeloption nalabeloption = function
+while_gen vars fid startlabeloption = function
 	| (exp,stmts) -> branchindex := !branchindex + 1;
 		let startwhilelabel = choose_label startlabeloption (startwhilelabel fid !branchindex) in
-		let endwhilelabel = choose_label nalabeloption (endwhilelabel fid !branchindex) in
+		let endwhilelabel = endwhilelabel fid !branchindex in
 		let code =
-			pointlabel startwhilelabel^
+			(if startlabeloption = None then pointlabel startwhilelabel else "") ^
 			exp_gen vars exp^
 			brf endwhilelabel^
-			stmtlist_gen vars fid None stmts^
+			fst (stmtlist_gen vars fid None stmts)^
 			bra startwhilelabel^
 			pointlabel endwhilelabel in
-			(code,Some startwhilelabel)
+			(code,Some endwhilelabel)
 and
 define_gen vars = function
 	| (Nofield id, exp) -> 
@@ -209,76 +212,45 @@ return_gen vars = function
 			return_none_code in
 			(code,None)
 and
-stmt_gen vars fid nalabeloption = function
-	| Stmt_if (a,b) -> if_gen vars fid nalabeloption (a,b)
-	| Stmt_if_else (a,b,c) -> if_else_gen vars fid nalabeloption (a,b,c)
-	| Stmt_while (a,b) -> while_gen vars fid None nalabeloption (a,b)
+stmt_gen vars fid startlabeloption = function
+	| Stmt_if (a,b) -> if_gen vars fid (a,b)
+	| Stmt_if_else (a,b,c) -> if_else_gen vars fid (a,b,c)
+	| Stmt_while (a,b) -> while_gen vars fid startlabeloption (a,b)
 	| Stmt_define (a,b) -> define_gen vars (a,b)
 	| Stmt_function_call (a,b) -> function_call_gen vars (a,b)
 	| Stmt_return a -> return_gen vars a
 and
-stmtlist_gen vars fid startlabel stmtlist = 
-	let rec stmtlist_gen' vars fid = function
-  	| stmt::stmtlist -> 
-  		let (stmtlistcode,nalabeloption) = stmtlist_gen' vars fid stmtlist in
-  		let (stmtcode,nalabeloption) = stmt_gen vars fid nalabeloption stmt in
-  		(stmtcode^stmtlistcode,nalabeloption)
-  	| [] -> ("",None) in
-	match stmtlist with
-	| (Stmt_while (a,b))::stmtlist -> 
-		let (stmtlistcode,nalabeloption) = stmtlist_gen' vars fid stmtlist in
-		let (whilecode,_) = while_gen vars fid startlabel nalabeloption (a,b) in
-		whilecode ^ stmtlistcode
-	| stmtlist -> 
-		let (stmtlistcode,_) = stmtlist_gen' vars fid stmtlist in
-		match startlabel with
-		| Some startlabel -> pointlabel startlabel ^ stmtlistcode
-		| None -> stmtlistcode
+stmtlist_gen vars fid startlabeloption = function
+	| stmt::stmtlist -> 
+		let (stmtcode,startlabeloption) = stmt_gen vars fid startlabeloption stmt in
+		let (stmtlistcode,startlabeloption) = stmtlist_gen vars fid startlabeloption stmtlist in
+		(stmtcode^stmtlistcode,startlabeloption)
+	| [] -> ("",startlabeloption)
 
-let last_if_else_gen vars fid nalabeloption = function
+exception Should_end_with_return_statement of string;;
+
+let rec last_if_else_gen vars fid = function
 	| (exp,stmtsif,stmtselse) -> branchindex := !branchindex + 1;
 	let endiflabel = endiflabel fid !branchindex in
 	let code =
 		exp_gen vars exp^
 		brf endiflabel^ 
-		stmtlist_gen vars fid None stmtsif^ 
-		stmtlist_gen vars fid (Some endiflabel) stmtselse in
+		fst (topstmtlist_gen vars fid None stmtsif)^
+		pointlabel endiflabel^ 
+		fst (topstmtlist_gen vars fid (Some endiflabel) stmtselse) in
 	(code,None)
-
-let last_while_gen vars fid startlabeloption nalabeloption = function
-	| (exp,stmts) -> branchindex := !branchindex + 1;
-		let startwhilelabel = choose_label startlabeloption (startwhilelabel fid !branchindex) in
-		let code =
-			stmtlist_gen vars fid (Some startwhilelabel) stmts^
-			bra startwhilelabel in
-			(code,Some startwhilelabel)
-
-let last_stmt_gen vars fid nalabeloption = function
-	| Stmt_if_else (a,b,c) -> last_if_else_gen vars fid nalabeloption (a,b,c)
-	| Stmt_while (a,b) -> last_while_gen vars fid None nalabeloption (a,b)
-	| stmt -> stmt_gen vars fid nalabeloption stmt
-
-let topstmtlist_gen vars fid startlabel stmtlist =
-	let rec topstmtlist_gen' vars fid = function
-		| stmt::[] -> last_stmt_gen vars fid None stmt
-  	| stmt::stmtlist -> 
-  		let (stmtlistcode,nalabeloption) = topstmtlist_gen' vars fid stmtlist in
-  		let (stmtcode,nalabeloption) = stmt_gen vars fid nalabeloption stmt in
-  		(stmtcode^stmtlistcode,nalabeloption)
-  	| [] -> ("",None) in
-	match stmtlist with
-	| (Stmt_while (a,b))::[] -> 
-		let (whilecode,_) = last_while_gen vars fid startlabel None (a,b) in
-		whilecode
-	| (Stmt_while (a,b))::stmtlist -> 
-		let (stmtlistcode,nalabeloption) = topstmtlist_gen' vars fid stmtlist in
-		let (whilecode,_) = while_gen vars fid startlabel nalabeloption (a,b) in
-		whilecode ^ stmtlistcode
-	| stmtlist -> 
-		let (stmtlistcode,_) = topstmtlist_gen' vars fid stmtlist in
-		match startlabel with
-		| Some startlabel -> pointlabel startlabel ^ stmtlistcode
-		| None -> stmtlistcode
+and
+last_stmt_gen vars fid startlabeloption = function
+	| Stmt_if_else (a,b,c) -> last_if_else_gen vars fid (a,b,c)
+	| Stmt_return (a) -> return_gen vars (a)
+	| stmt -> raise (Should_end_with_return_statement fid)
+and
+topstmtlist_gen vars fid startlabeloption = function
+	| stmt::[] -> last_stmt_gen vars fid startlabeloption stmt
+	| stmt::stmtlist -> 
+		let (stmtcode,startlabeloption) = stmt_gen vars fid startlabeloption stmt in
+		let (stmtlistcode,startlabeloption) = topstmtlist_gen vars fid startlabeloption stmtlist in
+		(stmtcode^stmtlistcode,startlabeloption)
 		
 let rec fargs_to_idstructs  i fargtypes = function
 	| id::fargs -> {global=false;vartype=hd fargtypes; id=id; index=i}::(fargs_to_idstructs (i+1) (tl fargtypes) fargs) 
@@ -302,13 +274,13 @@ let rec append_unique (l1: idstruct list) (l2: idstruct list) = match l2 with
 
 (* Als een var in fargs voorkomt bindt die sterker dan als in gvars *)
 (* Als een var in lvars voorkomt en ook in fargs hoeft er geen ruimte voor gereserveerd te worden *)
-let localknown fargs lvars gvars = append_unique lvars (append_unique fargs gvars)
+let localknown fargs lvars gvars = append_unique (append lvars fargs) gvars
 
 let rec vartypes_to_idstructs global index = function
 	| (x : env_var)::vartypes -> {id=x.id;vartype=x.t;global=global;index=index}::vartypes_to_idstructs global (index+1) vartypes
 	| [] -> []
 
-let rec print_vars = function
+let rec print_vars (vars:idstruct list)= match vars with
 	| var::vars -> var.id ^ " " ^ (print_vars vars)
 	| [] -> " # "
 
@@ -321,7 +293,7 @@ let rec ftype_to_fargtypes=function
 (* reserve space for the local vars *)
 (* parse the local vars *)
 (* parse de stmts. This includes return *)
-let rec functions_gen (gvars:'a list) funtypes vartypes = function
+let rec functions_gen (gvars:'a list) funtypes = function
 	| (fid,fargs,_,vardecllist,stmtlist)::decllist ->
 		let func = get_fun fid funtypes in
 		let fargtypes = ftype_to_fargtypes func.t in
@@ -332,11 +304,13 @@ let rec functions_gen (gvars:'a list) funtypes vartypes = function
 			else x::list) func.locals [] in
 		let lvars = vartypes_to_idstructs false 1 locals in
 		let localknown = localknown fargs lvars gvars in
+			(* print_vars gvars^"\n"^ *)
+			(* print_vars localknown^ *)
 			pointlabel fid^
   		reservelocalcode (length lvars)^
   		vardecl_gen localknown vardecllist^
-  		topstmtlist_gen localknown fid None stmtlist^
-  		functions_gen gvars funtypes vartypes decllist
+  		fst (topstmtlist_gen localknown fid None stmtlist)^
+  		functions_gen gvars funtypes decllist
 	| [] -> ""
 
 let rec get_vardecls = function
@@ -349,6 +323,7 @@ let rec get_fundecls = function
 	| (Vardecl vardecl)::spl -> get_fundecls spl
 	| [] -> []
 
+(*help function for printing: makes a simple string of vardecls*)
 let rec print_vardecls = function
 	| (_,id,_)::list -> id ^" "^(print_vardecls list)
 	| [] -> " # "
@@ -367,7 +342,7 @@ let code_gen env (spl:decl list) =
 		vardecl_gen gvars (get_vardecls spl)^
 		"bsr "^ mainlabel^" \n"^
 		end_code^
-		functions_gen gvars funtypes vartypes (get_fundecls spl)^
+		functions_gen gvars funtypes (get_fundecls spl)^
 		isempty_code^ 
 		read_code^
 		write_code
