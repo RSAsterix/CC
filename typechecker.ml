@@ -416,7 +416,7 @@ let m_main env main =
 		match fargs with
 		| _::_ -> Error "'main' cannot have arguments."
 		| _ -> try (
-  			let f_main = {id = "main"; bound = SS.empty; t = Int; locals = Env_var.empty} in
+  			let f_main = {id = "$main"; bound = SS.empty; t = Int; locals = Env_var.empty} in
   			let env' = Env.add_fun f_main env in 
   			match m_fundecl env' Int fundecl with
 				| Error e -> Error e
@@ -431,8 +431,8 @@ let m exp =
   try 
 		let graph = make_graph (snd exp) in
 		let env = m_typedecls Env.empty (fst exp) in
-		let main = List.find (fun x -> x.id = "main") graph.v in
-		let graph = {graph with v = List.filter (fun x -> not (x.id = "main")) graph.v} in
+		let main = List.find (fun x -> x.id = "$main") graph.v in
+		let graph = {graph with v = List.filter (fun x -> not (x.id = "$main")) graph.v} in
 		match m_sccs env (Var "0") (tarjan graph) with
 		| Success env -> m_main env main
 		| Error e -> Error e

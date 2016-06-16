@@ -171,7 +171,7 @@ stmt_parser = function
 		| Error e, list -> Error e, list)
 	| (l0,IDtok id)::(_,OPEN_PAR)::list -> 
   	(match funcall_parser list with
-  	| Success exp_list, (_,SEMICOLON)::list -> Success (Stmt_function_call (id, exp_list)), list
+  	| Success exp_list, (_,SEMICOLON)::list -> Success (Stmt_function_call ("$" ^ id, exp_list)), list
 		| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), list
 		| Success _, [] -> Error (sprintf "(r.%i) Unexpected EOF after parsing 'return'." l0), []
 		| Error e, list -> Error e, list)
@@ -277,7 +277,7 @@ let typedecl_parser id = function
 (* Decl = id '('  FunDecl | VarDecl *)
 let decl_parser = function
 	| (_,IDtok id)::(_,OPEN_PAR)::list ->
-		(match fundecl_parser id list with
+		(match fundecl_parser ("$" ^ id) list with
 		| Success fundecl, list -> Success (Fundecl fundecl), list
 		| Error e, faillist -> Error e, faillist)
 	| (l,IDtok id)::[] -> Error (sprintf "(r.%i) Unexpected EOF after parsing id.\nBy the way: is '%s' a type for a variable, or a function name without arguments?" l id), []

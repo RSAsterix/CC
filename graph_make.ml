@@ -88,35 +88,35 @@ let fv_spl graph spl =
 
 let make_graph spl = 
 	let g = {v = [
-		{id = "read";
+		{id = "$read";
 		i = -1;
 		lowlink = -1;
 		onStack = false;
 		spl_decl =
 			Fundecl (
-				"read",
+				"$read",
 				[],
 				None,
 				[None,"x",Exp_int 1],
 				[Stmt_return (Some (Exp_field (Nofield "x")))])};
-		{id = "write";
+		{id = "$write";
 		i = -1;
 		lowlink = -1;
 		onStack = false;
 		spl_decl =
 			Fundecl (
-				"write",
+				"$write",
 				["x"],
 				Some([Type_int],Type_void),
 				[],
 				[Stmt_return None])};
-		{id = "isEmpty"; 
+		{id = "$isEmpty"; 
 		i = -1; 
 		lowlink = -1; 
 		onStack = false; 
 		spl_decl = 
 			Fundecl (
-				"isEmpty", 
+				"$isEmpty", 
 				["l"], 
 				None, 
 				[],
