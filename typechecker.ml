@@ -134,7 +134,7 @@ let rec m_stmts env var = function
 and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
-	| Stmt_function_call (id,args) -> m_exp env var (Exp_function_call (id,args))
+	| Stmt_function_call (id,args) -> fresh(); m_exp env (Var !v) (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
@@ -409,11 +409,34 @@ let rec m_typedecls env = function
 					tt_to_env env'' tl in
 			m_typedecls (tt_to_env env' enum) rest;;
 
+let m_main env main = 
+	match main.spl_decl with
+	| Vardecl _ -> Error "'main' cannot be a variable."
+	| Fundecl ((_,fargs,_,_,_) as fundecl) ->
+		match fargs with
+		| _::_ -> Error "'main' cannot have arguments."
+		| _ -> try (
+  			let f_main = {id = "main"; bound = SS.empty; t = Int; locals = Env_var.empty} in
+  			let env' = Env.add_fun f_main env in 
+  			match m_fundecl env' Int fundecl with
+				| Error e -> Error e
+				| Success x ->
+    			let envxn = substitute_env x env in
+    			let ads = Env.diff (substitute_env x env') envxn in
+    			Success (argify envxn ads x [main]))
+  		with
+  		| Already_known a -> Error (sprintf "Duplicate declaration: '%s'" a);;
+		
 let m exp =
   try 
 		let graph = make_graph (snd exp) in
 		let env = m_typedecls Env.empty (fst exp) in
-		m_sccs env (Var "0") (tarjan graph)
+		let main = List.find (fun x -> x.id = "main") graph.v in
+		let graph = {graph with v = List.filter (fun x -> not (x.id = "main")) graph.v} in
+		match m_sccs env (Var "0") (tarjan graph) with
+		| Success env -> m_main env main
+		| Error e -> Error e
 	with
+	| Not_found -> Error "No 'main' found."
 	| Invalid_argument e -> Error e
 	| Already_known e -> Error (sprintf "Duplicate type '%s'." e);;
