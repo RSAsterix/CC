@@ -8,12 +8,14 @@ open Graph_make
 open Graph_cycles
 open Graph_lib
 
+(* Checks one field *)
 let m_field env var = function
 	| Hd -> fresh(); u (var, Imp (Lis (Var !v), (Var !v)))
 	| Tl -> fresh(); u (var, Imp (Lis (Var !v), Lis (Var !v)))
 	| Fst -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), a))
 	| Snd -> fresh(); let a = Var !v in fresh(); u (var, Imp (Tup (a, (Var !v)), (Var !v)));;
 
+(* Finds the type of a constructor in the environment *)
 let m_cons env var cons =
 	try
 		let el = Env.find_type cons env in
@@ -21,6 +23,7 @@ let m_cons env var cons =
 	with
 	| Not_in_env el -> Error (sprintf "Constructor '%s' not found in environment." el);;
 
+(* Finds the type of a variable in the environment *)
 let m_id_var env var id =
 	try
 		let el = Env.find_var id env in
@@ -28,6 +31,7 @@ let m_id_var env var id =
 	with
 	| Not_in_env el -> Error (sprintf "Variable '%s' not found in environment." el);;
 
+(* Finds the type of a function in the environment *)
 let m_id_fun env var id = 
 	try (
 		let el = Env.find_fun id env in
@@ -39,6 +43,10 @@ let m_id_fun env var id =
 	with
 	| Not_in_env el -> Error (sprintf "Function '%s' not found in environment." el);;
 
+(* Recursively checks a fieldexpression: *)
+(* If it's just a variable, look it up. *)
+(* If it's more than that, treat the fields as functions *)
+(* and work according to the rule in the college slides. *)
 let rec m_fieldexp (env : environment) var = function
 	| Nofield id -> m_id_var env var id
 	| Field (fieldexp, field) ->
@@ -51,6 +59,8 @@ let rec m_fieldexp (env : environment) var = function
 			| Error e -> Error ("Field cannot be applied to expression because of:\n" ^ e)
 			| Success res1 -> Success (o x res1);;
 
+(* Checks expressions according to college slides. *)
+(* Interesting parts will be commented upon inline. *)
 let rec m_exp env var = function
 	| Exp_int _ -> u (var, Int)
 	| Exp_bool _ -> u (var, Bool)
@@ -71,6 +81,9 @@ let rec m_exp env var = function
 				match u (substitute x var, substitute x (Tup (a1, a2))) with
 				| Error e -> Error ("Tuple ill-typed because of:\n" ^ e)
 				| Success res2 -> Success (o res2 x))
+	(* Operators "Neg" and "Not" have the same code, *)
+	(* apart from the type they need matched. *)
+	(* TypeRES will be Int for "Neg" and Bool for "Not" *)
 	| Exp_prefix (op, e1) ->
 		let typeRES = op1_to_subs op in
 		(match m_exp env typeRES e1 with
@@ -79,6 +92,10 @@ let rec m_exp env var = function
 			match u (substitute x var, typeRES) with
 			| Success res1 -> Success (o res1 x)
 			| Error e -> Error ("Negative ill-typed because of:\n" ^ e))
+	(* Same story as in "Exp_prefix": *)
+	(* Left expression needs to be typeL, *)
+	(* Right expression needs to be typeR, *)
+	(* Result needs to be typeRES. *) 
 	| Exp_infix (e1, op, e2) ->
 		let (typeL, typeR, typeRES) = op2_to_subs op in
 		(match m_exp env typeL e1 with
@@ -92,6 +109,10 @@ let rec m_exp env var = function
 					| Error e -> Error ("Complete expression ill-typed because of:\n" ^ e)
 					| Success res2 -> Success (o res2 x))
 	| Exp_field fieldexp -> m_fieldexp env var fieldexp
+	(* Works about the same as in the college slides, *)
+	(* except for the local function "match_type" that *)
+	(* gives every argument the correct type, according to *)
+	(* the function type found in the environment. *)
 	| Exp_function_call (id, args) ->
 		fresh();
 		let a = Var !v in
@@ -118,6 +139,7 @@ let rec m_exp env var = function
 			| Error e -> Error e
 			| Success x -> Success (o x xa);;		
 
+(* Recursively checks all statements in a list. *)
 let rec m_stmts env var = function
 	| [] -> Error "No statement found."
 	| [stmt] ->
@@ -131,6 +153,8 @@ let rec m_stmts env var = function
 			match m_stmts (substitute_env x env) (substitute x var) rest with
 			| Error e -> Error e
 			| Success res -> Success (o res x)
+(* Checks statements according to college slides. *)
+(* Interesting parts will be commented upon inline. *)
 and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
@@ -169,12 +193,19 @@ and m_stmt env var = function
 			match m_exp (substitute_env x env) (substitute x a) exp with
 			| Error e -> Error ("Assignment ill-typed:\n" ^ e)
 			| Success res -> Success (o x res))
+	(* Checks the type of the expression the cases need to be matched to. *)
+	(* Then, for every case: *)
+	(* - It extracts the hyperlocals with the local function "hyperlocals", *)
+	(*   and places them in a temporary environment used only for this case; *)
+	(* - It checks if the "when"-clause is a Bool; *)
+	(* - It checks the statementlist. *)
 	| Stmt_match (exp,caselist) ->
 		fresh();
 		let a = Var !v in
 		match m_exp env a exp with
 		| Error e -> Error e
 		| Success x ->
+			(* Local functions for generating a temporary variable environment. *)
 			let rec hyperlocals = function
 				| Exp_field (Nofield id) -> fresh();
 					Success (Env_var.singleton {id = id; t = Var !v})
@@ -205,6 +236,7 @@ and m_stmt env var = function
 							with 
 							| Already_known e -> Error (sprintf "Duplicate hyperlocal '%s'." e))
 				| _ -> Success Env_var.empty in
+			(* Local function for typechecking a single case. *)
 			let m_case env var varexp (mexp,mwhen,mstmts) =
 				(match hyperlocals mexp with
 				| Error e -> Error e
@@ -223,6 +255,7 @@ and m_stmt env var = function
 							match m_stmts (substitute_env x1_cl env') (substitute x1_cl var) mstmts with
 							| Error e -> Error e
 							| Success res2_cl -> Success (o res2_cl x1_cl)) in
+			(* Local function for recursively checking a list of cases. *)
 			let rec m_caselist env var varexp = function
 				| [] -> Error "No match-case found."
 				| [mcase] -> m_case env var varexp mcase
