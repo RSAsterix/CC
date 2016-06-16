@@ -134,7 +134,7 @@ let rec m_stmts env var = function
 and m_stmt env var = function
 	| Stmt_return None -> u (var, Void)
 	| Stmt_return (Some exp) -> m_exp env var exp
-	| Stmt_function_call (id,args) -> m_exp env var (Exp_function_call (id,args))
+	| Stmt_function_call (id,args) -> fresh(); m_exp env (Var !v) (Exp_function_call (id,args))
 	| Stmt_while (exp,stmts) ->
 		(match m_stmts env var stmts with
 		| Error e -> Error ("Body of 'while' ill-typed:\n" ^ e)
