@@ -239,25 +239,14 @@ let fundecl_parser id list = match fargs_parser list with
 	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No opening parenthesis or '::', but: %s" l (token_to_string x)), (l,x)::list
 	| Success _, [] -> Error "Unexpected EOF while parsing function declaration.", [];;
 
-(* (renames: (constructor * typetoken) list) (enums: (constructor * int) list) *)
+(* (renames: (constructor * typetoken) list) *)
+(* (enums: (constructor * int) list) *)
 
 let rec enum_parser enumlist = function
 	| (_,Constructortok c)::(_,PIPE)::list -> enum_parser (c::enumlist) list
 	| (_,Constructortok c)::list -> Success (List.rev (c::enumlist)), list
 	| (l,x)::list -> Error (sprintf "(r.%i) No enum, but: %s" l (token_to_string x)), (l,x)::list
 	| [] -> Error "Unexpected EOF after parsing '|'.", []
-
-(* let rec split_at predicate parsed = function                *)
-(* 	| head::tail when predicate head -> List.rev parsed, tail *)
-(* 	| head::tail -> split_at predicate (head::parsed) tail    *)
-(* 	| [] -> parsed,[]                                         *)
-
-(* let rec rename_parser id list =                                                                                                                           *)
-(* 	let typelist,restlist = split_at (fun x -> snd x = SEMICOLON) [] list in                                                                               *)
-(* 	match type_parser typelist with                                                                                                                        *)
-(* 	| Success _, [] -> Success None, List.fold_right (fun el newlist -> if snd el=IDtok id then List.append typelist newlist else el::newlist) restlist [] *)
-(* 	| Success _, (l,x)::list -> Error (sprintf "(r.%i) No semicolon, but: %s" l (token_to_string x)), (l,x)::list                                          *)
-(* 	| Error e, list -> Error e, list                                                                                                                       *)
 
 let rec rename_parser id list =
 	match type_parser list with
@@ -285,9 +274,6 @@ let decl_parser = function
 		(match vardecl_parser list with
 		| Success vardecl, list -> Success (Vardecl vardecl), list
 		| Error e, faillist -> Error e, faillist);;
-
-(* let print = Fundecl ("print", ["x"], None, [], [Stmt_return None]);; *)
-(* read *)
 
 let rec remove_comments = function
 	| (l,Startcomment)::list -> remove_comments' list
