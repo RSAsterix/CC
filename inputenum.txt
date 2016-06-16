@@ -24,6 +24,15 @@ if (x == Drie) {y=3;}
 return 3;
 }
 
+g(x) {
+if (x == 0)
+{return 1;}
+else
+{write(x);
+return 1;}
+}
+
 main() {
-write(c);
+write(f(Een));
+return 1;
 }
