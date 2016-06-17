@@ -12,6 +12,12 @@ open Pretty_printer_files
 (* let filename = "C:/Users/tom_e/workspace/CC/input.txt";; *)
 let filename = "C:/Users/Martin/workspace/CC/inputT.txt";;
 
+let unpack res = match res with
+| Success x -> x
+| Error e -> raise (Invalid_argument e);;
+
+let filename = "inputT"
+
 let in_channel = open_in filename;;
 let tokenlist = ref [];;
 let l = ref 0;;
