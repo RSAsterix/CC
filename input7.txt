@@ -1,3 +1,6 @@
+var ahe = ((1:[],2:[]):(3:[],4:[]):[]):((5:[],6:[]):(7:[],8:[]):[]):[];
+var bhe = ahe.tl.hd.tl.hd.fst.hd;
+
 product ( list ) :: [ int ] -> int {
 if ( isEmpty ( list ) ) {
 return 1;

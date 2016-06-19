@@ -33,6 +33,11 @@ type stelling_extract = {
 	werkruimte: varbeschrijving;
 }
 
+let to_negated_predicate varbeschrijving exp : exp =
+	match varbeschrijving with
+	| None,fieldexp -> Exp_infix(Exp_field fieldexp,Eqop Neq,exp)
+	| Some op1, fieldexp -> Exp_infix(Exp_prefix(op1,Exp_field fieldexp),Eqop Neq,exp)
+
 let to_predicate varbeschrijving exp : exp =
 	match varbeschrijving with
 	| None,fieldexp -> Exp_infix(Exp_field fieldexp,Eqop Eq,exp)
@@ -69,7 +74,7 @@ let rec rmc_stelling mid extract = function
 	| Exp_low_bar -> extract
 	| Exp_function_call _ -> raise Not_found
 	| Exp_infix (exp1,Listop,exp2) -> merge_extracts mid
-		(rmc_stelling mid {vars=[];predicates=[];werkruimte=(fst extract.werkruimte,Field (snd extract.werkruimte,Hd))} exp1)
+		(rmc_stelling mid {vars=[];predicates=[(to_negated_predicate extract.werkruimte Exp_emptylist)];werkruimte=(fst extract.werkruimte,Field (snd extract.werkruimte,Hd))} exp1)
 		(rmc_stelling mid {extract with werkruimte=(fst extract.werkruimte, Field (snd extract.werkruimte, Tl))} exp2)
 	| Exp_infix _ -> raise Not_found	
 
@@ -134,7 +139,7 @@ let rmc_case mid = function
 	let antwoord = rmc_antwoord stelling_extract.vars antwoord in
 		((List.fold_left (fun a b -> Exp_infix (a,Logop And, b)) whenpredicate stelling_extract.predicates), antwoord)
 
-(* missing match case: when an match stmt is given with no cases*)
+(* missing match case: when an match stmt is given with no cases. This possibility is removed earlier*)
 let rec to_ifstmts = function
 	| [] -> raise Not_found
 	| (predicate, ifbody)::[] -> Stmt_if (predicate, ifbody)
@@ -150,17 +155,17 @@ let rec remove_trues_exp = function
 	| exp -> exp
 
 let rec remove_trues_stmt = function
-	| [Stmt_if (Exp_bool true,stmt_list)] -> stmt_list
-	| [Stmt_if_else (Exp_bool true,stmt_list,rest)] -> stmt_list
-	| [Stmt_if (exp,stmt_list)] -> [Stmt_if(remove_trues_exp exp,stmt_list)]
-	| [Stmt_if_else (exp,stmt_list,rest)] -> [Stmt_if_else(remove_trues_exp exp,stmt_list,remove_trues_stmt rest)]
-	| stmts -> stmts
+	| Stmt_if (Exp_bool true,stmt_list) -> stmt_list
+	| Stmt_if_else (Exp_bool true,stmt_list,[rest]) -> stmt_list
+	| Stmt_if (exp,stmt_list) -> [Stmt_if(remove_trues_exp exp,stmt_list)]
+	| Stmt_if_else (exp,stmt_list,[rest]) -> [Stmt_if_else(remove_trues_exp exp,stmt_list,remove_trues_stmt rest)]
+	| _ -> raise Not_found
 
 let rec rmc_match_stmt fid = function
 	| exp, case_list -> 
 		let mid = fid_to_mid fid in
 		let case_list = List.map (rmc_case mid) case_list in
-		let ifstmts = rmc_stmt_list fid (remove_trues_stmt [(to_ifstmts case_list)]) in
+		let ifstmts = rmc_stmt_list fid (remove_trues_stmt (to_ifstmts case_list)) in
 		ifstmts
 and
 rmc_stmt_list fid (stmt_list: stmt list) = match stmt_list with

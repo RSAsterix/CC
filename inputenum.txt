@@ -24,6 +24,10 @@ if (x == Drie) {y=3;}
 return 3;
 }
 
+var a1=f(Een);
+var a2=f(Drie);
+
 main() {
-write(c);
+//write(c);
+return 1;
 }

@@ -1,5 +1,5 @@
 var x = facR(3,1);
-facR ( a,b ) :: Int -> Int
+facR ( a,b ) :: int -> int
 { a=a;
 a=a;
 return a-b;

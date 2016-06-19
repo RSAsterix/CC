@@ -1,8 +1,11 @@
 product ( list ) :: [ int ] -> int {
 match list with
 | [] -> {return 1;}
-| head:tail -> {return head * product (tail);}
+| head:tail:nother:not -> {return head * product (not);}
+| _ -> {return 1;}
 }
+
+var p2 = product([]);
 
 var p = product(1:2:3:[]);
 

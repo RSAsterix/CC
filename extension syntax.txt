@@ -31,7 +31,7 @@ Om dit uit te rekenen wordt gekeken of g(a) match met de vorm (_,0).
 Zoja, dan geven we de d in het antwoord de waarde die _ had. 
 d bestaat niet in deze vorm buiten deze case.
 
-variabelen mogen niet dubbel voorkomen in stellingen. hier wordt niet voor gecheckt.
+variabelen mogen niet dubbel voorkomen in stellingen. hier wordt voor gecheckt in de typechecker.
 | (d,d) is illegale syntax. Als je dit toch wil vragen, dan schrijf je dit op als:
 | (d,e) when d==e (== is niet defined voor tuples en lijsten)
 
