@@ -117,6 +117,6 @@ match structure with
   match m x with
   | Error e -> print_endline e;
   | Success env -> 
-		(* print_endline (code_gen env (rmc_spl (snd x)));; *)
-		print_string (prettyprint_env env);;
+		print_endline (code_gen env (rmc_spl (snd x)));;
+		(* print_string (prettyprint_env env);; *)
 (* close_out oc;; *)
