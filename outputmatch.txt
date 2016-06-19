@@ -1,0 +1,45 @@
+product(list) :: [int] -> int {
+  var |1product = list;
+  if((|1product == [])){
+    return 1;
+  }else{
+    return (|1product.hd * product(|1product.tl));
+  }
+}
+
+var p = product((1 : (2 : (3 : []))));
+
+fromTo(from, to) :: int int -> [int] {
+  var |1fromTo = from;
+  if((|1fromTo <= to)){
+    return (from : fromTo((from + 1), to));
+  }else{
+    return [];
+  }
+}
+
+var ft = fromTo(2, 5);
+
+swapCopy(pair) :: (a, b) -> (b, a) {
+  var |1swapCopy = pair;
+  return (|1swapCopy.snd,|1swapCopy.fst);
+}
+
+var sc = swapCopy((True,(1 : [])));
+
+append(l1, l2) :: [t] [t] -> [t] {
+  var |1append = l1;
+  if((|1append == [])){
+    return l2;
+  }else{
+    l1.tl = append(l1.tl, l2);
+  }
+  return l1;
+}
+
+var a = append((1 : []), (2 : (3 : [])));
+
+main(){
+  return 1;
+}
+

@@ -1,0 +1,73 @@
+var ahe = ((1:[],2:[]):(3:[],4:[]):[]):((5:[],6:[]):(7:[],8:[]):[]):[];
+var bhe = ahe.tl.hd.tl.hd.fst.hd;
+
+product ( list ) :: [ int ] -> int {
+if ( isEmpty ( list ) ) {
+return 1;
+} else {
+return list.hd * product ( list.tl );
+}
+}
+
+henk(){
+if (True) {
+return 1;
+}
+while (True){
+return 1;
+}
+return 1;
+}
+
+var p = product(1:2:3:[]);
+
+fromTo ( from , to ) :: int int -> [ int ] {
+if ( from <= to ) {
+return from : fromTo ( from + 1, to );
+} else {
+return [] ;
+}
+}
+
+var ft = fromTo(2,5);
+
+reverse ( list ) :: [ t ] -> [ t ] {
+var accu = [] ;
+while ( ! isEmpty ( list ) ) {
+accu = list.hd : accu ;
+list = list.tl ;
+}
+return accu ;
+}
+
+var r = reverse(1:2:3:[]);
+
+swapCopy ( pair ) :: (a, b) -> (b, a) {
+return ( pair.snd, pair.fst );
+}
+
+var sc = swapCopy((True,1:[]));
+
+swap ( tuple ) :: (a, a) -> (a, a) {
+var tmp = tuple.fst ;
+tuple.fst = tuple.snd;
+tuple.snd = tmp;
+return tuple ;
+}
+
+var s = swap((4,5));
+
+append ( l1 , l2 ) :: [ t ] [ t ] -> [ t ] {
+if ( isEmpty ( l1 ) ) {
+return l2 ;
+} else {
+l1.tl = append ( l1.tl , l2 );
+return l1 ;
+}
+}
+
+var a = append(1:[], 2:3:[]);
+
+main() {
+return 1;
+}

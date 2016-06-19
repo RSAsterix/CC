@@ -1,0 +1,6 @@
+var x = facR(3,1);
+facR ( a,b ) :: int -> int
+{ a=a;
+a=a;
+return a-b;
+}
