@@ -1,0 +1,38 @@
+product ( list ) :: [ int ] -> int {
+match list with
+| [] -> {return 1;}
+| head:tail:nother:not -> {return head * product (not);}
+| _ -> {return 1;}
+}
+
+var p2 = product([]);
+
+var p = product(1:2:3:[]);
+
+fromTo ( from , to ) :: int int -> [ int ] {
+match from with
+| x when x <= to -> {return from : fromTo (from + 1, to);}
+| _ -> {return [];}
+}
+
+var ft = fromTo(2,5);
+
+swapCopy ( pair ) :: (a, b) -> (b, a) {
+match pair with
+| (el1, el2) -> {return (el2, el1);}
+}
+
+var sc = swapCopy((True,1:[]));
+
+append ( l1 , l2 ) :: [ t ] [ t ] -> [ t ] {
+match l1 with
+| [] -> {return l2;}
+| head:tail -> {l1.tl = append (l1.tl, l2);}
+return l1 ;
+}
+
+var a = append(1:[], 2:3:[]);
+
+main() {
+return 1;
+}

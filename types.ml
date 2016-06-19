@@ -1,5 +1,6 @@
 (*==    structure    ==*)
 type id = string
+type constructor = string
 type op1 = Not | Neg
 type logop = And | Or
 type eqop = Eq | Neq
@@ -27,6 +28,8 @@ type exp =
 	| Exp_function_call of id * exp list
 	| Exp_emptylist
 	| Exp_tuple of exp * exp
+	| Exp_low_bar
+	| Exp_constructor of constructor
 type stmt = 
 	| Stmt_if of exp * stmt list
 	| Stmt_if_else of exp * stmt list * stmt list
@@ -34,6 +37,7 @@ type stmt =
 	| Stmt_define of fieldexp * exp
 	| Stmt_function_call of id * exp list
 	| Stmt_return of exp option
+	| Stmt_match of exp * (exp * exp option * stmt list) list
 type fargs = id list
 type typetoken = Type_int | Type_bool | Type_char
 	| Type_tuple of typetoken * typetoken
@@ -43,8 +47,12 @@ type rettype = Rettype of typetoken | Type_void
 type funtype = typetoken list * rettype
 type vardecl = typetoken option * id * exp 
 type fundecl = id * fargs * funtype option * vardecl list * stmt list
+type typedecl = 
+	| Rename of id * typetoken 
+	| Enum of id * constructor list
+	(* | Typedef of id * (constructor * typetoken) list *)
 type decl = Vardecl of vardecl | Fundecl of fundecl
-type spl = decl list;;
+type spl = typedecl list * decl list;;
 
 
 (*==    result    ==*)
@@ -72,6 +80,13 @@ type token =
 	| Optok of string
 	| Inttok of int
 	| IDtok of string
+	| Constructortok of string
 	| Chartok of char
 	| Startcomment
-	| Endcomment;;
+	| Endcomment
+	| LOWBAR
+	| TYPE 
+	| MATCH
+	| WITH
+	| PIPE
+	| WHEN;;

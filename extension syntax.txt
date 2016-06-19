@@ -1,0 +1,93 @@
+hier is een voorbeeld van een functie met een case matching:
+
+f (a) {
+var x =0;
+match g(a) with
+ | (0,0) -> {return 3;}
+ | (x,0) when x=c -> {if b then c = 1 + c; return c;}
+ | (d,0) -> {return d;}
+ | _ -> x = {snd a;}
+return x;
+}
+
+merk op dat bij een functionele taal na de pijl een expressie zou staan wat de nieuwe a zou worden.
+Hier staat na de pijl een rijtje statements die uitgevoerd wordt.
+merk op dat de functie g blijkbaar een tupel van ints teruggeeft.
+De functie f geeft een int terug.
+
+de expressie voor de pijl wordt de stelling genoemd, de stmts na de pijl wordt het antwoord genoemd
+in een stelling zijn alle voorkomende variabelen hyperlokaal. 
+Dat betekent dat ze dezelfde naam mogen hebben als globale en lokale variabelen.
+In het antwoord dan dat id wordt gebruikt, dan wordt de hyperlokale variabele gebruikt en niet de globale of lokale.
+Dit betekent gelijk dat globale en lokale variabelen niet in een stelling voor kunnen komen.
+wil je toch globale of lokale variabelen voor laten komen, dan kan dit met het when keyword.
+achter de when keyword moet een booleaanse expressie voorkomen.
+is deze boolean true, dan wordt het antwoord uitgevoerd.
+
+functies mogen niet voorkomen in stellingen. Dit geldt ook voor infix operators.
+
+Voorbeeld hyperlokale variabele: d in match case 3:
+Om dit uit te rekenen wordt gekeken of g(a) match met de vorm (_,0). 
+Zoja, dan geven we de d in het antwoord de waarde die _ had. 
+d bestaat niet in deze vorm buiten deze case.
+
+variabelen mogen niet dubbel voorkomen in stellingen. hier wordt voor gecheckt in de typechecker.
+| (d,d) is illegale syntax. Als je dit toch wil vragen, dan schrijf je dit op als:
+| (d,e) when d==e (== is niet defined voor tuples en lijsten)
+
+dubbele prefix operators mogen niet. dus --1 of !-c zijn dus illegaal. Hier wordt niet voor gecheckt.
+
+De vertaling van deze functie naar if-statements (waarbij c bestaat, d niet en de var u (van unnamed) ook nog niet)
+is als volgt. Denk er aan dat == niet gedefinieerd is voor tuples en lijsten
+
+f(a){
+var x = 0;
+var u = g(a);
+if (fst u == 0 && snd u == 0){
+	return 3;
+}
+else { if (snd u == 0 && fst u == c){
+	if b then c = 1 + c; return c;
+}}
+else { if (snd u == 0){
+	return (fst u);
+}}
+else
+	{x = snd a;}
+return x;
+}
+
+
+in toplevel mag je nu typedecls doen.
+Voorbeelden van een typedecl is:
+
+type stringwithlength = ([char],int)
+type intorchar = Int of int | Char of char
+type geslacht = Man | Vrouw | Anders of [Char]
+type hands = Lefthand | Righthand
+
+Inttype, Man etc worden constructors genoemd.
+constructors moeten met een hoofdletter beginnen.
+vars en types moeten met een kleine letter beginnen.
+Dit was eerst niet, eerst waren de types 'int', 'bool' en 'char' met een hoofdletter
+
+wil je bijvoorbeeld een intorchar aanmaken, dan doe je dat als volgt:
+vardecl: intorchar a = Int 2;
+stmt: a = Int 2;
+
+Verder heb je ook nog records:
+
+type person = 
+{
+ name: [char];
+ age: int;
+ friends: [person];
+}
+
+name, age en friends worden fields genoemd.
+als a is een person, dan verkrijg je zijn naam met:
+
+a.name
+
+maar op het moment ga ik alleen match casing en types van de vorm stringwithlength en hands toevoegen
+records en constructors met argumenten nog niet.

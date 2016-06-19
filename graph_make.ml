@@ -11,7 +11,7 @@ let rec fv_exp (free : SS.t) (bound : SS.t) = function
 	| Exp_prefix (_,exp) -> fv_exp free bound exp
 	| Exp_infix (exp1,_,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2)
 	| Exp_function_call (id, explist) -> fv_exp_list (SS.add id free) bound explist
-	| Exp_tuple (exp1,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2)
+	| Exp_tuple (exp1,exp2) -> SS.union (fv_exp free bound exp1) (fv_exp free bound exp2) 
 	| _ -> free
 and fv_exp_list (free : SS.t) (bound : SS.t) explist = List.fold_left (fun beginfree exp -> fv_exp beginfree bound exp) free explist;;
 
@@ -26,7 +26,16 @@ let rec fv_stmt (free : SS.t) (bound : SS.t) = function
 		fv_exp (fv_exp free bound (Exp_field fieldexp)) bound exp
 	| Stmt_function_call (id, explist) -> fv_exp free bound (Exp_function_call (id, explist))
 	| Stmt_return (Some exp) -> fv_exp free bound exp
-	| _ -> free
+	| Stmt_return None -> free
+	| Stmt_match (exp, []) -> fv_exp free bound exp 
+	| Stmt_match (exp, (matchexp, whenclause, stmts)::caselist) ->
+		let hyperlocals = SS.union bound (fv_exp SS.empty SS.empty matchexp) in
+		let free' =
+			(match whenclause with
+			| None -> free
+			| Some whenexp -> fv_exp free hyperlocals whenexp) in 
+		let free'' = fv_stmt_list free' hyperlocals stmts in
+		fv_stmt free'' bound (Stmt_match (exp, caselist))
 and fv_stmt_list (free : SS.t) (bound : SS.t) stmtlist = List.fold_left (fun beginfree stmt -> fv_stmt beginfree bound stmt) free stmtlist;;
 
 let fv_vardecl (free : SS.t) (bound : SS.t) = function
@@ -79,35 +88,35 @@ let fv_spl graph spl =
 
 let make_graph spl = 
 	let g = {v = [
-		{id = "read";
+		{id = "$read";
 		i = -1;
 		lowlink = -1;
 		onStack = false;
 		spl_decl =
 			Fundecl (
-				"read",
+				"$read",
 				[],
 				None,
 				[None,"x",Exp_int 1],
 				[Stmt_return (Some (Exp_field (Nofield "x")))])};
-		{id = "write";
+		{id = "$write";
 		i = -1;
 		lowlink = -1;
 		onStack = false;
 		spl_decl =
 			Fundecl (
-				"write",
+				"$write",
 				["x"],
 				Some([Type_int],Type_void),
 				[],
 				[Stmt_return None])};
-		{id = "isEmpty"; 
+		{id = "$isEmpty"; 
 		i = -1; 
 		lowlink = -1; 
 		onStack = false; 
 		spl_decl = 
 			Fundecl (
-				"isEmpty", 
+				"$isEmpty", 
 				["l"], 
 				None, 
 				[],

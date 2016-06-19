@@ -1,0 +1,7 @@
+type charretje = char;
+type enummetje = Een | Twee;
+
+enummetje x = Een;
+
+dan staat er in de environment:
+{id = "x"; t = Enum [("Een", None);("Twee",None)]}

@@ -6,6 +6,7 @@ open Types
 open Pretty_printer_files
 open Code_generator
 open Codefragments
+open Rewrite_match_casings
 
 open Graph_make
 open Graph_lib
@@ -16,6 +17,8 @@ open Typechecker
 open Typechecker_types
 open Typechecker_lib
 open Typechecker_print
+
+open Format
 
 (* #directory "C:/Users/tom_e/workspace/CC/_build";; *)
 (* open Printf;;                                     *)
@@ -59,16 +62,13 @@ let unpack res = match res with
 | Success x -> x
 | Error e -> raise (Invalid_argument e);;
 
-let filename = "inputT"
+let filename = "inputenum"
 
 let in_channel =
 	try
 		open_in ("C:/Users/tom_e/workspace/CC/"^filename^".txt")
 	with
 	| _ -> open_in ("C:/Users/Martin/workspace/CC/"^filename^".txt");;
-
-let filename = "C:/Users/tom_e/workspace/CC/input4.txt";;
-(* let filename = "C:/Users/Martin/workspace/CC/inputT.txt";; *)
 
 (* let in_channel = open_in filename;; *)
 let tokenlist = ref [];;
@@ -84,7 +84,7 @@ try
 with End_of_file ->
   close_in in_channel;;
 
-let structure = spl_parser [] !tokenlist;;
+let structure = parser [] !tokenlist;;
 (* let outfile = "C:/Users/tom_e/workspace/CC/output.txt";; *)
 let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 (* let oc = open_out outfile;; *)
@@ -106,8 +106,11 @@ let outfile = "C:/Users/Martin/workspace/CC/output.txt";;
 
 match structure with
 | Error e -> print_endline e;
-| Success x ->
-	match m x with
-	| Error e -> print_endline e;
-	| Success env -> print_endline (prettyprint_env env);; (*print_string (code_gen (Env.elements env) x);;*)
+| Success x -> 
+			(* print_spl std_formatter (rmc_spl (snd x)); *)
+  match m x with
+  | Error e -> print_endline e;
+  | Success env -> 
+		(* print_endline (code_gen env (rmc_spl (snd x)));; *)
+		print_string (prettyprint_env env);;
 (* close_out oc;; *)

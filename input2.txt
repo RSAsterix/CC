@@ -1,8 +1,8 @@
-facL ( n ) :: Int -> Int {
+facL ( n ) :: int -> int {
 return product (fromTo ( 1, n ));
 }
 
-product ( list ) :: [ Int ] -> Int {
+product ( list ) :: [ int ] -> int {
 if ( isEmpty ( list ) ) {
 return 1;
 } else {
@@ -10,7 +10,7 @@ return list.hd * product ( list.tl );
 }
 }
 
-fromTo ( from , to ) :: Int Int -> [ Int ] {
+fromTo ( from , to ) :: int int -> [ int ] {
 if ( from <= to ) {
 return from : fromTo ( from + 1, to );
 } else {
@@ -27,7 +27,7 @@ list = list.tl ;
 return accu ;
 }
 
-abs ( n ) :: Int -> Int { if (n < 0) {return -n;} else {return n ;} }
+abs ( n ) :: int -> int { if (n < 0) {return -n;} else {return n ;} }
 
 swapCopy ( pair ) :: (a, b) -> (b, a) {
 return ( pair.snd, pair.fst );
@@ -49,7 +49,7 @@ return l1 ;
 }
 }
 
-squareOddNumbers ( list ) :: [ Int ] -> [ Int ] {
+squareOddNumbers ( list ) :: [ int ] -> [ int ] {
 while (! isEmpty ( list ) && list.hd % 2 == 0) {
 list = list.tl ;
 }
