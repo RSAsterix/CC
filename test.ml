@@ -110,7 +110,7 @@ match structure with
 			(* print_spl std_formatter (rmc_spl (snd x)); *)
   match m x with
   | Error e -> print_endline e;
-  | Success env -> print_endline (code_gen env (rmc_spl (snd x)));;
-		
-		(* print_string (prettyprint_env env);; *)
+  | Success env -> 
+		(* print_endline (code_gen env (rmc_spl (snd x)));; *)
+		print_string (prettyprint_env env);;
 (* close_out oc;; *)

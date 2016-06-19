@@ -27,7 +27,15 @@ return 3;
 var a1=f(Een);
 var a2=f(Drie);
 
+
+g(x) {
+if (x == 0)
+{return 1;}
+else
+{
+return 1;}
+}
+
 main() {
-//write(c);
 return 1;
 }

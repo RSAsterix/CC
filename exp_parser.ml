@@ -164,7 +164,7 @@ atom_parser (list:tlt): (exp option result* tlt) = match list with
 	| (_,Constructortok c)::list -> Success (Some (Exp_constructor c)), list
 	| (_,IDtok id)::(_,OPEN_PAR)::list -> 
 		(match funcall_parser list with
-		| Success exps, list -> Success (Some (Exp_function_call (id, exps))), list 
+		| Success exps, list -> Success (Some (Exp_function_call ("$" ^ id, exps))), list 
 		| Error e, list -> Error e, list)
 	|	(_,IDtok id)::list ->
 		(match field_parser [] list with
